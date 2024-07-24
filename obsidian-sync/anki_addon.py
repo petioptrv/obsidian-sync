@@ -33,10 +33,9 @@ from pathlib import Path
 import json
 import os
 
-from anki.utils import is_mac
 from aqt import gui_hooks, mw
 from aqt.qt import QAction, QKeySequence
-from aqt.utils import showCritical, showInfo, qconnect
+from aqt.utils import showCritical, showInfo, qconnect, tooltip
 
 from .config_handler import ConfigHandler
 
@@ -52,8 +51,8 @@ class AnkiAddon:
 
     def _add_menu_item(self):
         action = QAction("Obsidian Sync", mw)
-        # shortcut = QKeySequence("Ctrl+Shift+N")
-        # action.setShortcut(shortcut)
+        shortcut = QKeySequence("Ctrl+Shift+Y")
+        action.setShortcut(shortcut)
         qconnect(action.triggered, self._sync_with_obsidian)
         mw.form.menuTools.addAction(action)
 
@@ -63,7 +62,6 @@ class AnkiAddon:
         # todo: make note linking be configurable via regex
         # todo: it should default to `\[ontocapturegrp|nid.d+]\` in Anki to `ontocapturegrp: [[note-path]]` in Obsidian
 
-        # todo: sync templates (search for the template folder in `{VAULT_PATH}/.obsidian/templates.json`, key "folder")
         # todo: get {nid: path} dict of all obsidian files with the "anki" tag (make it configurable)
         # todo: get all Obsidian notes created from templates but that do not yet have associated nid
         # todo: get {nid: note} dict of all Anki notes
@@ -83,9 +81,9 @@ class AnkiAddon:
         try:
             notes = self._get_all_notes()
 
-            showInfo("Synced with Obsidian successfully.")
+            tooltip(format_add_on_message("Notes synced successfully."))
         except Exception as e:
-            showCritical(f"Obsidian sync error: {str(e)}")
+            showCritical(format_add_on_message(f"Obsidian sync error: {str(e)}"))
 
     @staticmethod
     def _get_all_notes():
@@ -95,7 +93,7 @@ class AnkiAddon:
             note_data = {
                 "nid": nid,
                 "mid": note.mid,
-                "model": note.model()['name'],
+                "model": note.model()["name"],
                 "fields": note.fields,
                 "tags": note.tags,
                 "deck": mw.col.decks.name(note.cards()[0].did)
@@ -105,8 +103,10 @@ class AnkiAddon:
 
     @staticmethod
     def _store_notes_data(notes):
+        """For testing."""
+
         addon_dir = os.path.dirname(__file__)
         file_path = os.path.join(addon_dir, "anki_notes_data.json")
-        with open(file_path, 'w', encoding='utf-8') as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             json.dump(notes, f, ensure_ascii=False, indent=2)
 

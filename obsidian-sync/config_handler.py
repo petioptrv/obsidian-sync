@@ -33,9 +33,10 @@ from pathlib import Path
 from typing import Tuple
 
 from aqt import gui_hooks, mw
-from aqt.utils import showCritical, showInfo, qconnect
+from aqt.utils import showCritical, showInfo, qconnect, tooltip
 from aqt.qt import QFileDialog
 
+from .utils import format_add_on_message
 from .constants import ADD_ON_NAME, ADD_ON_ID, CONF_VAULT_PATH
 
 
@@ -62,25 +63,33 @@ class ConfigHandler:
             prompt_canceled = False
 
             while not self._check_valid_vault_path(vault_path=vault_path) and not prompt_canceled:
-                showInfo(f"[{ADD_ON_NAME}] Please specify the path to your Obsidian vault.")
+                showInfo(format_add_on_message("Please specify the path to your Obsidian vault."))
                 vault_path, prompt_canceled = self._prompt_for_vault_path(vault_path)
 
                 if prompt_canceled:
                     showCritical(
-                        f"[{ADD_ON_NAME}] No valid Obsidian vault path selected. "
-                        f"Please set the path in the add-on configs for {ADD_ON_NAME}.",
+                        format_add_on_message(
+                            message=(
+                                f"No valid Obsidian vault path selected. "
+                                f"Please set the path in the add-on configs for {ADD_ON_NAME}."
+                            ),
+                        ),
                         help=None,
                     )
                 elif not self._check_valid_vault_path(vault_path=vault_path):
                     showCritical(
-                        f"[{ADD_ON_NAME}] Selected directory is not a valid Obsidian vault. "
-                        f"Please select a directory containing a .obsidian folder.",
+                        format_add_on_message(
+                            message=(
+                                "Selected directory is not a valid Obsidian vault. "
+                                "Please select a directory containing a .obsidian folder."
+                            ),
+                        ),
                         help=None,
                     )
                 else:
                     config[CONF_VAULT_PATH] = str(vault_path)
                     mw.addonManager.writeConfig(__name__, config)
-                    showInfo(f"[{ADD_ON_NAME}] Obsidian vault path updated successfully.")
+                    tooltip(format_add_on_message("Obsidian vault path updated successfully."))
 
             text = json.dumps(config)
         return text

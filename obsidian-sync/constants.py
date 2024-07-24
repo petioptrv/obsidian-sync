@@ -5,3 +5,7 @@ ADD_ON_NAME = "obsidian-sync"
 
 CONF_VAULT_PATH = "vault-path"
 CONF_FIELD_NAME_HEADER_TAG = "field-name-header-tag"
+
+# Obsidian
+
+TEMPLATES_FOLDER_JSON_FIELD_NAME = "folder"
