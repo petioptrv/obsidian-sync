@@ -37,7 +37,8 @@ from aqt.utils import showCritical, showInfo, qconnect, tooltip
 from aqt.qt import QFileDialog
 
 from .utils import format_add_on_message
-from .constants import ADD_ON_NAME, ADD_ON_ID, CONF_VAULT_PATH
+from .constants import ADD_ON_NAME, ADD_ON_ID, CONF_VAULT_PATH, CONF_FIELD_NAME_HEADER_TAG, \
+    CONF_ANKI_NOTE_IN_OBSIDIAN_PROPERTY_VALUE
 
 
 class ConfigHandler:
@@ -55,6 +56,14 @@ class ConfigHandler:
     def vault_path(self) -> Path:
         path = Path(self.config[CONF_VAULT_PATH])
         return path
+
+    @property
+    def anki_note_in_obsidian_property_value(self) -> str:
+        return self.config[CONF_ANKI_NOTE_IN_OBSIDIAN_PROPERTY_VALUE]
+
+    @property
+    def field_name_header_tag(self) -> str:
+        return self.config[CONF_FIELD_NAME_HEADER_TAG]
 
     def _on_config_update(self, text: str, add_on_id: str) -> str:
         if add_on_id in (ADD_ON_ID, ADD_ON_NAME.lower(), __name__):

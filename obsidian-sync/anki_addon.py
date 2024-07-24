@@ -30,13 +30,13 @@ from pathlib import Path
 #
 # Any modifications to this file must keep this entire header intact.
 
-import json
-import os
-
 from aqt import gui_hooks, mw
 from aqt.qt import QAction, QKeySequence
 from aqt.utils import showCritical, showInfo, qconnect, tooltip
 
+from .obsidian_note_finder import ObsidianNoteFinder
+from .notes_synchronizer import NotesSynchronizer
+from .templates_synchronizer import TemplatesSynchronizer
 from .config_handler import ConfigHandler
 
 
@@ -47,6 +47,11 @@ class AnkiAddon:
 
     def __init__(self):
         self._config_handler = ConfigHandler()
+        obsidian_note_finder = ObsidianNoteFinder(config_handler=self._config_handler)
+        self._templates_synchronizer = TemplatesSynchronizer(
+            config_handler=self._config_handler, obsidian_note_finder=obsidian_note_finder
+        )
+        self._notes_synchronizer = NotesSynchronizer(config_handler=self._config_handler)
         self._add_menu_item()
 
     def _add_menu_item(self):
@@ -78,35 +83,6 @@ class AnkiAddon:
         #     todo: else, interactive choice of which one to keep, with option to apply to all remaining: keep most recent/keep Anki/keep Obsidian
         # todo: output visual, collapsible report on the changes
 
-        try:
-            notes = self._get_all_notes()
-
-            tooltip(format_add_on_message("Notes synced successfully."))
-        except Exception as e:
-            showCritical(format_add_on_message(f"Obsidian sync error: {str(e)}"))
-
-    @staticmethod
-    def _get_all_notes():
-        notes = []
-        for nid in mw.col.find_notes(""):
-            note = mw.col.get_note(nid)
-            note_data = {
-                "nid": nid,
-                "mid": note.mid,
-                "model": note.model()["name"],
-                "fields": note.fields,
-                "tags": note.tags,
-                "deck": mw.col.decks.name(note.cards()[0].did)
-            }
-            notes.append(note_data)
-        return notes
-
-    @staticmethod
-    def _store_notes_data(notes):
-        """For testing."""
-
-        addon_dir = os.path.dirname(__file__)
-        file_path = os.path.join(addon_dir, "anki_notes_data.json")
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(notes, f, ensure_ascii=False, indent=2)
+        self._templates_synchronizer.sync_note_templates()
+        # self._notes_synchronizer.sync_notes()
 
