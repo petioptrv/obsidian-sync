@@ -1,0 +1,3 @@
+[submodule "obsidian-sync/markdownify"]
+	path = obsidian-sync/markdownify
+	url = git@github.com:matthewwithanm/python-markdownify.git
