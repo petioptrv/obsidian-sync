@@ -29,7 +29,7 @@
 # Any modifications to this file must keep this entire header intact.
 import re
 
-from .constants import TEMPLATE_PROPERTY_NAME
+from .constants import TEMPLATE_PROPERTY_NAME, MODEL_ID_PROPERTY_NAME
 from .config_handler import ConfigHandler
 
 
@@ -43,3 +43,11 @@ class ObsidianNoteFinder:
             rf"^---\s*(?:.*\n)*?{re.escape(TEMPLATE_PROPERTY_NAME)}\s*:\s*{re.escape(property_value)}\s*(?:.*\n)*?---"
         )
         return re.match(pattern, note_content) is not None
+
+    @staticmethod
+    def get_template_id_from_anki_note_in_obsidian_content(content: str) -> int:
+        pattern = (
+            rf"^---\s*(?:.*\n)*?{re.escape(MODEL_ID_PROPERTY_NAME)}\s*:\s*(\d+)\s*(?:.*\n)*?---"
+        )
+        match = re.match(pattern, content)
+        return int(match.group(1))
