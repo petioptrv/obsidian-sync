@@ -7,3 +7,6 @@
 [submodule "obsidian-sync/pyyaml"]
 	path = obsidian-sync/pyyaml
 	url = git@github.com:yaml/pyyaml.git
+[submodule "obsidian-sync/send2trash"]
+	path = obsidian-sync/send2trash
+	url = git@github.com:arsenetar/send2trash.git

@@ -78,7 +78,7 @@ class NotesSynchronizer:
                 if note_id == DEFAULT_NODE_ID_FOR_NEW_OBSIDIAN_CARDS:
                     AnkiNote.create_in_anki_from_obsidian(obsidian_note=obsidian_note, change_log=change_log)
                 else:
-                    obsidian_note.move_to_trash_folder(change_log=change_log)
+                    obsidian_note.delete_file(change_log=change_log)
 
             change_log.display_changes()
 

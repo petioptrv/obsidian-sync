@@ -41,7 +41,7 @@ from aqt.utils import showCritical, tooltip
 from ..note_builders.obsidian_note_builder import ObsidianNoteBuilder
 from ..obsidian_note_parser import ObsidianNoteParser
 from ..utils import format_add_on_message, is_markdown_file, get_templates_folder_path, \
-    move_obsidian_note_to_trash_folder
+    delete_obsidian_note
 from ..constants import MODEL_ID_PROPERTY_NAME, TEMPLATE_DATE_FORMAT, TEMPLATE_TIME_FORMAT, \
     ADD_ON_NAME, NOTE_PROPERTIES_BASE_STRING
 from ..config_handler import ConfigHandler
@@ -80,7 +80,7 @@ class TemplatesSynchronizer:
 
             for model_id, template in obsidian_templates.items():
                 if model_id not in anki_templates:
-                    move_obsidian_note_to_trash_folder(
+                    delete_obsidian_note(
                         obsidian_vault=self._config_handler.vault_path, obsidian_note_path=template.path
                     )
                     model_ids_to_delete.append(model_id)

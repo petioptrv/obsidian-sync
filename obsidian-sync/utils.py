@@ -4,7 +4,11 @@ from typing import List
 
 from aqt import mw
 
-from .constants import ADD_ON_NAME, TEMPLATES_FOLDER_JSON_FIELD_NAME, ANKI_NOTE_FIELD_IDENTIFIER_COMMENT
+from .send2trash import send2trash
+from .constants import ADD_ON_NAME, TEMPLATES_FOLDER_JSON_FIELD_NAME, ANKI_NOTE_FIELD_IDENTIFIER_COMMENT, \
+    OBSIDIAN_TRASH_OPTION_KEY, OBSIDIAN_LOCAL_TRASH_OPTION_VALUE, OBSIDIAN_SYSTEM_TRASH_OPTION_VALUE, \
+    OBSIDIAN_PERMA_DELETE_TRASH_OPTION_VALUE, MARKDOWN_FILE_SUFFIX, OBSIDIAN_SETTINGS_FOLDER, \
+    OBSIDIAN_TEMPLATES_SETTINGS_FILE, OBSIDIAN_APP_SETTINGS_FILE, OBSIDIAN_LOCAL_TRASH_FOLDER
 
 
 def format_add_on_message(message: str) -> str:
@@ -12,11 +16,11 @@ def format_add_on_message(message: str) -> str:
 
 
 def is_markdown_file(path: Path) -> bool:
-    return path.suffix == ".md"
+    return path.suffix == MARKDOWN_FILE_SUFFIX
 
 
 def get_templates_folder_path(obsidian_vault: Path) -> Path:
-    templates_json_path = obsidian_vault / ".obsidian" / "templates.json"
+    templates_json_path = obsidian_vault / OBSIDIAN_SETTINGS_FOLDER / OBSIDIAN_TEMPLATES_SETTINGS_FILE
 
     if not templates_json_path.is_file():
         raise RuntimeError("The templates core plugin is not enabled.")
@@ -39,6 +43,29 @@ def get_field_names_from_anki_model_id(id: int) -> List[str]:
     return field_names
 
 
-def move_obsidian_note_to_trash_folder(obsidian_vault: Path, obsidian_note_path: Path):
-    obsidian_note_path.unlink()
-    # todo: implement
+def delete_obsidian_note(obsidian_vault: Path, obsidian_note_path: Path):
+    with open(obsidian_vault / OBSIDIAN_SETTINGS_FOLDER / OBSIDIAN_APP_SETTINGS_FILE, "r") as f:
+        settings = json.load(f)
+
+    trash_option = settings.get(OBSIDIAN_TRASH_OPTION_KEY)
+
+    if trash_option is None or trash_option == OBSIDIAN_SYSTEM_TRASH_OPTION_VALUE:
+        _move_to_system_trash(obsidian_note_path=obsidian_note_path)
+    elif trash_option == OBSIDIAN_LOCAL_TRASH_OPTION_VALUE:
+        _move_to_local_trash(obsidian_vault=obsidian_vault, obsidian_note_path=obsidian_note_path)
+    elif trash_option == OBSIDIAN_PERMA_DELETE_TRASH_OPTION_VALUE:
+        obsidian_note_path.unlink()
+
+
+def _move_to_system_trash(obsidian_note_path: Path):
+    send2trash.send2trash(paths=obsidian_note_path)
+
+
+def _move_to_local_trash(obsidian_vault: Path, obsidian_note_path: Path):
+    trash_folder = obsidian_vault / OBSIDIAN_LOCAL_TRASH_FOLDER
+
+    trash_folder.mkdir(parents=True, exist_ok=True)
+
+    new_file_path = trash_folder / obsidian_note_path.name
+
+    obsidian_note_path.rename(new_file_path)

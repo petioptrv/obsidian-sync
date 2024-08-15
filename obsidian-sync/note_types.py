@@ -10,11 +10,11 @@ from aqt.utils import showCritical
 
 from .note_builders.obsidian_note_builder import ObsidianNoteBuilder
 from .config_handler import ConfigHandler
-from .constants import ADD_ON_NAME, NOTE_PROPERTIES_BASE_STRING, DATETIME_FORMAT
+from .constants import ADD_ON_NAME, NOTE_PROPERTIES_BASE_STRING, DATETIME_FORMAT, MAX_OBSIDIAN_NOTE_FILE_NAME_LENGTH
 from .change_log import ChangeLogBase
 from .obsidian_note_parser import ObsidianNoteParser
 from .utils import is_markdown_file, format_add_on_message, get_field_names_from_anki_model_id, \
-    move_obsidian_note_to_trash_folder
+    delete_obsidian_note
 
 
 @dataclass
@@ -128,11 +128,11 @@ class ObsidianNote(Note):
             else:
                 self._perform_update_with_anki_note(anki_note=anki_note, change_log=change_log)
 
-    def move_to_trash_folder(self, change_log: ChangeLogBase):
-        move_obsidian_note_to_trash_folder(
+    def delete_file(self, change_log: ChangeLogBase):
+        delete_obsidian_note(
             obsidian_vault=self._config_handler.vault_path, obsidian_note_path=self.file_path
         )
-        change_log.log_change(change=f"{self.file_path} was moved to the trash folder")
+        change_log.log_change(change=f"{self.file_path} was deleted.")
 
     @classmethod
     def _parse_obsidian_note(
@@ -169,7 +169,7 @@ class ObsidianNote(Note):
         note_path_from_deck = self._build_note_path_from_deck()
 
         if note_path_from_deck != self.file_path:
-            self.move_to_trash_folder(change_log=change_log)
+            self.delete_file(change_log=change_log)
             change_log.log_change(
                 change=f"Removed {self.file_path} to move it to {note_path_from_deck}"
             )
@@ -183,7 +183,7 @@ class ObsidianNote(Note):
         return note_path_from_deck
 
     def _build_note_file_name(self) -> str:
-        max_file_name_length = 100  # todo get from os
+        max_file_name_length = MAX_OBSIDIAN_NOTE_FILE_NAME_LENGTH
         suffix = ".md"
         name = self.fields[0][:(max_file_name_length - len(suffix))] + suffix
         return name
