@@ -37,8 +37,10 @@ from aqt.utils import showCritical, showInfo, qconnect, tooltip
 from aqt.qt import QFileDialog
 
 from .utils import format_add_on_message
-from .constants import ADD_ON_NAME, ADD_ON_ID, CONF_VAULT_PATH, CONF_FIELD_NAME_HEADER_TAG, \
-    CONF_ANKI_NOTE_IN_OBSIDIAN_PROPERTY_VALUE
+from .constants import (
+    ADD_ON_NAME, ADD_ON_ID, CONF_VAULT_PATH, CONF_FIELD_NAME_HEADER_TAG, \
+    CONF_ANKI_NOTE_IN_OBSIDIAN_PROPERTY_VALUE, CONF_ANKI_FOLDER
+)
 
 
 class ConfigHandler:
@@ -58,6 +60,15 @@ class ConfigHandler:
         return path
 
     @property
+    def anki_folder(self) -> Path:
+        anki_folder = self.config[CONF_ANKI_FOLDER]
+        if anki_folder:
+            path = Path(self.vault_path / self.config[CONF_ANKI_FOLDER])
+        else:
+            path = self.vault_path
+        return path
+
+    @property
     def anki_note_in_obsidian_property_value(self) -> str:
         return self.config[CONF_ANKI_NOTE_IN_OBSIDIAN_PROPERTY_VALUE]
 
@@ -72,28 +83,33 @@ class ConfigHandler:
             prompt_canceled = False
 
             while not self._check_valid_vault_path(vault_path=vault_path) and not prompt_canceled:
-                showInfo(format_add_on_message("Please specify the path to your Obsidian vault."))
+                showInfo(
+                    text=format_add_on_message("Please specify the path to your Obsidian vault."),
+                    title=ADD_ON_NAME,
+                )
                 vault_path, prompt_canceled = self._prompt_for_vault_path(vault_path)
 
                 if prompt_canceled:
                     showCritical(
-                        format_add_on_message(
+                        text=format_add_on_message(
                             message=(
                                 f"No valid Obsidian vault path selected. "
                                 f"Please set the path in the add-on configs for {ADD_ON_NAME}."
                             ),
                         ),
                         help=None,
+                        title=ADD_ON_NAME,
                     )
                 elif not self._check_valid_vault_path(vault_path=vault_path):
                     showCritical(
-                        format_add_on_message(
+                        text=format_add_on_message(
                             message=(
                                 "Selected directory is not a valid Obsidian vault. "
                                 "Please select a directory containing a .obsidian folder."
                             ),
                         ),
                         help=None,
+                        title=ADD_ON_NAME,
                     )
                 else:
                     config[CONF_VAULT_PATH] = str(vault_path)

@@ -1,5 +1,6 @@
 {
   "vault-path": "",
+  "anki-folder": "",
   "anki-note-in-obsidian-property-value": "anki",
   "field-name-header-tag": "h2"
 }

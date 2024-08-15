@@ -29,19 +29,22 @@
 # Any modifications to this file must keep this entire header intact.
 
 import json
+import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List
 
-from aqt import gui_hooks, mw
-from aqt.utils import showCritical, showInfo, qconnect, tooltip
+from aqt import mw
+from aqt.utils import showCritical, tooltip
 
-from .html_to_markdown import HTMLToMarkdown
-from .obsidian_note_finder import ObsidianNoteFinder
-from .utils import format_add_on_message, is_markdown_file
-from .constants import TEMPLATES_FOLDER_JSON_FIELD_NAME, MODEL_ID_PROPERTY_NAME, TEMPLATES_PROPERTIES_TEMPLATE
-from .config_handler import ConfigHandler
+from ..note_builders.obsidian_note_builder import ObsidianNoteBuilder
+from ..obsidian_note_parser import ObsidianNoteParser
+from ..utils import format_add_on_message, is_markdown_file, get_templates_folder_path, \
+    move_obsidian_note_to_trash_folder
+from ..constants import MODEL_ID_PROPERTY_NAME, TEMPLATE_DATE_FORMAT, TEMPLATE_TIME_FORMAT, \
+    ADD_ON_NAME, NOTE_PROPERTIES_BASE_STRING
+from ..config_handler import ConfigHandler
 
 
 @dataclass
@@ -58,10 +61,15 @@ class ObsidianTemplate:
 
 
 class TemplatesSynchronizer:
-    def __init__(self, config_handler: ConfigHandler, obsidian_note_finder: ObsidianNoteFinder):
+    def __init__(
+        self,
+        config_handler: ConfigHandler,
+        obsidian_note_builder: ObsidianNoteBuilder,
+        obsidian_note_parser: ObsidianNoteParser,
+    ):
         self._config_handler = config_handler
-        self._obsidian_note_finder = obsidian_note_finder
-        self._markdown_converter = HTMLToMarkdown()
+        self._obsidian_note_builder = obsidian_note_builder
+        self._obsidian_note_parser = obsidian_note_parser
 
     def sync_note_templates(self):
         try:
@@ -72,7 +80,9 @@ class TemplatesSynchronizer:
 
             for model_id, template in obsidian_templates.items():
                 if model_id not in anki_templates:
-                    template.path.unlink()
+                    move_obsidian_note_to_trash_folder(
+                        obsidian_vault=self._config_handler.vault_path, obsidian_note_path=template.path
+                    )
                     model_ids_to_delete.append(model_id)
 
             for model_id in model_ids_to_delete:
@@ -85,7 +95,11 @@ class TemplatesSynchronizer:
                     self._merge_templates(anki_template=template, obsidian_template=obsidian_templates[model_id])
 
         except Exception as e:
-            showCritical(format_add_on_message(f"Error syncing note templates: {str(e)}"))
+            logging.exception("Failed to sync note templates.")
+            showCritical(
+                text=format_add_on_message(f"Error syncing note templates: {str(e)}"),
+                title=ADD_ON_NAME,
+            )
         tooltip(format_add_on_message("Templates synced successfully."))
 
     @staticmethod
@@ -101,7 +115,7 @@ class TemplatesSynchronizer:
         return templates
 
     def _get_all_obsidian_note_templates(self) -> Dict[int, ObsidianTemplate]:
-        templates_folder_path = self._get_templates_folder_path()
+        templates_folder_path = get_templates_folder_path(obsidian_vault=self._config_handler.vault_path)
         templates_folder_path.mkdir(parents=True, exist_ok=True)
 
         templates = {}
@@ -110,13 +124,14 @@ class TemplatesSynchronizer:
             if is_markdown_file(template_file_path):
                 with open(template_file_path, "r", encoding="utf-8") as f:
                     template_content = f.read()
-                if self._obsidian_note_finder.is_anki_note_in_obsidian(note_content=template_content):
+                if self._obsidian_note_parser.is_anki_note_in_obsidian(note_content=template_content):
                     template_id = None
                     try:
-                        template_id = self._obsidian_note_finder.get_template_id_from_anki_note_in_obsidian_content(
+                        template_id = self._obsidian_note_parser.get_model_id_from_obsidian_note_content(
                             content=template_content
                         )
                     except Exception:
+                        logging.exception(f"Failed to sync note template {template_file_path}.")
                         showCritical(
                             format_add_on_message(
                                 f"Failed to extract value for property {MODEL_ID_PROPERTY_NAME}"
@@ -144,33 +159,27 @@ class TemplatesSynchronizer:
 
     def _create_anki_template_in_obsidian(self, template: AnkiTemplate):
         template_content = self._convert_to_obsidian_template_content(anki_template=template)
-        template_path = self._get_templates_folder_path() / f"{template.model_name}.md"
+        templates_folder_path = get_templates_folder_path(obsidian_vault=self._config_handler.vault_path)
+        template_path = templates_folder_path / f"{template.model_name}.md"
 
         with open(template_path, "w", encoding="utf-8") as f:
             f.write(template_content)
 
     def _convert_to_obsidian_template_content(self, anki_template: AnkiTemplate):
-        obsidian_template = TEMPLATES_PROPERTIES_TEMPLATE.format(model_id=anki_template.model_id)
-        html_header_tag = self._config_handler.field_name_header_tag
+        obsidian_template = NOTE_PROPERTIES_BASE_STRING.format(
+            model_id=anki_template.model_id,
+            note_id=0,
+            tags="",
+            date_modified=f"\"{{{{date:{TEMPLATE_DATE_FORMAT} {TEMPLATE_TIME_FORMAT}}}}}\"",
+            date_synced="",
+            anki_note_identifier_property_value=self._config_handler.anki_note_in_obsidian_property_value,
+        )
 
         for field in anki_template.fields:
-            html_title = f"<{html_header_tag}>{field}</{html_header_tag}>"
-            markdown_title = self._markdown_converter.convert(html=html_title)
-            obsidian_template += f"\n{markdown_title}\n"
+            title = self._obsidian_note_builder.build_field_title(field_name=field)
+            obsidian_template += f"{title}\n\n\n"
 
         return obsidian_template
-
-    def _get_templates_folder_path(self) -> Path:
-        templates_json_path = self._config_handler.vault_path / ".obsidian" / "templates.json"
-
-        if not templates_json_path.is_file():
-            raise RuntimeError("The templates core plugin is not enabled.")
-
-        with open(templates_json_path, "r") as f:
-            templates_json = json.load(f)
-            templates_path = self._config_handler.vault_path / templates_json[TEMPLATES_FOLDER_JSON_FIELD_NAME]
-
-        return templates_path
 
     @staticmethod
     def _extract_note_templates_data_to_file_for_development(templates):

@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from pathlib import Path
 
 # Obsidian Sync Add-on for Anki
 #
@@ -30,14 +29,17 @@ from pathlib import Path
 #
 # Any modifications to this file must keep this entire header intact.
 
-from aqt import gui_hooks, mw
+from aqt import mw
 from aqt.qt import QAction, QKeySequence, QApplication
-from aqt.utils import showCritical, showInfo, qconnect, tooltip
+from aqt.utils import showCritical, qconnect
 
+from .constants import ADD_ON_NAME
+from .note_builders.obsidian_note_builder import ObsidianNoteBuilder
+from .markup_converter import MarkupConverter
 from .utils import format_add_on_message
-from .obsidian_note_finder import ObsidianNoteFinder
-from .notes_synchronizer import NotesSynchronizer
-from .templates_synchronizer import TemplatesSynchronizer
+from .obsidian_note_parser import ObsidianNoteParser
+from .synchronizers.notes_synchronizer import NotesSynchronizer
+from .synchronizers.templates_synchronizer import TemplatesSynchronizer
 from .config_handler import ConfigHandler
 
 
@@ -48,11 +50,24 @@ class AnkiAddon:
 
     def __init__(self):
         self._config_handler = ConfigHandler()
-        obsidian_note_finder = ObsidianNoteFinder(config_handler=self._config_handler)
-        self._templates_synchronizer = TemplatesSynchronizer(
-            config_handler=self._config_handler, obsidian_note_finder=obsidian_note_finder
+        markup_converter = MarkupConverter()
+        obsidian_note_builder = ObsidianNoteBuilder(
+            config_handler=self._config_handler, markup_converter=markup_converter
         )
-        self._notes_synchronizer = NotesSynchronizer(config_handler=self._config_handler)
+        obsidian_note_parser = ObsidianNoteParser(
+            config_handler=self._config_handler,
+            note_converter=markup_converter,
+        )
+        self._templates_synchronizer = TemplatesSynchronizer(
+            config_handler=self._config_handler,
+            obsidian_note_builder=obsidian_note_builder,
+            obsidian_note_parser=obsidian_note_parser,
+        )
+        self._notes_synchronizer = NotesSynchronizer(
+            config_handler=self._config_handler,
+            obsidian_note_builder=obsidian_note_builder,
+            obsidian_note_parser=obsidian_note_parser,
+        )
         self._add_menu_item()
 
     def _add_menu_item(self):
@@ -90,14 +105,17 @@ class AnkiAddon:
 
         if self._check_can_sync():
             self._templates_synchronizer.sync_note_templates()
-            # self._notes_synchronizer.sync_notes()
+            self._notes_synchronizer.sync_notes()
 
     def _check_can_sync(self):
         open_editing_windows = self._get_open_editing_anki_windows()
         can_sync = True
         if open_editing_windows:
             message = "Please close the following windows before syncing:\n\n" + "\n".join(open_editing_windows)
-            showCritical(format_add_on_message(message=message))
+            showCritical(
+                text=format_add_on_message(message=message),
+                title=ADD_ON_NAME
+            )
             can_sync = False
         return can_sync
 
