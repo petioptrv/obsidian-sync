@@ -1,4 +1,5 @@
 import logging
+import os
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -8,6 +9,7 @@ from aqt import mw
 from anki.notes import Note as ANote
 from aqt.utils import showCritical
 
+from .constants import DEFAULT_NODE_ID_FOR_NEW_OBSIDIAN_CARDS
 from .note_builders.obsidian_note_builder import ObsidianNoteBuilder
 from .config_handler import ConfigHandler
 from .constants import ADD_ON_NAME, NOTE_PROPERTIES_BASE_STRING, DATETIME_FORMAT, MAX_OBSIDIAN_NOTE_FILE_NAME_LENGTH
@@ -54,25 +56,38 @@ class AnkiNote(Note):
             note[field_name] = field_value
 
         mw.col.add_note(note=note, deck_id=deck_id)
+        mw.col.update_note(note=note)
 
-        note = mw.col.get_note(id=note.id)
         anki_note = AnkiNote.from_anki_note(note=note)
 
         obsidian_note.update_with_anki_note(anki_note=anki_note, change_log=change_log)  # update note ID in Obsidian
 
-        change_log.log_change(change=f"Created Anki note from obsidian note {obsidian_note.file_path}.")
+        change_log.log_change(change=f"Created Anki note from obsidian note {obsidian_note.file_path.name}.")
 
         return anki_note
 
     def update_with_obsidian_note(self, obsidian_note: "ObsidianNote", changes_log: ChangeLogBase):
-        raise NotImplementedError
+        if obsidian_note.updated_since_last_sync:
+            for i in range(len(self.fields)):
+                self.fields[i] = obsidian_note.fields[i]
+            self._update_anki_note()
+            changes_log.log_change(change=f"Updated Anki note with change in {obsidian_note.file_path.name}.")
+
+    def _update_anki_note(self):
+        note = mw.col.get_note(id=self.note_id)
+        field_names = get_field_names_from_anki_model_id(id=self.model_id)
+
+        for field_name, field_value in zip(field_names, self.fields):
+            note[field_name] = field_value
+
+        note.flush()
+        mw.col.update_note(note=note)
 
 
 @dataclass
 class ObsidianNote(Note):
     synced_dt: datetime
     file_path: Path
-    _obsidian_note_parser: ObsidianNoteParser
     _obsidian_note_builder: ObsidianNoteBuilder
     _config_handler: ConfigHandler
 
@@ -116,14 +131,44 @@ class ObsidianNote(Note):
         return note
 
     @classmethod
-    def create_from_anki_note(cls, anki_note: AnkiNote, change_log: ChangeLogBase):
-        pass
-        # raise NotImplementedError
+    def create_note_file_from_anki_note(
+        cls,
+        config_handler: ConfigHandler,
+        obsidian_note_builder: ObsidianNoteBuilder,
+        anki_note: AnkiNote,
+        change_log: ChangeLogBase,
+    ):
+        folder_path = obsidian_note_builder.build_obsidian_note_folder_path_from_deck(deck=anki_note.deck)
+        file_name = cls.build_obsidian_note_file_name_from_anki_note(anki_note=anki_note)
+        file_path = folder_path / file_name
+        obsidian_note = ObsidianNote(
+            note_id=anki_note.note_id,
+            model_id=anki_note.model_id,
+            fields=anki_note.fields,
+            tags=anki_note.tags,
+            deck=anki_note.deck,
+            modified_dt=anki_note.modified_dt,
+            synced_dt=datetime.now(),
+            file_path=file_path,
+            _obsidian_note_builder=obsidian_note_builder,
+            _config_handler=config_handler,
+        )
+        obsidian_note._store_to_file()
+        change_log.log_change(change=f"{obsidian_note.file_path} was created.")
+
+    @classmethod
+    def build_obsidian_note_file_name_from_anki_note(cls, anki_note: AnkiNote) -> str:
+        first_field = anki_note.fields[0][:MAX_OBSIDIAN_NOTE_FILE_NAME_LENGTH]
+        first_field = first_field.replace(os.path.sep, "")
+        first_field = first_field.replace(".", "")
+        max_file_name_length = MAX_OBSIDIAN_NOTE_FILE_NAME_LENGTH
+        suffix = ".md"
+        name = first_field[:(max_file_name_length - len(suffix))] + suffix
+        return name
 
     def update_with_anki_note(self, anki_note: AnkiNote, change_log: ChangeLogBase):
-        if anki_note.modified_dt > self.modified_dt:
+        if self.note_id == DEFAULT_NODE_ID_FOR_NEW_OBSIDIAN_CARDS or anki_note.modified_dt > self.modified_dt:
             if self.updated_since_last_sync:
-                # todo: add git-style diff window
                 self._perform_update_with_anki_note(anki_note=anki_note, change_log=change_log)
             else:
                 self._perform_update_with_anki_note(anki_note=anki_note, change_log=change_log)
@@ -152,7 +197,6 @@ class ObsidianNote(Note):
             modified_dt=obsidian_note_parser.get_modified_dt(content=note_content),
             synced_dt=obsidian_note_parser.get_synced_dt(content=note_content),
             file_path=note_path,
-            _obsidian_note_parser=obsidian_note_parser,
             _obsidian_note_builder=obsidian_note_builder,
             _config_handler=config_handler,
         )
@@ -178,15 +222,9 @@ class ObsidianNote(Note):
         self._store_to_file()
 
     def _build_note_path_from_deck(self) -> Path:
-        note_folder_path = self._obsidian_note_parser.build_obsidian_note_folder_path_from_deck(deck=self.deck)
+        note_folder_path = self._obsidian_note_builder.build_obsidian_note_folder_path_from_deck(deck=self.deck)
         note_path_from_deck = note_folder_path / self.file_path.name
         return note_path_from_deck
-
-    def _build_note_file_name(self) -> str:
-        max_file_name_length = MAX_OBSIDIAN_NOTE_FILE_NAME_LENGTH
-        suffix = ".md"
-        name = self.fields[0][:(max_file_name_length - len(suffix))] + suffix
-        return name
 
     def _store_to_file(self):
         field_names = get_field_names_from_anki_model_id(id=self.model_id)

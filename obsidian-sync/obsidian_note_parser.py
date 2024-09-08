@@ -93,11 +93,6 @@ class ObsidianNoteParser:
             synced_dt = datetime.now()
         return synced_dt
 
-    def build_obsidian_note_folder_path_from_deck(self, deck: str) -> Path:
-        relative_path_str = deck.replace(DECK_NAME_SEPARATOR, os.path.sep)
-        relative_path = Path(self._config_handler.anki_folder / relative_path_str)
-        return relative_path
-
     def _get_note_property(self, property_name: str, content: str) -> any:
         properties_content = self._get_note_properties(content=content)
 

@@ -46,8 +46,6 @@ from .config_handler import ConfigHandler
 class AnkiAddon:
     """Anki add-on composition root."""
 
-    # todo: add button to open note in Obsidian
-
     def __init__(self):
         self._config_handler = ConfigHandler()
         markup_converter = MarkupConverter()
@@ -68,40 +66,31 @@ class AnkiAddon:
             obsidian_note_builder=obsidian_note_builder,
             obsidian_note_parser=obsidian_note_parser,
         )
-        self._add_menu_item()
+        self._add_menu_items()
 
-    def _add_menu_item(self):
+    def _add_menu_items(self):
         action = QAction("Obsidian Sync", mw)
         shortcut = QKeySequence("Ctrl+Y")
         action.setShortcut(shortcut)
         qconnect(action.triggered, self._sync_with_obsidian)
         mw.form.menuTools.addAction(action)
+        # todo: add option to open Obsidian note from selected Anki note (both shown on the review screen and if selected in the browse window)
 
     def _sync_with_obsidian(self):
-        # todo: ensure that cards and notes that do not need to be updated are not updated (this will affect the last update ts)
-
-        # todo: add option to only transfer cards from Obsidian to Anki if their parents are already learned to a configurable level
-
         # todo: maybe add option to specify the Obsidian vault folder in which to use for Anki syncing (?)
 
         # todo: make note linking be configurable via regex
         # todo: it should default to "[Link Title|nidxxxxxxxxxxxxx]" in Anki to `LinkTitle: [[note-path]]` in Obsidian
 
+        # todo: ensure changing note path is reflected in the other app
 
-        # todo: get all Obsidian notes created from templates but that do not yet have associated nid
-        # todo: get {nid: note} dict of all Anki notes
-        # todo: for the superset of notes
-        #     todo: if it does not exist in Obsidian, create it
-        #         todo: convert Obsidian links between notes into Anki card links based on nid
-        #     todo: if it does not exist in Anki, create it
-        #         todo: convert Anki card links based on nid into Obsidian links between notes
-        #     todo: if it exists in both, check to see if they have the same content AND the same path (deck)
-        #     todo: if not
-        #         todo: add to list of conflicts
+        # ENHANCEMENTS
+
         # todo: for conflicting notes
         #     todo: explore git-style diff conflict resolver in Python
         #     todo: else, interactive choice of which one to keep, with option to apply to all remaining: keep most recent/keep Anki/keep Obsidian
-        # todo: output visual, collapsible report on the changes
+
+        # todo: add option to only transfer cards from Obsidian to Anki if their parents are already learned to a configurable level
 
         if self._check_can_sync():
             self._templates_synchronizer.sync_note_templates()

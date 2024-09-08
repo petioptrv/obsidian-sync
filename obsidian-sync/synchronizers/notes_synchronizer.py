@@ -31,6 +31,7 @@
 
 import json
 import os
+import logging
 from pathlib import Path
 from typing import Dict
 
@@ -71,7 +72,13 @@ class NotesSynchronizer:
                     obsidian_note.update_with_anki_note(anki_note=anki_note, change_log=change_log)
                     anki_note.update_with_obsidian_note(obsidian_note=obsidian_note, changes_log=change_log)
                 else:
-                    ObsidianNote.create_from_anki_note(anki_note=anki_note, change_log=change_log)
+                    # todo: check if note file is in Obsidian trash folder and delete Anki note if so
+                    ObsidianNote.create_note_file_from_anki_note(
+                        config_handler=self._config_handler,
+                        obsidian_note_builder=self._obsidian_note_builder,
+                        anki_note=anki_note,
+                        change_log=change_log,
+                    )
 
             while len(obsidian_notes) != 0:
                 note_id, obsidian_note = obsidian_notes.popitem()
@@ -84,6 +91,7 @@ class NotesSynchronizer:
 
             tooltip(format_add_on_message("Notes synced successfully."))
         except Exception as e:
+            logging.exception("Failed to sync notes.")
             showCritical(
                 text=format_add_on_message(f"Obsidian sync error: {str(e)}"),
                 title=ADD_ON_NAME,
