@@ -1,5 +1,7 @@
 import json
+import re
 from pathlib import Path
+from string import ascii_letters, digits
 from typing import List
 
 from aqt import mw
@@ -41,6 +43,13 @@ def get_field_names_from_anki_model_id(id: int) -> List[str]:
     model = mw.col.models.get(id=id)
     field_names = mw.col.models.field_names(model)
     return field_names
+
+
+def clean_string_for_file_name(string: str) -> str:
+    cloze_pattern = r"\{\{c\d+::(.*?)\}\}"
+    string = re.sub(cloze_pattern, r"\1", string)  # remove cloze markers
+    valid_chars = "-_.() %s%s" % (ascii_letters, digits)
+    return "".join(c for c in string if c in valid_chars)
 
 
 def delete_obsidian_note(obsidian_vault: Path, obsidian_note_path: Path):

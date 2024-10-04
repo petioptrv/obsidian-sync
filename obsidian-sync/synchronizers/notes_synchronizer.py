@@ -40,8 +40,8 @@ from aqt.utils import showCritical, tooltip
 
 from ..change_log import ChangeLogBase
 from ..note_types import AnkiNote, ObsidianNote
-from ..note_builders.obsidian_note_builder import ObsidianNoteBuilder
-from ..constants import DEFAULT_NODE_ID_FOR_NEW_OBSIDIAN_CARDS, ADD_ON_NAME
+from ..builders.obsidian_note_builder import ObsidianNoteBuilder
+from ..constants import DEFAULT_NODE_ID_FOR_NEW_OBSIDIAN_NOTES, ADD_ON_NAME
 from ..obsidian_note_parser import ObsidianNoteParser
 from ..config_handler import ConfigHandler
 from ..utils import format_add_on_message, get_templates_folder_path
@@ -69,8 +69,10 @@ class NotesSynchronizer:
                 note_id, anki_note = anki_notes.popitem()
                 if note_id in obsidian_notes:
                     obsidian_note = obsidian_notes.pop(note_id)
-                    obsidian_note.update_with_anki_note(anki_note=anki_note, change_log=change_log)
-                    anki_note.update_with_obsidian_note(obsidian_note=obsidian_note, changes_log=change_log)
+                    obsidian_note.update_with_anki_note(anki_note=anki_note, change_log=change_log, print_to_log=True)
+                    anki_note.update_with_obsidian_note(
+                        obsidian_note=obsidian_note, changes_log=change_log, print_to_log=True
+                    )
                 else:
                     # todo: check if note file is in Obsidian trash folder and delete Anki note if so
                     ObsidianNote.create_note_file_from_anki_note(
@@ -82,7 +84,7 @@ class NotesSynchronizer:
 
             while len(obsidian_notes) != 0:
                 note_id, obsidian_note = obsidian_notes.popitem()
-                if note_id == DEFAULT_NODE_ID_FOR_NEW_OBSIDIAN_CARDS:
+                if note_id == DEFAULT_NODE_ID_FOR_NEW_OBSIDIAN_NOTES:
                     AnkiNote.create_in_anki_from_obsidian(obsidian_note=obsidian_note, change_log=change_log)
                 else:
                     obsidian_note.delete_file(change_log=change_log)

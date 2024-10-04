@@ -46,12 +46,13 @@ from .constants import (
 class ConfigHandler:
     def __init__(self):
         gui_hooks.addon_config_editor_will_update_json.append(self._on_config_update)
-        config = mw.addonManager.getConfig(__name__)
-        self._on_config_update(json.dumps(config), __name__)
+        self._config = mw.addonManager.getConfig(__name__)
+        self._on_config_update(json.dumps(self._config), __name__)
 
     @property
     def config(self):
-        config = mw.addonManager.getConfig(__name__)
+        config = mw.addonManager.getConfig(__name__) or self._config
+        self._config = config or self._config
         return config
 
     @property

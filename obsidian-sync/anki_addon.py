@@ -34,7 +34,7 @@ from aqt.qt import QAction, QKeySequence, QApplication
 from aqt.utils import showCritical, qconnect
 
 from .constants import ADD_ON_NAME
-from .note_builders.obsidian_note_builder import ObsidianNoteBuilder
+from .builders.obsidian_note_builder import ObsidianNoteBuilder
 from .markup_converter import MarkupConverter
 from .utils import format_add_on_message
 from .obsidian_note_parser import ObsidianNoteParser

@@ -53,8 +53,8 @@ class ObsidianNoteParser:
         )
         return re.match(pattern, note_content) is not None
 
-    def parse_deck_from_obsidian_note_path(self, note_path: Path) -> str:
-        relative_path = Path(os.path.relpath(path=note_path, start=self._config_handler.anki_folder))
+    def parse_deck_from_obsidian_note_path(self, file_path: Path) -> str:
+        relative_path = Path(os.path.relpath(path=file_path, start=self._config_handler.anki_folder))
         deck_name = str(relative_path.parent).replace(os.path.sep, DECK_NAME_SEPARATOR)
         return deck_name
 

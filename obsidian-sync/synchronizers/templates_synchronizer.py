@@ -38,7 +38,7 @@ from typing import Dict, List
 from aqt import mw
 from aqt.utils import showCritical, tooltip
 
-from ..note_builders.obsidian_note_builder import ObsidianNoteBuilder
+from ..builders.obsidian_note_builder import ObsidianNoteBuilder
 from ..obsidian_note_parser import ObsidianNoteParser
 from ..utils import format_add_on_message, is_markdown_file, get_templates_folder_path, \
     delete_obsidian_note
