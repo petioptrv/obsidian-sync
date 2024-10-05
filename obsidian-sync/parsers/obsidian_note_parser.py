@@ -31,7 +31,7 @@ import os
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import List, Set
+from typing import List, Set, Tuple
 
 from ..utils import get_field_title_format_string
 from ..constants import ANKI_NOTE_IDENTIFIER_PROPERTY_NAME, MODEL_ID_PROPERTY_NAME, NOTE_ID_PROPERTY_NAME, \
@@ -66,10 +66,16 @@ class ObsidianNoteParser:
         note_id = self._get_note_property(property_name=NOTE_ID_PROPERTY_NAME, content=content)
         return int(note_id)
 
-    def get_fields_from_obsidian_note_content(self, content: str) -> List[str]:
+    def get_field_names_text_and_images_from_obsidian_note_content(
+        self, content: str
+    ) -> List[Tuple[str, str, List[Path]]]:
         note_body = self._get_note_body(content=content)
-        fields = self._extract_paragraphs_after_headers(note_body=note_body)
-        return fields
+        field_names_and_text = self._extract_headers_and_paragraphs(note_body=note_body)
+        field_names_text_and_images = [
+            (name, text, self._extract_obsidian_image_paths_from_field_text(field_text=text))
+            for name, text in field_names_and_text
+        ]
+        return field_names_text_and_images
 
     def get_tags_from_obsidian_note_content(self, content: str) -> Set[str]:
         tags = self._get_note_property(property_name=TAGS_PROPERTY_NAME, content=content)
@@ -122,11 +128,11 @@ class ObsidianNoteParser:
         match = re.search(pattern=pattern, string=content, flags=re.DOTALL)
         return match.group(2)
 
-    def _extract_paragraphs_after_headers(self, note_body: str) -> List[str]:
+    def _extract_headers_and_paragraphs(self, note_body: str) -> List[Tuple[str, str]]:
         pattern = self._build_field_title_matcher()
         pattern += f"([\s\S]*?)(?={ANKI_NOTE_FIELD_IDENTIFIER_COMMENT}|\Z)"
         matches = re.findall(pattern, note_body, re.DOTALL)
-        result = [para.strip() if para else "" for header, para in matches]
+        result = [(header.strip(), paragraph.strip()) if paragraph else "" for header, paragraph in matches]
         return result
 
     def _build_field_title_matcher(self) -> str:
@@ -135,3 +141,6 @@ class ObsidianNoteParser:
         )
         pattern = field_format_string.format(field="(.*?)")
         return pattern
+
+    def _extract_obsidian_image_paths_from_field_text(self, field_text: str) -> List[Path]:
+        return []

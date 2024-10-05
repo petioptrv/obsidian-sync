@@ -3,7 +3,7 @@ import os
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Set, Optional
+from typing import Set, Optional, List
 
 from aqt import mw
 from anki.notes import Note as ANote
@@ -22,16 +22,17 @@ from .utils import is_markdown_file, format_add_on_message, delete_obsidian_note
 
 @dataclass
 class NoteImage:
-    anki_path: Path
-    obsidian_path: Path
+    anki_path: Optional[Path]
+    obsidian_path: Optional[Path]
 
     # def sync_image(self, ):
 
 
 @dataclass
 class NoteField:
-    field_text: str
-    field_images: [NoteImage]
+    name: str
+    text: str
+    images: [NoteImage]
 
 
 @dataclass
@@ -47,22 +48,34 @@ class Note:
 @dataclass
 class AnkiNote(Note):
     @classmethod
-    def get_field_names(cls, model_id: int) -> [str]:
-        model = mw.col.models.get(id=model_id)
-        field_names = mw.col.models.field_names(model)
-        return field_names
-
-    @classmethod
     def from_anki_note(cls, note: ANote) -> "AnkiNote":
+        field_names = cls.get_field_names(model_id=note.mid)
+        fields = [
+            NoteField(
+                name=name,
+                text=text,
+                images=cls._extract_anki_image_paths_from_field_text(field_text=text),
+            ) for name, text in zip(field_names, note.fields)
+        ]
         note = AnkiNote(
             note_id=note.id,
             model_id=note.mid,
-            fields=note.fields,
+            fields=fields,
             tags=set(note.tags),
             deck=mw.col.decks.name(note.cards()[0].did),
             modified_dt=datetime.fromtimestamp(note.mod),
         )
         return note
+
+    @classmethod
+    def _extract_anki_image_paths_from_field_text(cls, field_text: str) -> List[Path]:
+        return []
+
+    @classmethod
+    def get_field_names(cls, model_id: int) -> [str]:
+        model = mw.col.models.get(id=model_id)
+        field_names = mw.col.models.field_names(model)
+        return field_names
 
     @classmethod
     def create_in_anki_from_obsidian(cls, obsidian_note: "ObsidianNote", change_log: ChangeLogBase) -> "AnkiNote":
@@ -92,8 +105,7 @@ class AnkiNote(Note):
 
     def update_with_obsidian_note(self, obsidian_note: "ObsidianNote", changes_log: ChangeLogBase, print_to_log: bool):
         if obsidian_note.updated_since_last_sync:
-            for i in range(len(self.fields)):
-                self.fields[i] = obsidian_note.fields[i]
+            self.fields = obsidian_note.fields
             self._update_anki_note()
             self.modified_dt = datetime.now()
             obsidian_note.update_with_anki_note(anki_note=self, change_log=changes_log, print_to_log=False)
@@ -108,10 +120,9 @@ class AnkiNote(Note):
 
     def _update_anki_note(self):
         note = mw.col.get_note(id=self.note_id)
-        field_names = self.get_field_names(model_id=self.model_id)
 
-        for field_name, field_value in zip(field_names, self.fields):
-            note[field_name] = field_value
+        for field in self.fields:
+            note[field.name] = field.text
 
         note.flush()
 
@@ -218,7 +229,7 @@ class ObsidianNote(Note):
 
     @classmethod
     def build_obsidian_note_file_name_from_anki_note(cls, anki_note: AnkiNote) -> str:
-        first_field = anki_note.fields[0][:MAX_OBSIDIAN_NOTE_FILE_NAME_LENGTH]
+        first_field = anki_note.fields[0].text[:MAX_OBSIDIAN_NOTE_FILE_NAME_LENGTH]
         first_field_clean = md(html=first_field)
         first_field_clean = clean_string_for_file_name(string=first_field_clean)
         max_file_name_length = MAX_OBSIDIAN_NOTE_FILE_NAME_LENGTH
@@ -258,10 +269,22 @@ class ObsidianNote(Note):
         note_content: str,
     ) -> "ObsidianNote":
         deck = obsidian_note_parser.parse_deck_from_obsidian_note_path(file_path=note_path.absolute_path)
+        fields = [
+            NoteField(
+                name=name,
+                text=text,
+                images=[
+                    NoteImage(anki_path=None, obsidian_path=image_path)
+                    for image_path in image_paths
+                ]
+            ) for name, text, image_paths in obsidian_note_parser.get_field_names_text_and_images_from_obsidian_note_content(
+                content=note_content
+            )
+        ]
         note = ObsidianNote(
             note_id=obsidian_note_parser.get_note_id_from_obsidian_note_content(content=note_content),
             model_id=obsidian_note_parser.get_model_id_from_obsidian_note_content(content=note_content),
-            fields=obsidian_note_parser.get_fields_from_obsidian_note_content(content=note_content),
+            fields=fields,
             tags=obsidian_note_parser.get_tags_from_obsidian_note_content(content=note_content),
             deck=deck,
             modified_dt=obsidian_note_parser.get_modified_dt(content=note_content),

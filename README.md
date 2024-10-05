@@ -2,6 +2,10 @@
 
 Anki add-on for syncing with Obsidian.
 
+## TO-DO
+
+- [ ] Update associated notes on model update (e.g. changing field names).
+
 ## Functionality
 
 The main goal of this add-on is to keep Anki and Obsidian notes in sync, with the
