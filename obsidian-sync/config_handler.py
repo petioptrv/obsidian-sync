@@ -39,7 +39,8 @@ from aqt.qt import QFileDialog
 from .utils import format_add_on_message, get_obsidian_trash_option, get_obsidian_trash_folder
 from .constants import (
     ADD_ON_NAME, ADD_ON_ID, CONF_VAULT_PATH, CONF_FIELD_NAME_HEADER_TAG, \
-    CONF_ANKI_NOTE_IN_OBSIDIAN_PROPERTY_VALUE, CONF_ANKI_FOLDER, OBSIDIAN_LOCAL_TRASH_OPTION_VALUE
+    CONF_ANKI_NOTE_IN_OBSIDIAN_PROPERTY_VALUE, CONF_ANKI_FOLDER, OBSIDIAN_LOCAL_TRASH_OPTION_VALUE,
+    OBSIDIAN_SETTINGS_FOLDER, OBSIDIAN_TEMPLATES_SETTINGS_FILE, TEMPLATES_FOLDER_JSON_FIELD_NAME
 )
 
 
@@ -56,28 +57,45 @@ class ConfigHandler:
         return config
 
     @property
-    def vault_path(self) -> Path:
+    def obsidian_vault_path(self) -> Path:
         path = Path(self.config[CONF_VAULT_PATH])
         return path
 
     @property
-    def anki_folder(self) -> Path:
+    def obsidian_templates_folder_path(self) -> Path:
+        templates_json_path = self.obsidian_vault_path / OBSIDIAN_SETTINGS_FOLDER / OBSIDIAN_TEMPLATES_SETTINGS_FILE
+
+        if not templates_json_path.is_file():
+            raise RuntimeError("The templates core plugin is not enabled.")
+
+        with open(templates_json_path, "r") as f:
+            templates_json = json.load(f)
+            templates_path = self.obsidian_vault_path / templates_json[TEMPLATES_FOLDER_JSON_FIELD_NAME]
+
+        return templates_path
+
+    @property
+    def anki_folder_in_obsidian(self) -> Path:
         anki_folder = self.config[CONF_ANKI_FOLDER]
         if anki_folder:
-            path = Path(self.vault_path / self.config[CONF_ANKI_FOLDER])
+            path = Path(self.obsidian_vault_path / self.config[CONF_ANKI_FOLDER])
         else:
-            path = self.vault_path
+            path = self.obsidian_vault_path
         return path
 
     @property
     def obsidian_trash_folder(self) -> Optional[Path]:
         trash_folder = None
-        trash_option = get_obsidian_trash_option(obsidian_vault=self.vault_path)
+        trash_option = get_obsidian_trash_option(obsidian_vault=self.obsidian_vault_path)
 
         if trash_option == OBSIDIAN_LOCAL_TRASH_OPTION_VALUE:
-            trash_folder = get_obsidian_trash_folder(obsidian_vault=self.vault_path)
+            trash_folder = get_obsidian_trash_folder(obsidian_vault=self.obsidian_vault_path)
 
         return trash_folder
+
+    # @property
+    # def obsidian_attachments_folder(self) -> Path:
+
 
     @property
     def anki_note_in_obsidian_property_value(self) -> str:

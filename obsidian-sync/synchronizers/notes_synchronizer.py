@@ -44,7 +44,7 @@ from ..builders.obsidian_note_builder import ObsidianNoteBuilder
 from ..constants import DEFAULT_NODE_ID_FOR_NEW_OBSIDIAN_NOTES, ADD_ON_NAME
 from ..parsers.obsidian_note_parser import ObsidianNoteParser
 from ..config_handler import ConfigHandler
-from ..utils import format_add_on_message, get_templates_folder_path, get_obsidian_trash_option
+from ..utils import format_add_on_message
 
 
 class NotesSynchronizer:
@@ -114,10 +114,10 @@ class NotesSynchronizer:
 
     def _get_all_obsidian_notes(self) -> Dict[int, ObsidianNote]:
         notes = {}
-        templates_folder_path = get_templates_folder_path(obsidian_vault=self._config_handler.vault_path)
+        templates_folder_path = self._config_handler.obsidian_templates_folder_path
         trash_path = self._config_handler.obsidian_trash_folder
 
-        for root, dirs, files in os.walk(self._config_handler.anki_folder):
+        for root, dirs, files in os.walk(self._config_handler.anki_folder_in_obsidian):
             if Path(root) in [templates_folder_path, trash_path]:
                 continue
             for file in files:

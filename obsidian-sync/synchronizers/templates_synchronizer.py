@@ -40,8 +40,7 @@ from aqt.utils import showCritical, tooltip
 
 from ..builders.obsidian_note_builder import ObsidianNoteBuilder
 from ..parsers.obsidian_note_parser import ObsidianNoteParser
-from ..utils import format_add_on_message, is_markdown_file, get_templates_folder_path, \
-    delete_obsidian_note
+from ..utils import format_add_on_message, is_markdown_file, delete_obsidian_note
 from ..constants import MODEL_ID_PROPERTY_NAME, TEMPLATE_DATE_FORMAT, TEMPLATE_TIME_FORMAT, \
     ADD_ON_NAME, NOTE_PROPERTIES_BASE_STRING
 from ..config_handler import ConfigHandler
@@ -81,7 +80,7 @@ class TemplatesSynchronizer:
             for model_id, template in obsidian_templates.items():
                 if model_id not in anki_templates:
                     delete_obsidian_note(
-                        obsidian_vault=self._config_handler.vault_path, obsidian_note_path=template.path
+                        obsidian_vault=self._config_handler.obsidian_vault_path, obsidian_note_path=template.path
                     )
                     model_ids_to_delete.append(model_id)
 
@@ -115,7 +114,7 @@ class TemplatesSynchronizer:
         return templates
 
     def _get_all_obsidian_note_templates(self) -> Dict[int, ObsidianTemplate]:
-        templates_folder_path = get_templates_folder_path(obsidian_vault=self._config_handler.vault_path)
+        templates_folder_path = self._config_handler.obsidian_templates_folder_path
         templates_folder_path.mkdir(parents=True, exist_ok=True)
 
         templates = {}
@@ -159,7 +158,7 @@ class TemplatesSynchronizer:
 
     def _create_anki_template_in_obsidian(self, template: AnkiTemplate):
         template_content = self._convert_to_obsidian_template_content(anki_template=template)
-        templates_folder_path = get_templates_folder_path(obsidian_vault=self._config_handler.vault_path)
+        templates_folder_path = self._config_handler.obsidian_templates_folder_path
         template_path = templates_folder_path / f"{template.model_name}.md"
 
         with open(template_path, "w", encoding="utf-8") as f:

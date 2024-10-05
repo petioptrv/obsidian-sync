@@ -27,5 +27,5 @@ class ObsidianNoteBuilder:
 
     def build_obsidian_note_folder_path_from_deck(self, deck: str) -> Path:
         relative_path = self.build_relative_path_from_deck(deck=deck)
-        path = Path(self._config_handler.anki_folder / relative_path)
+        path = Path(self._config_handler.anki_folder_in_obsidian / relative_path)
         return path

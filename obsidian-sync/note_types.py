@@ -17,15 +17,28 @@ from .change_log import ChangeLogBase
 from .markdown import markdown
 from .markdownify.markdownify import markdownify as md
 from .parsers.obsidian_note_parser import ObsidianNoteParser
-from .utils import is_markdown_file, format_add_on_message, get_field_names_from_anki_model_id, \
-    delete_obsidian_note, clean_string_for_file_name
+from .utils import is_markdown_file, format_add_on_message, delete_obsidian_note, clean_string_for_file_name
+
+
+@dataclass
+class NoteImage:
+    anki_path: Path
+    obsidian_path: Path
+
+    # def sync_image(self, ):
+
+
+@dataclass
+class NoteField:
+    field_text: str
+    field_images: [NoteImage]
 
 
 @dataclass
 class Note:
     note_id: int
     model_id: int
-    fields: [str]
+    fields: [NoteField]
     tags: Set[str]
     deck: str
     modified_dt: datetime
@@ -33,6 +46,12 @@ class Note:
 
 @dataclass
 class AnkiNote(Note):
+    @classmethod
+    def get_field_names(cls, model_id: int) -> [str]:
+        model = mw.col.models.get(id=model_id)
+        field_names = mw.col.models.field_names(model)
+        return field_names
+
     @classmethod
     def from_anki_note(cls, note: ANote) -> "AnkiNote":
         note = AnkiNote(
@@ -48,7 +67,7 @@ class AnkiNote(Note):
     @classmethod
     def create_in_anki_from_obsidian(cls, obsidian_note: "ObsidianNote", change_log: ChangeLogBase) -> "AnkiNote":
         deck_id = mw.col.decks.id(name=obsidian_note.deck)
-        field_names = get_field_names_from_anki_model_id(id=obsidian_note.model_id)
+        field_names = cls.get_field_names(model_id=obsidian_note.model_id)
         model = mw.col.models.get(id=obsidian_note.model_id)
 
         note = ANote(col=mw.col, model=model)
@@ -89,7 +108,7 @@ class AnkiNote(Note):
 
     def _update_anki_note(self):
         note = mw.col.get_note(id=self.note_id)
-        field_names = get_field_names_from_anki_model_id(id=self.model_id)
+        field_names = self.get_field_names(model_id=self.model_id)
 
         for field_name, field_value in zip(field_names, self.fields):
             note[field_name] = field_value
@@ -110,7 +129,7 @@ class ObsidianNotePath:
         note_path = ObsidianNotePath(
             file_name=file_path.name,
             absolute_path=file_path,
-            relative_path=Path(os.path.relpath(path=file_path, start=config_handler.anki_folder)),
+            relative_path=Path(os.path.relpath(path=file_path, start=config_handler.anki_folder_in_obsidian)),
         )
         return note_path
 
@@ -225,7 +244,7 @@ class ObsidianNote(Note):
 
     def delete_file(self, change_log: ChangeLogBase):
         delete_obsidian_note(
-            obsidian_vault=self._config_handler.vault_path, obsidian_note_path=self.note_path.absolute_path
+            obsidian_vault=self._config_handler.obsidian_vault_path, obsidian_note_path=self.note_path.absolute_path
         )
         change_log.log_change(change=f"{self.note_path.relative_path} was deleted.")
 
@@ -301,7 +320,7 @@ class ObsidianNote(Note):
         return note_path_from_deck
 
     def _store_to_file(self):
-        field_names = get_field_names_from_anki_model_id(id=self.model_id)
+        field_names = AnkiNote.get_field_names(model_id=self.model_id)
         obsidian_note_content = NOTE_PROPERTIES_BASE_STRING.format(
             model_id=self.model_id,
             note_id=self.note_id,
