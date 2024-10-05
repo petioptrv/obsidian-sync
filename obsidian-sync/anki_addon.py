@@ -37,7 +37,7 @@ from .constants import ADD_ON_NAME
 from .builders.obsidian_note_builder import ObsidianNoteBuilder
 from .markup_converter import MarkupConverter
 from .utils import format_add_on_message
-from .obsidian_note_parser import ObsidianNoteParser
+from .parsers.obsidian_note_parser import ObsidianNoteParser
 from .synchronizers.notes_synchronizer import NotesSynchronizer
 from .synchronizers.templates_synchronizer import TemplatesSynchronizer
 from .config_handler import ConfigHandler

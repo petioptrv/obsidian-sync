@@ -42,9 +42,9 @@ from ..change_log import ChangeLogBase
 from ..note_types import AnkiNote, ObsidianNote
 from ..builders.obsidian_note_builder import ObsidianNoteBuilder
 from ..constants import DEFAULT_NODE_ID_FOR_NEW_OBSIDIAN_NOTES, ADD_ON_NAME
-from ..obsidian_note_parser import ObsidianNoteParser
+from ..parsers.obsidian_note_parser import ObsidianNoteParser
 from ..config_handler import ConfigHandler
-from ..utils import format_add_on_message, get_templates_folder_path
+from ..utils import format_add_on_message, get_templates_folder_path, get_obsidian_trash_option
 
 
 class NotesSynchronizer:
@@ -62,6 +62,7 @@ class NotesSynchronizer:
         try:
             anki_notes = self._get_all_anki_notes()
             obsidian_notes = self._get_all_obsidian_notes()
+            obsidian_deleted_notes = self._get_all_obsidian_deleted_notes()
 
             change_log = ChangeLogBase.build_log(config_handler=self._config_handler)
 
@@ -74,13 +75,15 @@ class NotesSynchronizer:
                         obsidian_note=obsidian_note, changes_log=change_log, print_to_log=True
                     )
                 else:
-                    # todo: check if note file is in Obsidian trash folder and delete Anki note if so
-                    ObsidianNote.create_note_file_from_anki_note(
-                        config_handler=self._config_handler,
-                        obsidian_note_builder=self._obsidian_note_builder,
-                        anki_note=anki_note,
-                        change_log=change_log,
-                    )
+                    if note_id in obsidian_deleted_notes:
+                        anki_note.delete(change_log=change_log)
+                    else:
+                        ObsidianNote.create_note_file_from_anki_note(
+                            config_handler=self._config_handler,
+                            obsidian_note_builder=self._obsidian_note_builder,
+                            anki_note=anki_note,
+                            change_log=change_log,
+                        )
 
             while len(obsidian_notes) != 0:
                 note_id, obsidian_note = obsidian_notes.popitem()
@@ -112,9 +115,10 @@ class NotesSynchronizer:
     def _get_all_obsidian_notes(self) -> Dict[int, ObsidianNote]:
         notes = {}
         templates_folder_path = get_templates_folder_path(obsidian_vault=self._config_handler.vault_path)
+        trash_path = self._config_handler.obsidian_trash_folder
 
         for root, dirs, files in os.walk(self._config_handler.anki_folder):
-            if Path(root) == templates_folder_path:
+            if Path(root) in [templates_folder_path, trash_path]:
                 continue
             for file in files:
                 file_path = Path(root) / file
@@ -128,6 +132,25 @@ class NotesSynchronizer:
                     notes[obsidian_note.note_id] = obsidian_note
 
         return notes
+
+    def _get_all_obsidian_deleted_notes(self) -> Dict[int, ObsidianNote]:
+        deleted_notes = {}
+        trash_path = self._config_handler.obsidian_trash_folder
+
+        if trash_path is not None:
+            for root, dirs, deleted_files in os.walk(trash_path):
+                for file in deleted_files:
+                    file_path = Path(root) / file
+                    obsidian_note = ObsidianNote.build_from_file(
+                        config_handler=self._config_handler,
+                        obsidian_note_parser=self._obsidian_note_parser,
+                        obsidian_note_builder=self._obsidian_note_builder,
+                        file_path=file_path,
+                    )
+                    if obsidian_note is not None:
+                        deleted_notes[obsidian_note.note_id] = obsidian_note
+
+        return deleted_notes
 
     @staticmethod
     def _store_notes_data_for_testing(notes):

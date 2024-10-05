@@ -16,7 +16,7 @@ from .constants import ADD_ON_NAME, NOTE_PROPERTIES_BASE_STRING, DATETIME_FORMAT
 from .change_log import ChangeLogBase
 from .markdown import markdown
 from .markdownify.markdownify import markdownify as md
-from .obsidian_note_parser import ObsidianNoteParser
+from .parsers.obsidian_note_parser import ObsidianNoteParser
 from .utils import is_markdown_file, format_add_on_message, get_field_names_from_anki_model_id, \
     delete_obsidian_note, clean_string_for_file_name
 
@@ -82,6 +82,10 @@ class AnkiNote(Note):
                 changes_log.log_change(
                     change=f"Updated Anki note {self.note_id} with change in {obsidian_note.note_path.file_name}."
                 )
+
+    def delete(self, change_log: ChangeLogBase):
+        mw.col.remove_notes(note_ids=[self.note_id])
+        change_log.log_change(change=f"Deleted Anki note {self.note_id}.")
 
     def _update_anki_note(self):
         note = mw.col.get_note(id=self.note_id)
@@ -214,12 +218,10 @@ class ObsidianNote(Note):
                 self._perform_update_with_anki_note(
                     anki_note=anki_note, change_log=change_log, print_to_log=print_to_log
                 )
-                # anki_note.update_with_obsidian_note(obsidian_note=self, changes_log=change_log, print_to_log=False)
             else:
                 self._perform_update_with_anki_note(
                     anki_note=anki_note, change_log=change_log, print_to_log=print_to_log
                 )
-                # anki_note.update_with_obsidian_note(obsidian_note=self, changes_log=change_log, print_to_log=False)
 
     def delete_file(self, change_log: ChangeLogBase):
         delete_obsidian_note(

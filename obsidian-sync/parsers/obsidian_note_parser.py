@@ -33,12 +33,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Set
 
-from .utils import get_field_title_format_string
-from .constants import ANKI_NOTE_IDENTIFIER_PROPERTY_NAME, MODEL_ID_PROPERTY_NAME, NOTE_ID_PROPERTY_NAME, \
+from ..utils import get_field_title_format_string
+from ..constants import ANKI_NOTE_IDENTIFIER_PROPERTY_NAME, MODEL_ID_PROPERTY_NAME, NOTE_ID_PROPERTY_NAME, \
     TAGS_PROPERTY_NAME, DATE_MODIFIED_PROPERTY_NAME, DATETIME_FORMAT, ANKI_NOTE_FIELD_IDENTIFIER_COMMENT, \
     DATE_SYNCED_PROPERTY_NAME, DECK_NAME_SEPARATOR
-from .config_handler import ConfigHandler
-from .markup_converter import MarkupConverter
+from ..config_handler import ConfigHandler
+from ..markup_converter import MarkupConverter
 
 
 class ObsidianNoteParser:

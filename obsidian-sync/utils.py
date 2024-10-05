@@ -53,10 +53,7 @@ def clean_string_for_file_name(string: str) -> str:
 
 
 def delete_obsidian_note(obsidian_vault: Path, obsidian_note_path: Path):
-    with open(obsidian_vault / OBSIDIAN_SETTINGS_FOLDER / OBSIDIAN_APP_SETTINGS_FILE, "r") as f:
-        settings = json.load(f)
-
-    trash_option = settings.get(OBSIDIAN_TRASH_OPTION_KEY)
+    trash_option = get_obsidian_trash_option(obsidian_vault=obsidian_vault)
 
     if trash_option is None or trash_option == OBSIDIAN_SYSTEM_TRASH_OPTION_VALUE:
         _move_to_system_trash(obsidian_note_path=obsidian_note_path)
@@ -64,6 +61,23 @@ def delete_obsidian_note(obsidian_vault: Path, obsidian_note_path: Path):
         _move_to_local_trash(obsidian_vault=obsidian_vault, obsidian_note_path=obsidian_note_path)
     elif trash_option == OBSIDIAN_PERMA_DELETE_TRASH_OPTION_VALUE:
         obsidian_note_path.unlink()
+
+
+def get_obsidian_trash_option(obsidian_vault: Path) -> str:
+    with open(obsidian_vault / OBSIDIAN_SETTINGS_FOLDER / OBSIDIAN_APP_SETTINGS_FILE, "r") as f:
+        settings = json.load(f)
+
+    trash_option = settings.get(OBSIDIAN_TRASH_OPTION_KEY)
+
+    return trash_option
+
+
+def get_obsidian_trash_folder(obsidian_vault: Path) -> Path:
+    trash_folder = obsidian_vault / OBSIDIAN_LOCAL_TRASH_FOLDER
+
+    trash_folder.mkdir(parents=True, exist_ok=True)
+
+    return trash_folder
 
 
 def _move_to_system_trash(obsidian_note_path: Path):

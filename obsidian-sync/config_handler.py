@@ -30,16 +30,16 @@
 
 import json
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Optional
 
 from aqt import gui_hooks, mw
-from aqt.utils import showCritical, showInfo, qconnect, tooltip
+from aqt.utils import showCritical, showInfo, tooltip
 from aqt.qt import QFileDialog
 
-from .utils import format_add_on_message
+from .utils import format_add_on_message, get_obsidian_trash_option, get_obsidian_trash_folder
 from .constants import (
     ADD_ON_NAME, ADD_ON_ID, CONF_VAULT_PATH, CONF_FIELD_NAME_HEADER_TAG, \
-    CONF_ANKI_NOTE_IN_OBSIDIAN_PROPERTY_VALUE, CONF_ANKI_FOLDER
+    CONF_ANKI_NOTE_IN_OBSIDIAN_PROPERTY_VALUE, CONF_ANKI_FOLDER, OBSIDIAN_LOCAL_TRASH_OPTION_VALUE
 )
 
 
@@ -68,6 +68,16 @@ class ConfigHandler:
         else:
             path = self.vault_path
         return path
+
+    @property
+    def obsidian_trash_folder(self) -> Optional[Path]:
+        trash_folder = None
+        trash_option = get_obsidian_trash_option(obsidian_vault=self.vault_path)
+
+        if trash_option == OBSIDIAN_LOCAL_TRASH_OPTION_VALUE:
+            trash_folder = get_obsidian_trash_folder(obsidian_vault=self.vault_path)
+
+        return trash_folder
 
     @property
     def anki_note_in_obsidian_property_value(self) -> str:

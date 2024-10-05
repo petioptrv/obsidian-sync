@@ -39,7 +39,7 @@ from aqt import mw
 from aqt.utils import showCritical, tooltip
 
 from ..builders.obsidian_note_builder import ObsidianNoteBuilder
-from ..obsidian_note_parser import ObsidianNoteParser
+from ..parsers.obsidian_note_parser import ObsidianNoteParser
 from ..utils import format_add_on_message, is_markdown_file, get_templates_folder_path, \
     delete_obsidian_note
 from ..constants import MODEL_ID_PROPERTY_NAME, TEMPLATE_DATE_FORMAT, TEMPLATE_TIME_FORMAT, \
