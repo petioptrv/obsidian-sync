@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-
-# Obsidian Sync config.json Add-on for Anki
+# Obsidian Sync Add-on for Anki
 #
-# Copyright (C) 2024 Petrov P.
+# Copyright (C)  2024 Petrov P.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -28,9 +27,6 @@
 # listed here: <mailto:petioptrv@icloud.com>.
 #
 # Any modifications to this file must keep this entire header intact.
-import sys
-import os
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "."))
-
-from main import *
+from ..constants import MODEL_ID_PROPERTY_NAME
+from .obsidian_file import ObsidianFile

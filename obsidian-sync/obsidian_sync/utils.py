@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-
-# Obsidian Sync config.json Add-on for Anki
+# Obsidian Sync Add-on for Anki
 #
-# Copyright (C) 2024 Petrov P.
+# Copyright (C)  2024 Petrov P.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -28,9 +27,8 @@
 # listed here: <mailto:petioptrv@icloud.com>.
 #
 # Any modifications to this file must keep this entire header intact.
-import sys
-import os
+from obsidian_sync.constants import ADD_ON_NAME
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "."))
 
-from main import *
+def format_add_on_message(message: str) -> str:
+    return f"[{ADD_ON_NAME}] {message}"

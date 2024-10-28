@@ -1,3 +1,32 @@
+# -*- coding: utf-8 -*-
+# Obsidian Sync Add-on for Anki
+#
+# Copyright (C)  2024 Petrov P.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version, with the additions
+# listed at the end of the license file that accompanied this program
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# NOTE: This program is subject to certain additional terms pursuant to
+# Section 7 of the GNU Affero General Public License.  You should have
+# received a copy of these additional terms immediately following the
+# terms and conditions of the GNU Affero General Public License that
+# accompanied this program.
+#
+# If not, please request a copy through one of the means of contact
+# listed here: <mailto:petioptrv@icloud.com>.
+#
+# Any modifications to this file must keep this entire header intact.
 import logging
 import os
 from dataclasses import dataclass
@@ -9,10 +38,11 @@ from aqt import mw
 from anki.notes import Note as ANote
 from aqt.utils import showCritical
 
+from .obsidian.obsidian_file import ObsidianFile
+from .addon_config import AddonConfig
 from .constants import DEFAULT_NODE_ID_FOR_NEW_OBSIDIAN_NOTES
 from .builders.obsidian_note_builder import ObsidianNoteBuilder
-from .config_handler import ConfigHandler
-from .constants import ADD_ON_NAME, NOTE_PROPERTIES_BASE_STRING, DATETIME_FORMAT, MAX_OBSIDIAN_NOTE_FILE_NAME_LENGTH
+from .constants import ADD_ON_NAME, DATETIME_FORMAT, MAX_OBSIDIAN_NOTE_FILE_NAME_LENGTH
 from .change_log import ChangeLogBase
 from .markdown import markdown
 from .markdownify.markdownify import markdownify as md
@@ -105,6 +135,7 @@ class AnkiNote(Note):
 
     def update_with_obsidian_note(self, obsidian_note: "ObsidianNote", changes_log: ChangeLogBase, print_to_log: bool):
         if obsidian_note.updated_since_last_sync:
+            self.deck = obsidian_note.deck
             self.fields = obsidian_note.fields
             self._update_anki_note()
             self.modified_dt = datetime.now()
@@ -120,6 +151,11 @@ class AnkiNote(Note):
 
     def _update_anki_note(self):
         note = mw.col.get_note(id=self.note_id)
+        deck_name = mw.col.decks.name(note.cards()[0].did)
+
+        if self.deck != deck_name:
+            new_deck = mw.col.decks.add_normal_deck_with_name(name=self.deck)
+            mw.col.set_deck(card_ids=[card.id for card in note.cards()], deck_id=new_deck.id)
 
         for field in self.fields:
             note[field.name] = field.text
@@ -135,12 +171,12 @@ class ObsidianNotePath:
 
     @classmethod
     def build_from_file_path(
-        cls, file_path: Path, config_handler: ConfigHandler
+        cls, file_path: Path, addon_config: AddonConfig
     ) -> "ObsidianNotePath":
         note_path = ObsidianNotePath(
             file_name=file_path.name,
             absolute_path=file_path,
-            relative_path=Path(os.path.relpath(path=file_path, start=config_handler.anki_folder_in_obsidian)),
+            relative_path=Path(os.path.relpath(path=file_path, start=addon_config.srs_folder_in_obsidian)),
         )
         return note_path
 
@@ -150,7 +186,7 @@ class ObsidianNote(Note):
     synced_dt: datetime
     note_path: ObsidianNotePath
     _obsidian_note_builder: ObsidianNoteBuilder
-    _config_handler: ConfigHandler
+    _addon_config: AddonConfig
 
     @property
     def updated_since_last_sync(self) -> bool:
@@ -163,23 +199,21 @@ class ObsidianNote(Note):
     @classmethod
     def build_from_file(
         cls,
-        config_handler: ConfigHandler,
-        obsidian_note_parser: ObsidianNoteParser,
-        obsidian_note_builder: ObsidianNoteBuilder,
-        file_path: Path,
+        addon_config: AddonConfig,
+        obsidian_file: ObsidianFile,
     ) -> Optional["ObsidianNote"]:
         note = None
 
         if is_markdown_file(path=file_path):
             with open(file_path, "r") as f:
                 note_content = f.read()
-            if obsidian_note_parser.is_anki_note_in_obsidian(note_content=note_content):
+            if obsidian_file.is_anki_file_in_obsidian:
                 try:
                     note_path = ObsidianNotePath.build_from_file_path(
-                        file_path=file_path, config_handler=config_handler
+                        file_path=file_path, addon_config=addon_config
                     )
                     note = cls._parse_obsidian_note(
-                        config_handler=config_handler,
+                        addon_config=addon_config,
                         obsidian_note_parser=obsidian_note_parser,
                         obsidian_note_builder=obsidian_note_builder,
                         note_path=note_path,
@@ -202,7 +236,7 @@ class ObsidianNote(Note):
     @classmethod
     def create_note_file_from_anki_note(
         cls,
-        config_handler: ConfigHandler,
+        addon_config: AddonConfig,
         obsidian_note_builder: ObsidianNoteBuilder,
         anki_note: AnkiNote,
         change_log: ChangeLogBase,
@@ -210,7 +244,7 @@ class ObsidianNote(Note):
         folder_path = obsidian_note_builder.build_obsidian_note_folder_path_from_deck(deck=anki_note.deck)
         file_name = cls.build_obsidian_note_file_name_from_anki_note(anki_note=anki_note)
         note_path = ObsidianNotePath.build_from_file_path(
-            file_path=folder_path / file_name, config_handler=config_handler
+            file_path=folder_path / file_name, addon_config=addon_config
         )
         obsidian_note = ObsidianNote(
             note_id=anki_note.note_id,
@@ -222,7 +256,7 @@ class ObsidianNote(Note):
             synced_dt=datetime.now(),
             note_path=note_path,
             _obsidian_note_builder=obsidian_note_builder,
-            _config_handler=config_handler,
+            _addon_config=addon_config,
         )
         obsidian_note._store_to_file()
         change_log.log_change(change=f"{note_path.file_name} was created.")
@@ -262,7 +296,7 @@ class ObsidianNote(Note):
     @classmethod
     def _parse_obsidian_note(
         cls,
-        config_handler: ConfigHandler,
+        addon_config: AddonConfig,
         obsidian_note_parser: ObsidianNoteParser,
         obsidian_note_builder: ObsidianNoteBuilder,
         note_path: ObsidianNotePath,
@@ -291,7 +325,7 @@ class ObsidianNote(Note):
             synced_dt=obsidian_note_parser.get_synced_dt(content=note_content),
             note_path=note_path,
             _obsidian_note_builder=obsidian_note_builder,
-            _config_handler=config_handler,
+            _addon_config=addon_config,
         )
         return note
 
@@ -326,7 +360,7 @@ class ObsidianNote(Note):
                 )
             self.note_path = ObsidianNotePath.build_from_file_path(
                 file_path=note_folder_path / self.note_path.file_name,
-                config_handler=self._config_handler,
+                addon_config=self._addon_config,
             )
 
         self.synced_dt = datetime.now()
@@ -350,7 +384,6 @@ class ObsidianNote(Note):
             tags=",".join(self.tags),
             date_modified=self.modified_dt.strftime(format=DATETIME_FORMAT),
             date_synced=datetime.now().strftime(format=DATETIME_FORMAT),
-            anki_note_identifier_property_value=self._config_handler.anki_note_in_obsidian_property_value,
         ) + "".join(
             [
                 f"{self._obsidian_note_builder.build_field_title(field_name=field_name)}\n{field_content}\n\n"

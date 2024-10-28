@@ -38,23 +38,26 @@ from typing import Dict
 from aqt import mw
 from aqt.utils import showCritical, tooltip
 
+from ..addon_config import AddonConfig
+from ..obsidian.obsidian_config import ObsidianConfig
 from ..change_log import ChangeLogBase
 from ..note_types import AnkiNote, ObsidianNote
 from ..builders.obsidian_note_builder import ObsidianNoteBuilder
 from ..constants import DEFAULT_NODE_ID_FOR_NEW_OBSIDIAN_NOTES, ADD_ON_NAME
 from ..parsers.obsidian_note_parser import ObsidianNoteParser
-from ..config_handler import ConfigHandler
 from ..utils import format_add_on_message
 
 
 class NotesSynchronizer:
     def __init__(
         self,
-        config_handler: ConfigHandler,
+        addon_config: AddonConfig,
+        obsidian_config: ObsidianConfig,
         obsidian_note_builder: ObsidianNoteBuilder,
         obsidian_note_parser: ObsidianNoteParser,
     ):
-        self._config_handler = config_handler
+        self._addon_config = addon_config
+        self._obsidian_config = obsidian_config
         self._obsidian_note_builder = obsidian_note_builder
         self._obsidian_note_parser = obsidian_note_parser
 
@@ -64,7 +67,7 @@ class NotesSynchronizer:
             obsidian_notes = self._get_all_obsidian_notes()
             obsidian_deleted_notes = self._get_all_obsidian_deleted_notes()
 
-            change_log = ChangeLogBase.build_log(config_handler=self._config_handler)
+            change_log = ChangeLogBase.build_log(addon_config=self._addon_config)
 
             while len(anki_notes) != 0:
                 note_id, anki_note = anki_notes.popitem()
@@ -79,7 +82,7 @@ class NotesSynchronizer:
                         anki_note.delete(change_log=change_log)
                     else:
                         ObsidianNote.create_note_file_from_anki_note(
-                            config_handler=self._config_handler,
+                            addon_config=self._addon_config,
                             obsidian_note_builder=self._obsidian_note_builder,
                             anki_note=anki_note,
                             change_log=change_log,
@@ -114,16 +117,16 @@ class NotesSynchronizer:
 
     def _get_all_obsidian_notes(self) -> Dict[int, ObsidianNote]:
         notes = {}
-        templates_folder_path = self._config_handler.obsidian_templates_folder_path
-        trash_path = self._config_handler.obsidian_trash_folder
+        templates_folder_path = self._obsidian_config.templates_folder
+        trash_path = self._obsidian_config.trash_folder
 
-        for root, dirs, files in os.walk(self._config_handler.anki_folder_in_obsidian):
+        for root, dirs, files in os.walk(self._addon_config.srs_folder_in_obsidian):
             if Path(root) in [templates_folder_path, trash_path]:
                 continue
             for file in files:
                 file_path = Path(root) / file
                 obsidian_note = ObsidianNote.build_from_file(
-                    config_handler=self._config_handler,
+                    addon_config=self._addon_config,
                     obsidian_note_parser=self._obsidian_note_parser,
                     obsidian_note_builder=self._obsidian_note_builder,
                     file_path=file_path,
@@ -135,14 +138,14 @@ class NotesSynchronizer:
 
     def _get_all_obsidian_deleted_notes(self) -> Dict[int, ObsidianNote]:
         deleted_notes = {}
-        trash_path = self._config_handler.obsidian_trash_folder
+        trash_path = self._obsidian_config.trash_folder
 
         if trash_path is not None:
             for root, dirs, deleted_files in os.walk(trash_path):
                 for file in deleted_files:
                     file_path = Path(root) / file
                     obsidian_note = ObsidianNote.build_from_file(
-                        config_handler=self._config_handler,
+                        addon_config=self._addon_config,
                         obsidian_note_parser=self._obsidian_note_parser,
                         obsidian_note_builder=self._obsidian_note_builder,
                         file_path=file_path,

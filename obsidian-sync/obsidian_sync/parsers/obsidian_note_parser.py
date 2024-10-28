@@ -33,28 +33,19 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Set, Tuple
 
-from ..utils import get_field_title_format_string
-from ..constants import ANKI_NOTE_IDENTIFIER_PROPERTY_NAME, MODEL_ID_PROPERTY_NAME, NOTE_ID_PROPERTY_NAME, \
-    TAGS_PROPERTY_NAME, DATE_MODIFIED_PROPERTY_NAME, DATETIME_FORMAT, ANKI_NOTE_FIELD_IDENTIFIER_COMMENT, \
+from ..constants import SRS_NOTE_IDENTIFIER_PROPERTY_NAME, MODEL_ID_PROPERTY_NAME, NOTE_ID_PROPERTY_NAME, \
+    TAGS_PROPERTY_NAME, DATE_MODIFIED_PROPERTY_NAME, DATETIME_FORMAT, SRS_NOTE_FIELD_IDENTIFIER_COMMENT, \
     DATE_SYNCED_PROPERTY_NAME, DECK_NAME_SEPARATOR
-from ..config_handler import ConfigHandler
-from ..markup_converter import MarkupConverter
+from ..markup_translator import MarkupTranslator
 
 
 class ObsidianNoteParser:
-    def __init__(self, config_handler: ConfigHandler, note_converter: MarkupConverter):
+    def __init__(self, config_handler: ConfigHandler, note_converter: MarkupTranslator):
         self._config_handler = config_handler
         self._note_converter = note_converter
 
-    def is_anki_note_in_obsidian(self, note_content: str) -> bool:
-        property_value = self._config_handler.anki_note_in_obsidian_property_value
-        pattern = (
-            rf"^---\s*(?:.*\n)*?{re.escape(ANKI_NOTE_IDENTIFIER_PROPERTY_NAME)}\s*:\s*{re.escape(property_value)}\s*(?:.*\n)*?---"
-        )
-        return re.match(pattern, note_content) is not None
-
     def parse_deck_from_obsidian_note_path(self, file_path: Path) -> str:
-        relative_path = Path(os.path.relpath(path=file_path, start=self._config_handler.anki_folder_in_obsidian))
+        relative_path = Path(os.path.relpath(path=file_path, start=self._config_handler.srs_folder_in_obsidian))
         deck_name = str(relative_path.parent).replace(os.path.sep, DECK_NAME_SEPARATOR)
         return deck_name
 
@@ -99,48 +90,6 @@ class ObsidianNoteParser:
             synced_dt = datetime.now()
         return synced_dt
 
-    def _get_note_property(self, property_name: str, content: str) -> any:
-        properties_content = self._get_note_properties(content=content)
-
-        if property_name == TAGS_PROPERTY_NAME:
-            tags_match = re.findall(r"\n\s*-\s*(.+)", properties_content)
-            value = [tag.strip() for tag in tags_match if tag.strip()]
-        else:
-            value_pattern = rf"{property_name}:[ \t]*(.+)"
-            value_match = re.search(value_pattern, properties_content)
-
-            if value_match:
-                value = value_match.group(1).strip()
-            else:
-                raise ValueError(f"No property {property_name} found.")
-
-        return value
-
-    @staticmethod
-    def _get_note_properties(content: str) -> str:
-        pattern = r"^---\n(.*?\n)---\n(.*)$"
-        match = re.search(pattern=pattern, string=content, flags=re.DOTALL)
-        return match.group(1)
-
-    @staticmethod
-    def _get_note_body(content: str) -> str:
-        pattern = r"^---\n(.*?\n)---\n(.*)$"
-        match = re.search(pattern=pattern, string=content, flags=re.DOTALL)
-        return match.group(2)
-
-    def _extract_headers_and_paragraphs(self, note_body: str) -> List[Tuple[str, str]]:
-        pattern = self._build_field_title_matcher()
-        pattern += f"([\s\S]*?)(?={ANKI_NOTE_FIELD_IDENTIFIER_COMMENT}|\Z)"
-        matches = re.findall(pattern, note_body, re.DOTALL)
-        result = [(header.strip(), paragraph.strip()) if paragraph else "" for header, paragraph in matches]
-        return result
-
-    def _build_field_title_matcher(self) -> str:
-        field_format_string = get_field_title_format_string(
-            html_header_tag=self._config_handler.field_name_header_tag
-        )
-        pattern = field_format_string.format(field="(.*?)")
-        return pattern
-
     def _extract_obsidian_image_paths_from_field_text(self, field_text: str) -> List[Path]:
+
         return []

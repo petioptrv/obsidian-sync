@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-
-# Obsidian Sync config.json Add-on for Anki
+# Obsidian Sync Add-on for Anki
 #
-# Copyright (C) 2024 Petrov P.
+# Copyright (C)  2024 Petrov P.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -28,9 +27,23 @@
 # listed here: <mailto:petioptrv@icloud.com>.
 #
 # Any modifications to this file must keep this entire header intact.
-import sys
-import os
+from pathlib import Path
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "."))
+from send2trash import send2trash
 
-from main import *
+from obsidian_sync.constants import MARKDOWN_FILE_SUFFIX, SRS_NOTE_IDENTIFIER_COMMENT
+
+
+def check_is_srs_file(path: Path) -> bool:
+    return (
+        check_is_markdown_file(path=path)
+        and SRS_NOTE_IDENTIFIER_COMMENT in path.read_text(encoding="utf-8")
+    )
+
+
+def check_is_markdown_file(path: Path) -> bool:
+    return path.suffix == f".{MARKDOWN_FILE_SUFFIX}"
+
+
+def move_file_to_system_trash(file_path: Path):
+    send2trash(paths=file_path)
