@@ -1,20 +1,17 @@
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from obsidian_sync.anki.anki_app import AnkiApp
 from obsidian_sync.constants import OBSIDIAN_PERMA_DELETE_TRASH_OPTION_VALUE, MARKDOWN_FILE_SUFFIX
-from obsidian_sync.markup_translator import MarkupTranslator
 from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 from obsidian_sync.synchronizers.templates_synchronizer import TemplatesSynchronizer
 from tests.anki_mock import AnkiMocker, MockAnkiTemplate, MockAnkiField
 
 
 def test_create_new_anki_template_in_obsidian(
-    tmp_path: Path,
-    obsidian_config_mock: MagicMock,
-    obsidian_templates_folder_mock: Path,
-    addon_config_mock: MagicMock,
     anki_mocker: AnkiMocker,
+    obsidian_vault: ObsidianVault,
+    obsidian_templates_folder_mock: Path,
+    templates_synchronizer: TemplatesSynchronizer,
 ):
     template_id = 1
     template_name = "Basic"
@@ -30,27 +27,11 @@ def test_create_new_anki_template_in_obsidian(
     ]
     anki_mocker.add_mock_templates(mock_templates=templates)
 
-    anki_app = AnkiApp()
-    markup_translator = MarkupTranslator()
-    vault = ObsidianVault(
-        anki_app=anki_app,
-        addon_config=addon_config_mock,
-        obsidian_config=obsidian_config_mock,
-        markup_translator=markup_translator,
-    )
-    synchronizer = TemplatesSynchronizer(
-        anki_app=anki_app,
-        obsidian_vault=vault,
-        obsidian_config=obsidian_config_mock,
-        addon_config=addon_config_mock,
-        markup_translator=markup_translator,
-    )
+    assert len(obsidian_vault.get_all_obsidian_templates()) == 0
 
-    assert len(vault.get_all_obsidian_templates()) == 0
+    templates_synchronizer.synchronize_templates()
 
-    synchronizer.synchronize_templates()
-
-    obsidian_templates = vault.get_all_obsidian_templates()
+    obsidian_templates = obsidian_vault.get_all_obsidian_templates()
 
     assert len(obsidian_templates) == 1
     assert len(list(obsidian_templates_folder_mock.iterdir())) == 1
@@ -66,29 +47,13 @@ def test_create_new_anki_template_in_obsidian(
 
 
 def test_update_anki_template_in_obsidian(
-    tmp_path: Path,
     obsidian_config_mock: MagicMock,
-    obsidian_templates_folder_mock: Path,
-    addon_config_mock: MagicMock,
     anki_mocker: AnkiMocker,
+    templates_synchronizer: TemplatesSynchronizer,
+    obsidian_vault: ObsidianVault,
+    obsidian_templates_folder_mock: Path,
 ):
     obsidian_config_mock.trash_option = OBSIDIAN_PERMA_DELETE_TRASH_OPTION_VALUE
-
-    anki_app = AnkiApp()
-    markup_translator = MarkupTranslator()
-    vault = ObsidianVault(
-        anki_app=anki_app,
-        addon_config=addon_config_mock,
-        obsidian_config=obsidian_config_mock,
-        markup_translator=markup_translator,
-    )
-    synchronizer = TemplatesSynchronizer(
-        anki_app=anki_app,
-        obsidian_vault=vault,
-        obsidian_config=obsidian_config_mock,
-        addon_config=addon_config_mock,
-        markup_translator=markup_translator,
-    )
 
     template_id = 1
     template_name = "Basic"
@@ -103,15 +68,15 @@ def test_update_anki_template_in_obsidian(
     templates = [anki_template]
     anki_mocker.add_mock_templates(mock_templates=templates)
 
-    synchronizer.synchronize_templates()
+    templates_synchronizer.synchronize_templates()
 
     anki_template.name = template_name + "Alt"
     anki_template.flds[0].name = "Front Alt"
     anki_mocker.add_mock_templates(mock_templates=templates)
 
-    synchronizer.synchronize_templates()
+    templates_synchronizer.synchronize_templates()
 
-    obsidian_templates = vault.get_all_obsidian_templates()
+    obsidian_templates = obsidian_vault.get_all_obsidian_templates()
 
     assert len(obsidian_templates) == 1
     assert len(list(obsidian_templates_folder_mock.iterdir())) == 1
@@ -126,29 +91,13 @@ def test_update_anki_template_in_obsidian(
 
 
 def test_remove_deleted_anki_template_from_obsidian(
-    tmp_path: Path,
     obsidian_config_mock: MagicMock,
-    obsidian_templates_folder_mock: Path,
-    addon_config_mock: MagicMock,
     anki_mocker: AnkiMocker,
+    templates_synchronizer: TemplatesSynchronizer,
+    obsidian_vault: ObsidianVault,
+    obsidian_templates_folder_mock: Path,
 ):
     obsidian_config_mock.trash_option = OBSIDIAN_PERMA_DELETE_TRASH_OPTION_VALUE
-
-    anki_app = AnkiApp()
-    markup_translator = MarkupTranslator()
-    vault = ObsidianVault(
-        anki_app=anki_app,
-        addon_config=addon_config_mock,
-        obsidian_config=obsidian_config_mock,
-        markup_translator=markup_translator,
-    )
-    synchronizer = TemplatesSynchronizer(
-        anki_app=anki_app,
-        obsidian_vault=vault,
-        obsidian_config=obsidian_config_mock,
-        addon_config=addon_config_mock,
-        markup_translator=markup_translator,
-    )
 
     template_id = 1
     template_name = "Basic"
@@ -163,13 +112,13 @@ def test_remove_deleted_anki_template_from_obsidian(
     templates = [anki_template]
     anki_mocker.add_mock_templates(mock_templates=templates)
 
-    synchronizer.synchronize_templates()
+    templates_synchronizer.synchronize_templates()
 
     anki_mocker.add_mock_templates(mock_templates=[])
 
-    synchronizer.synchronize_templates()
+    templates_synchronizer.synchronize_templates()
 
-    obsidian_templates = vault.get_all_obsidian_templates()
+    obsidian_templates = obsidian_vault.get_all_obsidian_templates()
 
     assert len(obsidian_templates) == 0
     assert len(list(obsidian_templates_folder_mock.iterdir())) == 0
