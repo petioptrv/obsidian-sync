@@ -31,11 +31,11 @@ import json
 from pathlib import Path
 from typing import Optional, Dict
 
-from ..constants import OBSIDIAN_SETTINGS_FOLDER, OBSIDIAN_TEMPLATES_SETTINGS_FILE, TEMPLATES_FOLDER_JSON_FIELD_NAME, \
-    OBSIDIAN_LOCAL_TRASH_OPTION_VALUE, OBSIDIAN_APP_SETTINGS_FILE, OBSIDIAN_TRASH_OPTION_KEY, \
-    OBSIDIAN_LOCAL_TRASH_FOLDER, OBSIDIAN_USE_MARKDOWN_LINKS_OPTION_KEY, OBSIDIAN_TEMPLATES_OPTION_KEY, \
-    CONF_SRS_FOLDER_IN_OBSIDIAN
-from ..addon_config import AddonConfig
+from obsidian_sync.constants import OBSIDIAN_SETTINGS_FOLDER, OBSIDIAN_TEMPLATES_SETTINGS_FILE, \
+    TEMPLATES_FOLDER_JSON_FIELD_NAME, OBSIDIAN_LOCAL_TRASH_OPTION_VALUE, OBSIDIAN_APP_SETTINGS_FILE, \
+    OBSIDIAN_TRASH_OPTION_KEY, OBSIDIAN_LOCAL_TRASH_FOLDER, OBSIDIAN_USE_MARKDOWN_LINKS_OPTION_KEY, \
+    OBSIDIAN_TEMPLATES_OPTION_KEY, CONF_SRS_FOLDER_IN_OBSIDIAN
+from obsidian_sync.addon_config import AddonConfig
 
 
 class ObsidianConfig:
@@ -44,26 +44,15 @@ class ObsidianConfig:
 
     @property
     def templates_enabled(self) -> bool:
-        templates = self.settings.get(OBSIDIAN_TEMPLATES_OPTION_KEY)
+        templates = self._settings.get(OBSIDIAN_TEMPLATES_OPTION_KEY)
         return templates is not None and templates
 
     @property
     def templates_folder(self) -> Path:
         templates_path = (
-            self._addon_config.obsidian_vault_path / self.templates_settings[TEMPLATES_FOLDER_JSON_FIELD_NAME]
+            self._addon_config.obsidian_vault_path / self._templates_settings[TEMPLATES_FOLDER_JSON_FIELD_NAME]
         )
         return templates_path
-
-    @property
-    def templates_settings(self) -> Dict[str, str]:
-        templates_json_path = (
-            self._addon_config.obsidian_vault_path / OBSIDIAN_SETTINGS_FOLDER / OBSIDIAN_TEMPLATES_SETTINGS_FILE
-        )
-
-        with open(templates_json_path, "r") as f:
-            templates_settings_json = json.load(f)
-
-        return templates_settings_json
 
     @property
     def trash_folder(self) -> Optional[Path]:
@@ -78,17 +67,17 @@ class ObsidianConfig:
 
     @property
     def trash_option(self) -> str:
-        trash_option = self.settings.get(OBSIDIAN_TRASH_OPTION_KEY)
+        trash_option = self._settings.get(OBSIDIAN_TRASH_OPTION_KEY)
         return trash_option
 
     @property
     def use_markdown_links(self) -> bool:
-        use_markdown_links_ = self.settings.get(OBSIDIAN_USE_MARKDOWN_LINKS_OPTION_KEY)
+        use_markdown_links_ = self._settings.get(OBSIDIAN_USE_MARKDOWN_LINKS_OPTION_KEY)
         return use_markdown_links_ is not None and use_markdown_links_
 
     @property
-    def srs_attachments_in_obsidian(self) -> Path:
-        anki_folder = self._addon_config.srs_folder_in_obsidian
+    def srs_attachments_folder(self) -> Path:
+        anki_folder = self._addon_config.srs_folder
         if anki_folder:
             path = Path(anki_folder) / CONF_SRS_FOLDER_IN_OBSIDIAN  # attachment paths are specified relative to the obsidian vault folder
         else:
@@ -96,7 +85,18 @@ class ObsidianConfig:
         return path
 
     @property
-    def settings(self) -> Dict[str, str]:
+    def _templates_settings(self) -> Dict[str, str]:
+        templates_json_path = (
+            self._addon_config.obsidian_vault_path / OBSIDIAN_SETTINGS_FOLDER / OBSIDIAN_TEMPLATES_SETTINGS_FILE
+        )
+
+        with open(templates_json_path, "r") as f:
+            templates_settings_json = json.load(f)
+
+        return templates_settings_json
+
+    @property
+    def _settings(self) -> Dict[str, str]:
         with open(
             self._addon_config.obsidian_vault_path / OBSIDIAN_SETTINGS_FOLDER / OBSIDIAN_APP_SETTINGS_FILE, "r"
         ) as f:

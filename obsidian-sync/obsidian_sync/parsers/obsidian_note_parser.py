@@ -45,7 +45,7 @@ class ObsidianNoteParser:
         self._note_converter = note_converter
 
     def parse_deck_from_obsidian_note_path(self, file_path: Path) -> str:
-        relative_path = Path(os.path.relpath(path=file_path, start=self._config_handler.srs_folder_in_obsidian))
+        relative_path = Path(os.path.relpath(path=file_path, start=self._config_handler.srs_folder))
         deck_name = str(relative_path.parent).replace(os.path.sep, DECK_NAME_SEPARATOR)
         return deck_name
 

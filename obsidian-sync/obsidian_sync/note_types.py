@@ -176,7 +176,7 @@ class ObsidianNotePath:
         note_path = ObsidianNotePath(
             file_name=file_path.name,
             absolute_path=file_path,
-            relative_path=Path(os.path.relpath(path=file_path, start=addon_config.srs_folder_in_obsidian)),
+            relative_path=Path(os.path.relpath(path=file_path, start=addon_config.srs_folder)),
         )
         return note_path
 

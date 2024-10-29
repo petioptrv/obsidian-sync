@@ -64,7 +64,7 @@ class AddonConfig:
         return path
 
     @property
-    def srs_folder_in_obsidian(self) -> Path:
+    def srs_folder(self) -> Path:
         anki_folder = self.config[CONF_SRS_FOLDER_IN_OBSIDIAN]
         if anki_folder:
             path = Path(self.obsidian_vault_path / self.config[CONF_SRS_FOLDER_IN_OBSIDIAN])

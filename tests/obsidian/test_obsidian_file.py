@@ -90,12 +90,12 @@ def test_parse_note_properties(
 
 def test_parse_note_fields(
     tmp_path: Path,
+    some_test_image: PILImage,
     obsidian_config_mock: MagicMock,
     addon_config_mock: MagicMock,
 ):
     image_file = tmp_path / "img.jpg"
-    image = PILImage.new(mode="RGB", size=(1, 1))
-    image.save(image_file)
+    some_test_image.save(image_file)
     file_content = f"""{
     ObsidianNoteProperties(
         model_id=1,

@@ -120,7 +120,7 @@ class NotesSynchronizer:
         templates_folder_path = self._obsidian_config.templates_folder
         trash_path = self._obsidian_config.trash_folder
 
-        for root, dirs, files in os.walk(self._addon_config.srs_folder_in_obsidian):
+        for root, dirs, files in os.walk(self._addon_config.srs_folder):
             if Path(root) in [templates_folder_path, trash_path]:
                 continue
             for file in files:

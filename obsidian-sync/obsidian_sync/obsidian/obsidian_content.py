@@ -39,10 +39,10 @@ import yaml
 from obsidian_sync.constants import SRS_NOTE_FIELD_IDENTIFIER_COMMENT, IMAGE_FILE_EXTENSIONS, SRS_NOTE_IDENTIFIER_COMMENT, \
     MODEL_ID_PROPERTY_NAME, NOTE_ID_PROPERTY_NAME, TAGS_PROPERTY_NAME, DATE_MODIFIED_PROPERTY_NAME, \
     SRS_HEADER_TITLE_LEVEL, DATETIME_FORMAT, TEMPLATE_TIME_FORMAT, TEMPLATE_DATE_FORMAT, DATE_SYNCED_PROPERTY_NAME
-from obsidian_sync.content import Image, Content, Field, Properties
+from obsidian_sync.base_types.content import Image, Content, Field, Properties
 from obsidian_sync.markup_translator import MarkupTranslator
 from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
-from obsidian_sync.template import Template
+from obsidian_sync.base_types.template import Template
 
 
 @dataclass
@@ -289,7 +289,7 @@ class ObsidianImage(Image):
 
     @classmethod
     def from_image(cls, image: Image, obsidian_config: ObsidianConfig) -> "ObsidianImage":
-        image_path = obsidian_config.srs_attachments_in_obsidian / image.path.name
+        image_path = obsidian_config.srs_attachments_folder / image.path.name
         return cls(path=image_path)
 
     @staticmethod

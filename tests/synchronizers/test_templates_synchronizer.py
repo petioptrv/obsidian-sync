@@ -25,7 +25,7 @@ def test_create_new_anki_template_in_obsidian(
             ]
         )
     ]
-    anki_mocker.add_mock_templates(mock_templates=templates)
+    anki_mocker.set_mock_templates(mock_templates=templates)
 
     assert len(obsidian_vault.get_all_obsidian_templates()) == 0
 
@@ -66,13 +66,13 @@ def test_update_anki_template_in_obsidian(
         ]
     )
     templates = [anki_template]
-    anki_mocker.add_mock_templates(mock_templates=templates)
+    anki_mocker.set_mock_templates(mock_templates=templates)
 
     templates_synchronizer.synchronize_templates()
 
     anki_template.name = template_name + "Alt"
     anki_template.flds[0].name = "Front Alt"
-    anki_mocker.add_mock_templates(mock_templates=templates)
+    anki_mocker.set_mock_templates(mock_templates=templates)
 
     templates_synchronizer.synchronize_templates()
 
@@ -110,11 +110,11 @@ def test_remove_deleted_anki_template_from_obsidian(
         ]
     )
     templates = [anki_template]
-    anki_mocker.add_mock_templates(mock_templates=templates)
+    anki_mocker.set_mock_templates(mock_templates=templates)
 
     templates_synchronizer.synchronize_templates()
 
-    anki_mocker.add_mock_templates(mock_templates=[])
+    anki_mocker.set_mock_templates(mock_templates=[])
 
     templates_synchronizer.synchronize_templates()
 

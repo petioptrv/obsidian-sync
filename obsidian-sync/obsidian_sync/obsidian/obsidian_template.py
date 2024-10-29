@@ -35,7 +35,7 @@ from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
 from obsidian_sync.obsidian.obsidian_content import ObsidianField, ObsidianTemplateContent, ObsidianTemplateProperties
 from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.obsidian.obsidian_file import ObsidianTemplateFile
-from obsidian_sync.template import Template
+from obsidian_sync.base_types.template import Template
 
 
 class ObsidianTemplate(Template):

@@ -2,7 +2,7 @@ import re
 from dataclasses import dataclass
 from typing import List
 
-from obsidian_sync.content import Image, Field, Content, Properties
+from obsidian_sync.base_types.content import Image, Field, Content, Properties
 from obsidian_sync.markup_translator import MarkupTranslator
 
 

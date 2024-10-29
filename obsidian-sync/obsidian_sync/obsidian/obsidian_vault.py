@@ -29,8 +29,9 @@
 # Any modifications to this file must keep this entire header intact.
 import logging
 import os
+import shutil
 from pathlib import Path
-from typing import Dict, Generator
+from typing import Dict, Generator, List
 
 from obsidian_sync.anki.anki_app import AnkiApp
 from obsidian_sync.file_utils import check_is_srs_file
@@ -56,15 +57,17 @@ class ObsidianVault:
         self._obsidian_config = obsidian_config
         self._markup_translator = markup_translator
 
-    @staticmethod
-    def build_relative_path_from_deck(deck: str) -> Path:
-        relative_path = Path(deck.replace(DECK_NAME_SEPARATOR, os.path.sep))
-        return relative_path
+    def get_all_srs_attachment_files(self) -> List[Path]:
+        attachments_folder = self._obsidian_config.srs_attachments_folder
+        if attachments_folder.exists():
+            attachments = [p for p in attachments_folder.iterdir() if p.is_file()]
+        else:
+            attachments = []
+        return attachments
 
-    def build_obsidian_note_folder_path_from_deck(self, deck: str) -> Path:
-        relative_path = self.build_relative_path_from_deck(deck=deck)
-        path = Path(self._addon_config.srs_folder_in_obsidian / relative_path)
-        return path
+    def copy_file_to_srs_attachments_folder(self, file: Path):
+        self._obsidian_config.srs_attachments_folder.mkdir(parents=True, exist_ok=True)
+        shutil.copy(src=file, dst=self._obsidian_config.srs_attachments_folder)
 
     def get_all_obsidian_templates(self) -> Dict[int, ObsidianTemplate]:
         self._obsidian_config.templates_folder.mkdir(parents=True, exist_ok=True)
@@ -98,6 +101,16 @@ class ObsidianVault:
                 templates[template.properties.model_id] = template
 
         return templates
+
+    @staticmethod
+    def build_relative_path_from_deck(deck: str) -> Path:
+        relative_path = Path(deck.replace(DECK_NAME_SEPARATOR, os.path.sep))
+        return relative_path
+
+    def build_obsidian_note_folder_path_from_deck(self, deck: str) -> Path:
+        relative_path = self.build_relative_path_from_deck(deck=deck)
+        path = Path(self._addon_config.srs_folder / relative_path)
+        return path
 
     def _get_srs_template_files_in_obsidian(
         self, markup_translator: MarkupTranslator

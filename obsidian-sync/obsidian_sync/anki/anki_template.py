@@ -29,8 +29,7 @@
 # Any modifications to this file must keep this entire header intact.
 from dataclasses import dataclass
 
-from obsidian_sync.content import Content
-from obsidian_sync.template import Template
+from obsidian_sync.base_types.template import Template
 
 
 @dataclass

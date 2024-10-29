@@ -27,6 +27,11 @@
 # listed here: <mailto:petioptrv@icloud.com>.
 #
 # Any modifications to this file must keep this entire header intact.
+from dataclasses import dataclass
 
-from ..constants import MODEL_ID_PROPERTY_NAME
-from .obsidian_file import ObsidianFile
+from obsidian_sync.base_types.note import Note
+
+
+@dataclass
+class ObsidianNote(Note):
+    pass

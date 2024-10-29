@@ -61,7 +61,9 @@ class AnkiAddon:
             obsidian_vault=self._obsidian_vault,
             markup_translator=self._markup_translator,
         )
-        self._media_synchronizer = MediaSynchronizer()
+        self._media_synchronizer = MediaSynchronizer(
+            anki_app=self._anki_app,
+        )
 
         self._add_menu_items()
         self._add_menu_items()
@@ -81,6 +83,8 @@ class AnkiAddon:
         #     todo: else, interactive choice of which one to keep, with option to apply to all remaining: keep most recent/keep Anki/keep Obsidian
 
         # todo: add option to only transfer cards from Obsidian to Anki if their parents are already learned to a configurable level
+
+        self._media_synchronizer.synchronize_media()
 
         if self._check_can_sync():
             self._templates_synchronizer.synchronize_templates()

@@ -124,6 +124,21 @@ class AnkiApp:
         return open_editing_windows
 
     @staticmethod
+    def get_all_media_files() -> List[Path]:
+        media_dir = Path(mw.col.media.dir())
+        media_files = [
+            file
+            for file in media_dir.iterdir()
+            if file.is_file()
+        ]
+
+        return media_files
+
+    @staticmethod
+    def add_media_file(file: Path):
+        mw.col.media.add_file(path=file)
+
+    @staticmethod
     def _get_editing_window_name(window):
         window_name = window.windowTitle()
 

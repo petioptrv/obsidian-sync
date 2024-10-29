@@ -27,25 +27,12 @@
 # listed here: <mailto:petioptrv@icloud.com>.
 #
 # Any modifications to this file must keep this entire header intact.
-import re
-from string import ascii_letters, digits
+from dataclasses import dataclass
 
-from obsidian_sync.addon_config import AddonConfig
-from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
+from obsidian_sync.base_types.content import Content
 
 
-class ObsidianFileFormatter:  # todo: delete
-    def __init__(
-        self,
-        addon_config: AddonConfig,
-        obsidian_config: ObsidianConfig,
-    ):
-        self._addon_config = addon_config
-        self._obsidian_config = obsidian_config
-
-    @staticmethod
-    def clean_string_for_file_name(string: str) -> str:
-        cloze_pattern = r"\{\{c\d+::(.*?)\}\}"
-        string = re.sub(cloze_pattern, r"\1", string)  # remove cloze markers
-        valid_chars = "-_.() %s%s" % (ascii_letters, digits)
-        return "".join(c for c in string if c in valid_chars)
+@dataclass
+class Template:
+    content: Content
+    model_name: str
