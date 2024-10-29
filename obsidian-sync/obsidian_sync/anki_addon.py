@@ -31,7 +31,7 @@
 
 from obsidian_sync.anki.anki_app import AnkiApp
 from obsidian_sync.addon_config import AddonConfig
-from obsidian_sync.constants import ADD_ON_NAME
+from obsidian_sync.constants import ADD_ON_NAME, OBSIDIAN_LOCAL_TRASH_OPTION_VALUE
 from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
 from obsidian_sync.markup_translator import MarkupTranslator
 from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
@@ -102,17 +102,27 @@ class AnkiAddon:
         if not self._obsidian_config.use_markdown_links:
             message = (
                 "Wikilinks are not supported. To use Markdown links in Obsidian:"
-                " Options -> Files and links -> uncheck the Use [[Wikilinks]] option."
+                " Options -> Files and links -> uncheck the \"Use [[Wikilinks]]\" option."
             )
             self._anki_app.show_critical(
                 text=format_add_on_message(message=message),
                 title=ADD_ON_NAME,
             )
             can_sync = False
-        elif not self._obsidian_config.templates_enabled:
+        if not self._obsidian_config.templates_enabled:
             message = (
                 "Obsidian templates must be enabled:"
-                " Options -> Core plugins -> check the Templates option."
+                " Options -> Core plugins -> check the \"Templates\" option."
+            )
+            self._anki_app.show_critical(
+                text=format_add_on_message(message=message),
+                title=ADD_ON_NAME
+            )
+            can_sync = False
+        if not self._obsidian_config.trash_option != OBSIDIAN_LOCAL_TRASH_OPTION_VALUE:
+            message = (
+                "Obsidian must be configured to use the local trash:"
+                " Options -> Files and links -> Deleted files -> Move to Obsidian Trash (.trash folder)."
             )
             self._anki_app.show_critical(
                 text=format_add_on_message(message=message),
