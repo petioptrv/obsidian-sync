@@ -35,7 +35,8 @@ from typing import Tuple, Callable, List
 from obsidian_sync.anki.anki_app import AnkiApp
 from obsidian_sync.utils import format_add_on_message
 from obsidian_sync.constants import (
-    ADD_ON_NAME, ADD_ON_ID, CONF_VAULT_PATH, CONF_SRS_FOLDER_IN_OBSIDIAN
+    ADD_ON_NAME, ADD_ON_ID, CONF_VAULT_PATH, CONF_SRS_FOLDER_IN_OBSIDIAN, CONF_SYNC_WITH_OBSIDIAN_ON_ANKI_WEB_SYNC,
+    CONF_ANKI_DECK_NAME_FOR_OBSIDIAN_IMPORTS
 )
 
 
@@ -65,12 +66,20 @@ class AddonConfig:
 
     @property
     def srs_folder(self) -> Path:
-        anki_folder = self.config[CONF_SRS_FOLDER_IN_OBSIDIAN]
-        if anki_folder:
+        anki_folder_in_obsidian = self.config[CONF_SRS_FOLDER_IN_OBSIDIAN]
+        if anki_folder_in_obsidian:
             path = Path(self.obsidian_vault_path / self.config[CONF_SRS_FOLDER_IN_OBSIDIAN])
         else:
             path = self.obsidian_vault_path
         return path
+
+    @property
+    def sync_with_obsidian_on_anki_web_sync(self) -> bool:
+        return self.config[CONF_SYNC_WITH_OBSIDIAN_ON_ANKI_WEB_SYNC]
+
+    @property
+    def anki_deck_name_for_obsidian_imports(self) -> str:
+        return self.config[CONF_ANKI_DECK_NAME_FOR_OBSIDIAN_IMPORTS]
 
     def register_config_update_listener(self, listener: AddonConfigUpdateListener):
         self._config_update_listeners.append(listener)

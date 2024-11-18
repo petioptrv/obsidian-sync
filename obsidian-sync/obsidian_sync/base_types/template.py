@@ -28,11 +28,11 @@
 #
 # Any modifications to this file must keep this entire header intact.
 from dataclasses import dataclass
+from typing import Optional
 
-from obsidian_sync.base_types.content import Content
+from obsidian_sync.base_types.content import TemplateContent
 
 
 @dataclass
 class Template:
-    content: Content
-    model_name: str
+    content: Optional[TemplateContent]

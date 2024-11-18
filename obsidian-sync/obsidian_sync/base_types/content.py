@@ -29,12 +29,13 @@
 # Any modifications to this file must keep this entire header intact.
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 
 @dataclass
-class Content:
+class Content(ABC):
     properties: "Properties"
     fields: List["Field"]
 
@@ -48,23 +49,46 @@ class Content:
 
 
 @dataclass
+class TemplateContent(Content):
+    properties: "TemplateProperties"
+
+
+@dataclass
+class NoteContent(Content):
+    properties: "NoteProperties"
+
+
+@dataclass
 class Properties:
     model_id: int
+    model_name: str
+
+
+@dataclass
+class TemplateProperties(Properties):
+    pass
+
+
+@dataclass
+class NoteProperties(Properties):
+    note_id: int
+    tags: List[str]
+    date_modified_in_anki: Optional[datetime]
 
 
 @dataclass
 class Field(ABC):
     name: str
     text: str
-    images: List["Image"]
+    attachments: List["LinkedAttachment"]
 
     def __eq__(self, other: object) -> bool:
         return (
-            isinstance(other, Field)
+            isinstance(other, type(self))
             and self.name == other.name
             and self.text == other.text
-            and len(self.images) == len(other.images)
-            and all(si == oi for si, oi in zip(self.images, other.images))
+            and len(self.attachments) == len(other.attachments)
+            and all(sa == oa for sa, oa in zip(self.attachments, other.attachments))
         )
 
     @abstractmethod
@@ -77,23 +101,12 @@ class Field(ABC):
 
 
 @dataclass
-class LinkedResource(ABC):
+class LinkedAttachment(ABC):
     path: Path
 
     def __eq__(self, other):
         return isinstance(other, type(self)) and self.path == other.path
 
-
-@dataclass
-class Image(LinkedResource):
-    pass
-
-
-@dataclass
-class Video(LinkedResource):
-    pass
-
-
-@dataclass
-class Audio(LinkedResource):
-    pass
+    @abstractmethod
+    def to_field_text(self) -> str:
+        ...

@@ -34,13 +34,17 @@ from typing import Optional, Dict
 from obsidian_sync.constants import OBSIDIAN_SETTINGS_FOLDER, OBSIDIAN_TEMPLATES_SETTINGS_FILE, \
     TEMPLATES_FOLDER_JSON_FIELD_NAME, OBSIDIAN_LOCAL_TRASH_OPTION_VALUE, OBSIDIAN_APP_SETTINGS_FILE, \
     OBSIDIAN_TRASH_OPTION_KEY, OBSIDIAN_LOCAL_TRASH_FOLDER, OBSIDIAN_USE_MARKDOWN_LINKS_OPTION_KEY, \
-    OBSIDIAN_TEMPLATES_OPTION_KEY, CONF_SRS_FOLDER_IN_OBSIDIAN
+    OBSIDIAN_TEMPLATES_OPTION_KEY, SRS_ATTACHMENTS_FOLDER
 from obsidian_sync.addon_config import AddonConfig
 
 
 class ObsidianConfig:
     def __init__(self, addon_config: AddonConfig):
         self._addon_config = addon_config
+
+    @property
+    def vault_folder(self) -> Path:
+        return self._addon_config.obsidian_vault_path
 
     @property
     def templates_enabled(self) -> bool:
@@ -77,11 +81,7 @@ class ObsidianConfig:
 
     @property
     def srs_attachments_folder(self) -> Path:
-        anki_folder = self._addon_config.srs_folder
-        if anki_folder:
-            path = Path(anki_folder) / CONF_SRS_FOLDER_IN_OBSIDIAN  # attachment paths are specified relative to the obsidian vault folder
-        else:
-            path = CONF_SRS_FOLDER_IN_OBSIDIAN
+        path = self._addon_config.srs_folder / SRS_ATTACHMENTS_FOLDER
         return path
 
     @property

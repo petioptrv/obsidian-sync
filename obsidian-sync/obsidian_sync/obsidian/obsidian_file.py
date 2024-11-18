@@ -29,34 +29,29 @@
 # Any modifications to this file must keep this entire header intact.
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
 from obsidian_sync.markup_translator import MarkupTranslator
 from obsidian_sync.obsidian.obsidian_content import ObsidianContent, ObsidianField, ObsidianNoteContent, ObsidianTemplateContent, \
     ObsidianTemplateProperties, ObsidianNoteProperties
-from obsidian_sync.file_utils import check_is_markdown_file, move_file_to_system_trash
-from obsidian_sync.addon_config import AddonConfig
-from obsidian_sync.constants import (
-    OBSIDIAN_SYSTEM_TRASH_OPTION_VALUE, OBSIDIAN_LOCAL_TRASH_OPTION_VALUE,
-    OBSIDIAN_PERMA_DELETE_TRASH_OPTION_VALUE, OBSIDIAN_LOCAL_TRASH_FOLDER,
-)
-from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
+from obsidian_sync.file_utils import check_is_markdown_file
 from obsidian_sync.obsidian.obsidian_content import ObsidianProperties
+
+if TYPE_CHECKING:  # avoids circular imports
+    from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 
 
 class ObsidianFile(ABC):
     def __init__(
         self,
         path: Path,
-        addon_config: AddonConfig,
-        obsidian_config: ObsidianConfig,
+        obsidian_vault: "ObsidianVault",
         markup_translator: MarkupTranslator,
     ):
         assert check_is_markdown_file(path=path)
 
         self._path = path
-        self._addon_config = addon_config
-        self._obsidian_config = obsidian_config
+        self._obsidian_vault = obsidian_vault
         self._markup_translator = markup_translator
 
         self._raw_content = None
@@ -68,6 +63,10 @@ class ObsidianFile(ABC):
             and self.path == other.path
             and self.content == other.content
         )
+
+    @property
+    def exists(self) -> bool:
+        return self._path.exists()
 
     @property
     def path(self) -> Path:
@@ -108,28 +107,7 @@ class ObsidianFile(ABC):
         self.path.write_text(file_text, encoding="utf-8")
 
     def delete(self):
-        """No need to delete linked resources (images, etc.). We don't know if the resource
-        is linked to by other notes and deleting a file in obsidian does not delete the linked
-        resources either."""
-        trash_option = self._obsidian_config.trash_option
-
-        if trash_option is None or trash_option == OBSIDIAN_SYSTEM_TRASH_OPTION_VALUE:
-            move_file_to_system_trash(file_path=self._path)
-        elif trash_option == OBSIDIAN_LOCAL_TRASH_OPTION_VALUE:
-            self._move_to_local_trash()
-        elif trash_option == OBSIDIAN_PERMA_DELETE_TRASH_OPTION_VALUE:
-            self.path.unlink()
-        else:
-            raise NotImplementedError  # unrecognized delete option
-
-    def _move_to_local_trash(self):
-        trash_folder = self._addon_config.obsidian_vault_path / OBSIDIAN_LOCAL_TRASH_FOLDER
-
-        trash_folder.mkdir(parents=True, exist_ok=True)
-
-        new_file_path = trash_folder / self.name
-
-        self.path.rename(new_file_path)
+        self._obsidian_vault.delete_file(file_path=self.path)
 
 
 class ObsidianNoteFile(ObsidianFile):
@@ -141,7 +119,10 @@ class ObsidianNoteFile(ObsidianFile):
     def content(self) -> Optional[ObsidianNoteContent]:
         if self._content is None and self.raw_content is not None:
             self._content = ObsidianNoteContent.from_obsidian_file_text(
-                file_text=self.raw_content, markup_translator=self._markup_translator
+                file_text=self.raw_content,
+                note_path=self._path,
+                obsidian_vault=self._obsidian_vault,
+                markup_translator=self._markup_translator,
             )
         return self._content
 
@@ -160,7 +141,10 @@ class ObsidianTemplateFile(ObsidianFile):
     def content(self) -> Optional[ObsidianTemplateContent]:
         if self._content is None and self.raw_content is not None:
             self._content = ObsidianTemplateContent.from_obsidian_file_text(
-                file_text=self.raw_content, markup_translator=self._markup_translator
+                file_text=self.raw_content,
+                note_path=self._path,
+                obsidian_vault=self._obsidian_vault,
+                markup_translator=self._markup_translator,
             )
         return self._content
 

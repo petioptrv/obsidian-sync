@@ -1,18 +1,25 @@
-import random
+import json
+import shutil
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from typing import Dict
 
 import pytest
-from PIL import Image as PILImage, ImageDraw
+from PIL import Image as PILImage
+import aqt
 
 from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.anki.anki_app import AnkiApp
+from obsidian_sync.constants import OBSIDIAN_SETTINGS_FOLDER, OBSIDIAN_APP_SETTINGS_FILE, OBSIDIAN_TRASH_OPTION_KEY, \
+    OBSIDIAN_PERMA_DELETE_TRASH_OPTION_VALUE, OBSIDIAN_TEMPLATES_SETTINGS_FILE, OBSIDIAN_TEMPLATES_OPTION_KEY, \
+    TEMPLATES_FOLDER_JSON_FIELD_NAME, OBSIDIAN_USE_MARKDOWN_LINKS_OPTION_KEY, CONF_VAULT_PATH, ADD_ON_NAME, \
+    CONF_SRS_FOLDER_IN_OBSIDIAN, CONF_SYNC_WITH_OBSIDIAN_ON_ANKI_WEB_SYNC, CONF_ANKI_DECK_NAME_FOR_OBSIDIAN_IMPORTS, \
+    SRS_ATTACHMENTS_FOLDER
 from obsidian_sync.markup_translator import MarkupTranslator
 from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
 from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
-from obsidian_sync.synchronizers.media_synchronizer import MediaSynchronizer
+from obsidian_sync.synchronizers.notes_synchronizer import NotesSynchronizer
 from obsidian_sync.synchronizers.templates_synchronizer import TemplatesSynchronizer
-from tests.anki_mock import AnkiMocker
+from tests.anki_test_app import AnkiTestApp
 
 
 @pytest.fixture()
@@ -27,86 +34,284 @@ def second_test_image() -> PILImage:
     return image
 
 
-@pytest.fixture()
-@patch("obsidian_sync.addon_config.AddonConfig")
-def addon_config_mock(addon_config_: MagicMock) -> AddonConfig:
-    return addon_config_
-
-
-@pytest.fixture()
-@patch("obsidian_sync.obsidian.obsidian_config.ObsidianConfig")
-def obsidian_config_mock(obsidian_config_: MagicMock) -> ObsidianConfig:
-    return obsidian_config_
-
-
-@pytest.fixture()
-def srs_folder_in_obsidian_mock(obsidian_config_mock: MagicMock, tmp_path) -> Path:
-    srs_folder = tmp_path / "srs-in-obsidian"
-    obsidian_config_mock.srs_folder = srs_folder
-    return srs_folder
-
-
-@pytest.fixture()
-def obsidian_templates_folder_mock(obsidian_config_mock: MagicMock, srs_folder_in_obsidian_mock: Path) -> Path:
-    templates_folder = srs_folder_in_obsidian_mock / "templates"
-    obsidian_config_mock.templates_folder = templates_folder
-    return templates_folder
-
-
-@pytest.fixture()
-def srs_attachments_in_obsidian_folder_mock(
-    obsidian_config_mock: MagicMock, srs_folder_in_obsidian_mock: Path
-) -> Path:
-    srs_attachments_in_obsidian_folder = srs_folder_in_obsidian_mock / "srs-attachments"
-    obsidian_config_mock.srs_attachments_folder = srs_attachments_in_obsidian_folder
-    return srs_attachments_in_obsidian_folder
-
-
-@pytest.fixture()
-def anki_mocker() -> AnkiMocker:
-    mocker = AnkiMocker()
-    return mocker
-
-
-@pytest.fixture()
-def anki_app() -> AnkiApp:
-    return AnkiApp()
-
-
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def markup_translator() -> MarkupTranslator:
     return MarkupTranslator()
 
 
+# ================== PATHS =============================================================
+
+
+@pytest.fixture(scope="session")
+def project_root() -> Path:
+    return Path(__file__).parent.parent
+
+
+@pytest.fixture(scope="session")
+def session_dir(tmpdir_factory):
+    return Path(tmpdir_factory.mktemp("tmp"))
+
+
+@pytest.fixture(scope="session")
+def anki_base_folder(session_dir: Path) -> Path:
+    base_folder = session_dir / "anki"
+    base_folder.mkdir(parents=True)
+    return base_folder
+
+
+@pytest.fixture(scope="session")
+def anki_logs_folder(anki_base_folder: Path) -> Path:
+    logs_folder = anki_base_folder / "logs"
+    logs_folder.mkdir(parents=True)
+    return logs_folder
+
+
+@pytest.fixture(scope="session")
+def anki_addon_folder(anki_base_folder: Path) -> Path:
+    addon_folder = anki_base_folder / "addons21" / ADD_ON_NAME
+    addon_folder.mkdir(parents=True)
+    return addon_folder
+
+
+@pytest.fixture(scope="session")
+def anki_addon_manifest_file(anki_addon_folder: Path) -> Path:
+    manifest_file = anki_addon_folder / "manifest.json"
+    return manifest_file
+
+
+@pytest.fixture(scope="session")
+def anki_addon_meta_file(anki_addon_folder: Path) -> Path:
+    meta_file = anki_addon_folder / "meta.json"
+    return meta_file
+
+
+@pytest.fixture(scope="session")
+def obsidian_vault_folder(session_dir: Path) -> Path:
+    vault_folder = session_dir / "obsidian-vault"
+    vault_folder.mkdir(parents=True)
+    return vault_folder
+
+
+@pytest.fixture(scope="session")
+def obsidian_settings_folder(obsidian_vault_folder: Path) -> Path:
+    settings_folder = obsidian_vault_folder / OBSIDIAN_SETTINGS_FOLDER
+    settings_folder.mkdir()
+    return settings_folder
+
+
+@pytest.fixture(scope="session")
+def srs_folder_in_obsidian(obsidian_vault_folder: Path) -> Path:
+    srs_folder = obsidian_vault_folder / "srs-in-obsidian"
+    return srs_folder
+
+
+@pytest.fixture(scope="session")
+def obsidian_templates_folder(obsidian_vault_folder: Path) -> Path:
+    templates_folder = obsidian_vault_folder / "templates"
+    return templates_folder
+
+
+@pytest.fixture(scope="session")
+def srs_attachments_in_obsidian_folder(srs_folder_in_obsidian: Path) -> Path:
+    srs_attachments_in_obsidian_folder = srs_folder_in_obsidian / SRS_ATTACHMENTS_FOLDER
+    return srs_attachments_in_obsidian_folder
+
+
+# ================== ANKI ==============================================================
+
+
+@pytest.fixture(scope="session")
+def anki_profile_name() -> str:
+    return "test-profile"
+
+
+@pytest.fixture(scope="session")
+def anki_addon_manifest_default_data() -> Dict:
+    manifest = {
+        "package": "obsidian-sync",
+        "name": "Obsidian-Sync",
+        "version": "0.0.1"
+    }
+    return manifest
+
+
+@pytest.fixture(scope="session")
+def anki_addon_meta_default_data(
+    obsidian_vault_folder: Path,
+    srs_folder_in_obsidian: Path,
+    obsidian_settings_folder: Path,
+) -> Dict:
+    meta = {
+        "disabled": False,
+        "mod": 0,
+        "conflicts": [],
+        "max_point_version": 0,
+        "min_point_version": 0,
+        "branch_index": 0,
+        "update_enabled": True,
+        "config": {
+            CONF_VAULT_PATH: str(obsidian_vault_folder),
+            CONF_SRS_FOLDER_IN_OBSIDIAN: str(srs_folder_in_obsidian),
+            CONF_SYNC_WITH_OBSIDIAN_ON_ANKI_WEB_SYNC: False,
+            CONF_ANKI_DECK_NAME_FOR_OBSIDIAN_IMPORTS: "",
+        },
+    }
+    return meta
+
+
+@pytest.fixture(scope="session")
+def aqt_run(
+    project_root: Path,
+    anki_base_folder: Path,
+    anki_logs_folder: Path,
+    anki_addon_folder: Path,
+    anki_addon_manifest_file: Path,
+    anki_addon_manifest_default_data: Dict,
+    anki_addon_meta_file: Path,
+    anki_addon_meta_default_data: Dict,
+    anki_profile_name: str,
+) -> aqt.AnkiApp:
+    anki_initial_data = project_root / "tests" / "anki-initial-data"
+    shutil.copytree(src=anki_initial_data, dst=anki_base_folder, dirs_exist_ok=True)
+    shutil.copy(src=project_root / ADD_ON_NAME / "config.json", dst=anki_addon_folder / "config.json")
+
+    anki_addon_manifest_file.write_text(data=json.dumps(obj=anki_addon_manifest_default_data))
+    anki_addon_meta_file.write_text(data=json.dumps(obj=anki_addon_meta_default_data))
+
+    argv = [
+        "",
+        "--base", str(anki_base_folder),
+        "--profile", anki_profile_name,
+        "--lang", "en",
+    ]
+    app = aqt._run(argv=argv, exec=False)
+    aqt.mw.setupProfile()
+    yield app
+    app.quit()
+
+
+@pytest.fixture(scope="session")
+def anki_test_app(aqt_run: aqt.AnkiApp, markup_translator: MarkupTranslator) -> AnkiTestApp:
+    return AnkiTestApp(markup_translator=markup_translator)
+
+
+@pytest.fixture(scope="session")
+def anki_app(anki_test_app: AnkiApp) -> AnkiApp:
+    return anki_test_app
+
+
+@pytest.fixture(scope="session")
+def addon_config(anki_app: AnkiApp) -> AddonConfig:
+    return AddonConfig(anki_app=anki_app)
+
+
 @pytest.fixture()
-def obsidian_vault(anki_app, addon_config_mock, obsidian_config_mock, markup_translator) -> ObsidianVault:
+def anki_setup_and_teardown(
+    anki_base_folder: Path,
+    anki_logs_folder: Path,
+    anki_addon_manifest_file: Path,
+    anki_addon_manifest_default_data: Dict,
+    anki_addon_meta_file: Path,
+    anki_addon_meta_default_data: Dict,
+    anki_test_app: AnkiTestApp,
+):
+    anki_test_app.setup_performed = True
+
+    shutil.rmtree(anki_logs_folder)
+    anki_logs_folder.mkdir()
+    anki_addon_manifest_file.write_text(data=json.dumps(obj=anki_addon_manifest_default_data))
+    anki_addon_meta_file.write_text(data=json.dumps(obj=anki_addon_meta_default_data))
+
+    models_backup = anki_test_app.get_all_models()
+    anki_test_app.remove_all_notes()
+
+    yield
+
+    anki_test_app.remove_all_note_models()
+    anki_test_app.add_backed_up_note_models(models=models_backup)
+
+    anki_test_app.setup_performed = False
+
+
+# ================== OBSIDIAN ==========================================================
+
+
+@pytest.fixture()
+def obsidian_config(
+    obsidian_settings_folder: Path,
+    obsidian_templates_folder: Path,
+    addon_config: AddonConfig,
+) -> ObsidianConfig:
+    settings = {
+        OBSIDIAN_TEMPLATES_OPTION_KEY: True,
+        OBSIDIAN_TRASH_OPTION_KEY: OBSIDIAN_PERMA_DELETE_TRASH_OPTION_VALUE,
+        OBSIDIAN_USE_MARKDOWN_LINKS_OPTION_KEY: True,
+    }
+    with open(file=obsidian_settings_folder / OBSIDIAN_APP_SETTINGS_FILE, mode="w") as f:
+        json.dump(settings, f)
+
+    template_settings = {
+        TEMPLATES_FOLDER_JSON_FIELD_NAME: obsidian_templates_folder.name,
+    }
+    with open(file=obsidian_settings_folder / OBSIDIAN_TEMPLATES_SETTINGS_FILE, mode="w") as f:
+        json.dump(template_settings, f)
+
+    return ObsidianConfig(addon_config=addon_config)
+
+
+@pytest.fixture()
+def obsidian_vault(
+    anki_app, addon_config, obsidian_config, markup_translator
+) -> ObsidianVault:
     return ObsidianVault(
         anki_app=anki_app,
-        addon_config=addon_config_mock,
-        obsidian_config=obsidian_config_mock,
+        addon_config=addon_config,
+        obsidian_config=obsidian_config,
         markup_translator=markup_translator,
     )
 
 
 @pytest.fixture()
-def media_synchronizer(
-    anki_app,
-    obsidian_vault,
-) -> MediaSynchronizer:
-    return MediaSynchronizer(
-        anki_app=anki_app,
-        obsidian_vault=obsidian_vault,
-    )
+def obsidian_setup_and_teardown(
+    srs_folder_in_obsidian: Path,
+    obsidian_templates_folder: Path,
+    srs_attachments_in_obsidian_folder: Path,
+    obsidian_config: ObsidianConfig,
+):
+    if srs_folder_in_obsidian.exists():
+        shutil.rmtree(srs_folder_in_obsidian)
+    if obsidian_templates_folder.exists():
+        shutil.rmtree(obsidian_templates_folder)
+    if srs_attachments_in_obsidian_folder.exists():
+        shutil.rmtree(srs_attachments_in_obsidian_folder)
+
+    yield
+
+
+# ================== OTHER =============================================================
 
 
 @pytest.fixture()
 def templates_synchronizer(
-    anki_app, obsidian_vault, obsidian_config_mock, addon_config_mock, markup_translator
+    anki_app, obsidian_vault, obsidian_config, addon_config, markup_translator
 ) -> TemplatesSynchronizer:
     return TemplatesSynchronizer(
         anki_app=anki_app,
         obsidian_vault=obsidian_vault,
-        obsidian_config=obsidian_config_mock,
-        addon_config=addon_config_mock,
+        obsidian_config=obsidian_config,
+        addon_config=addon_config,
+        markup_translator=markup_translator,
+    )
+
+
+@pytest.fixture()
+def notes_synchronizer(
+    anki_app, obsidian_vault, obsidian_config, addon_config, markup_translator
+) -> NotesSynchronizer:
+    return NotesSynchronizer(
+        anki_app=anki_app,
+        obsidian_vault=obsidian_vault,
+        obsidian_config=obsidian_config,
+        addon_config=addon_config,
         markup_translator=markup_translator,
     )

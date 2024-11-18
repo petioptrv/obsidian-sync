@@ -67,8 +67,7 @@ class TemplatesSynchronizer:
 
     def synchronize_templates(self):
         try:
-
-            anki_templates = self._anki_app.get_all_anki_note_templates(markup_translator=self._markup_translator)
+            anki_templates = self._anki_app.get_all_anki_note_templates()
             obsidian_templates = self._obsidian_vault.get_all_obsidian_templates()
 
             obsidian_templates = self._remove_deleted_templates(
@@ -80,19 +79,19 @@ class TemplatesSynchronizer:
                     ObsidianTemplate.from_template(
                         template=anki_template,
                         addon_config=self._addon_config,
-                        obsidian_config=self._obsidian_config,
+                        obsidian_vault=self._obsidian_vault,
                         markup_translator=self._markup_translator,
                     )
                 else:
                     obsidian_templates[model_id].update_with_template(template=anki_template)
 
+            self._anki_app.show_tooltip(tip=format_add_on_message("Templates synced successfully."))
         except Exception as e:
             logging.exception("Failed to sync note templates.")
             self._anki_app.show_critical(
                 text=format_add_on_message(f"Error syncing note templates: {str(e)}"),
                 title=ADD_ON_NAME,
             )
-        self._anki_app.show_tooltip(tip=format_add_on_message("Templates synced successfully."))
 
     @staticmethod
     def _remove_deleted_templates(

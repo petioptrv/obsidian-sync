@@ -29,7 +29,9 @@
 # Any modifications to this file must keep this entire header intact.
 from dataclasses import dataclass
 
+from obsidian_sync.base_types.content import NoteContent
+
 
 @dataclass
 class Note:
-    pass
+    content: NoteContent

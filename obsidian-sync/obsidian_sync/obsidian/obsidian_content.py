@@ -32,29 +32,42 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field as dataclass_field
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional, TYPE_CHECKING
 
 import yaml
 
-from obsidian_sync.constants import SRS_NOTE_FIELD_IDENTIFIER_COMMENT, IMAGE_FILE_EXTENSIONS, SRS_NOTE_IDENTIFIER_COMMENT, \
+from obsidian_sync.constants import SRS_NOTE_FIELD_IDENTIFIER_COMMENT, \
+    SRS_NOTE_IDENTIFIER_COMMENT, \
     MODEL_ID_PROPERTY_NAME, NOTE_ID_PROPERTY_NAME, TAGS_PROPERTY_NAME, DATE_MODIFIED_PROPERTY_NAME, \
-    SRS_HEADER_TITLE_LEVEL, DATETIME_FORMAT, TEMPLATE_TIME_FORMAT, TEMPLATE_DATE_FORMAT, DATE_SYNCED_PROPERTY_NAME
-from obsidian_sync.base_types.content import Image, Content, Field, Properties
+    SRS_HEADER_TITLE_LEVEL, DATETIME_FORMAT, DATE_SYNCED_PROPERTY_NAME, \
+    MODEL_NAME_PROPERTY_NAME
+from obsidian_sync.base_types.content import Content, Field, LinkedAttachment, NoteProperties, NoteContent, \
+    TemplateContent, TemplateProperties
 from obsidian_sync.markup_translator import MarkupTranslator
-from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
-from obsidian_sync.base_types.template import Template
+
+if TYPE_CHECKING:  # avoid circular imports
+    from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 
 
 @dataclass
-class ObsidianContent(ABC, Content):
+class ObsidianContent(Content, ABC):
     properties: "ObsidianProperties"
     fields: List["ObsidianField"]
 
     @classmethod
-    def from_obsidian_file_text(cls, file_text: str, markup_translator: MarkupTranslator) -> "ObsidianContent":
+    def from_obsidian_file_text(
+        cls,
+        file_text: str,
+        note_path: Path,
+        obsidian_vault: "ObsidianVault",
+        markup_translator: MarkupTranslator,
+    ) -> "ObsidianContent":
         properties = cls._properties_from_obsidian_file_text(file_text=file_text)
         fields = ObsidianField.from_obsidian_file_text(
-            file_text=file_text, markup_translator=markup_translator
+            file_text=file_text,
+            note_path=note_path,
+            obsidian_vault=obsidian_vault,
+            markup_translator=markup_translator,
         )
         content = cls(fields=fields, properties=properties)
         return content
@@ -79,18 +92,18 @@ class ObsidianTemplateContent(ObsidianContent):
     properties: "ObsidianTemplateProperties"
 
     @classmethod
-    def from_template(
-        cls, template: Template,
-        obsidian_config: ObsidianConfig,
+    def from_content(
+        cls,
+        content: TemplateContent,
+        obsidian_vault: "ObsidianVault",
         markup_translator: MarkupTranslator,
     ):
-        properties = ObsidianTemplateProperties.from_template(template=template)
-        fields = [
-            ObsidianField.from_field(
-                field=anki_field, markup_translator=markup_translator, obsidian_config=obsidian_config
-            )
-            for anki_field in template.content.fields
-        ]
+        properties = ObsidianTemplateProperties.from_properties(properties=content.properties)
+        fields = ObsidianField.from_fields(
+            fields=content.fields,
+            markup_translator=markup_translator,
+            obsidian_vault=obsidian_vault,
+        )
         return cls(properties=properties, fields=fields)
 
     @classmethod
@@ -103,15 +116,27 @@ class ObsidianNoteContent(ObsidianContent):
     properties: "ObsidianNoteProperties"
 
     @classmethod
+    def from_content(
+        cls,
+        content: NoteContent,
+        obsidian_vault: "ObsidianVault",
+        markup_translator: MarkupTranslator,
+    ) -> "ObsidianNoteContent":
+        properties = ObsidianNoteProperties.from_properties(properties=content.properties)
+        fields = ObsidianField.from_fields(
+            fields=content.fields,
+            markup_translator=markup_translator,
+            obsidian_vault=obsidian_vault,
+        )
+        return cls(properties=properties, fields=fields)
+
+    @classmethod
     def _properties_from_obsidian_file_text(cls, file_text: str) -> "ObsidianNoteProperties":
         return ObsidianNoteProperties.from_obsidian_file_text(file_text=file_text)
 
 
 @dataclass
-class ObsidianProperties(Properties):
-    note_id: int
-    tags: List[str]
-    date_modified: Union[str, datetime]
+class ObsidianProperties(NoteProperties):
     date_synced: Optional[datetime]
 
     @classmethod
@@ -141,24 +166,38 @@ class ObsidianProperties(Properties):
 class ObsidianTemplateProperties(ObsidianProperties):
     note_id: int = dataclass_field(default=0)
     tags: List[str] = dataclass_field(default_factory=list)
-    date_modified: str = dataclass_field(default=f"\"{{{{date:{TEMPLATE_DATE_FORMAT} {TEMPLATE_TIME_FORMAT}}}}}\"")
+    date_modified_in_anki: Optional[datetime] = dataclass_field(default=None)
     date_synced: Optional[datetime] = dataclass_field(default=None)
 
     @classmethod
-    def from_template(cls, template: Template) -> "ObsidianTemplateProperties":
-        return cls(model_id=template.content.properties.model_id)
+    def from_properties(cls, properties: TemplateProperties) -> "ObsidianTemplateProperties":
+        return cls(
+            model_id=properties.model_id,
+            model_name=properties.model_name,
+        )
 
     def to_obsidian_file_text(self) -> str:
+        date_modified_in_anki = (
+            self.date_modified_in_anki.strftime(DATETIME_FORMAT)
+            if self.date_modified_in_anki is not None
+            else self.date_modified_in_anki
+        )
+        date_synced = (
+            self.date_synced.strftime(DATETIME_FORMAT)
+            if self.date_synced is not None
+            else self.date_synced
+        )
         properties_dict = {
             MODEL_ID_PROPERTY_NAME: self.model_id,
+            MODEL_NAME_PROPERTY_NAME: self.model_name,
             NOTE_ID_PROPERTY_NAME: self.note_id,
             TAGS_PROPERTY_NAME: self.tags,
-            DATE_MODIFIED_PROPERTY_NAME: self.date_modified,
-            DATE_SYNCED_PROPERTY_NAME: self.date_synced,
+            DATE_MODIFIED_PROPERTY_NAME: date_modified_in_anki,
+            DATE_SYNCED_PROPERTY_NAME: date_synced,
         }
         return (
             f"---\n"
-            f"{yaml.safe_dump(data=properties_dict, sort_keys=False)}\n"
+            f"{yaml.safe_dump(data=properties_dict, sort_keys=False)}"
             f"---\n"
         )
 
@@ -166,6 +205,7 @@ class ObsidianTemplateProperties(ObsidianProperties):
     def _properties_from_dict(cls, properties_dict: dict) -> "ObsidianTemplateProperties":
         properties = cls(
             model_id=int(properties_dict[MODEL_ID_PROPERTY_NAME]),
+            model_name=properties_dict[MODEL_NAME_PROPERTY_NAME],
         )
         return properties
 
@@ -174,51 +214,79 @@ class ObsidianTemplateProperties(ObsidianProperties):
 class ObsidianNoteProperties(ObsidianProperties):
     note_id: int
     tags: List[str]
-    date_modified: datetime
+    date_modified_in_anki: Optional[datetime]
     date_synced: Optional[datetime]
 
+    @classmethod
+    def from_properties(cls, properties: NoteProperties):
+        return cls(
+            model_id=properties.model_id,
+            model_name=properties.model_name,
+            note_id=properties.note_id,
+            tags=properties.tags,
+            date_modified_in_anki=properties.date_modified_in_anki,
+            date_synced=datetime.now(),
+        )
+
     def to_obsidian_file_text(self) -> str:
+        date_modified_in_anki = (
+            self.date_modified_in_anki.strftime(DATETIME_FORMAT)
+            if self.date_modified_in_anki is not None
+            else self.date_modified_in_anki
+        )
+        date_synced = (
+            self.date_synced.strftime(DATETIME_FORMAT)
+            if self.date_synced is not None
+            else self.date_synced
+        )
         properties_dict = {
             MODEL_ID_PROPERTY_NAME: self.model_id,
+            MODEL_NAME_PROPERTY_NAME: self.model_name,
             NOTE_ID_PROPERTY_NAME: self.note_id,
             TAGS_PROPERTY_NAME: self.tags,
-            DATE_MODIFIED_PROPERTY_NAME: self.date_modified.strftime(DATETIME_FORMAT),
-            DATE_SYNCED_PROPERTY_NAME: self.date_synced.strftime(DATETIME_FORMAT) if self.date_synced else None,
+            DATE_MODIFIED_PROPERTY_NAME: date_modified_in_anki,
+            DATE_SYNCED_PROPERTY_NAME: date_synced,
         }
         return (
             f"---\n"
-            f"{yaml.safe_dump(data=properties_dict, sort_keys=False)}\n"
+            f"{yaml.safe_dump(data=properties_dict, sort_keys=False)}"
             f"---\n"
         )
 
     @classmethod
     def _properties_from_dict(cls, properties_dict: dict) -> "ObsidianNoteProperties":
+        date_modified_in_anki_value = properties_dict[DATE_MODIFIED_PROPERTY_NAME]
+        date_modified_in_anki = (
+            datetime.strptime(date_modified_in_anki_value, DATETIME_FORMAT)
+            if date_modified_in_anki_value is not None
+            else date_modified_in_anki_value
+        )
         date_synced_value = properties_dict[DATE_SYNCED_PROPERTY_NAME]
+        date_synced = datetime.strptime(date_synced_value, DATETIME_FORMAT) if date_synced_value else None
         properties = cls(
             note_id=int(properties_dict[NOTE_ID_PROPERTY_NAME]),
+            model_name=properties_dict[MODEL_NAME_PROPERTY_NAME],
             model_id=int(properties_dict[MODEL_ID_PROPERTY_NAME]),
             tags=properties_dict[TAGS_PROPERTY_NAME],
-            date_modified=datetime.strptime(properties_dict[DATE_MODIFIED_PROPERTY_NAME], DATETIME_FORMAT),
-            date_synced=datetime.strptime(date_synced_value, DATETIME_FORMAT) if date_synced_value else None,
+            date_modified_in_anki=date_modified_in_anki,
+            date_synced=date_synced,
         )
         return properties
 
 
 @dataclass
 class ObsidianField(Field):
+    attachments: List["ObsidianLinkedAttachment"]
     _markup_translator: MarkupTranslator
 
-    def __eq__(self, other: object) -> bool:
-        return (
-            isinstance(other, type(self))
-            and self.name == other.name
-            and self.text == other.text
-            and len(self.images) == len(other.images)
-            and all(si == oi for si, oi in zip(self.images, other.images))
-        )
-
     @classmethod
-    def from_obsidian_file_text(cls, file_text: str, markup_translator: MarkupTranslator) -> List["ObsidianField"]:
+    def from_obsidian_file_text(
+        cls,
+        file_text: str,
+        note_path: Path,
+        obsidian_vault: "ObsidianVault",
+        markup_translator: MarkupTranslator,
+    ) -> List["ObsidianField"]:
         headers_and_paragraph_matching_pattern = (
             f"{SRS_NOTE_FIELD_IDENTIFIER_COMMENT}\n{SRS_HEADER_TITLE_LEVEL} (.*?)\n"
             f"([\s\S]*?)(?={SRS_NOTE_FIELD_IDENTIFIER_COMMENT}|\Z)"
@@ -234,36 +302,76 @@ class ObsidianField(Field):
 
         for header, paragraph in matches:
             text = paragraph.strip()
-            images = ObsidianImage.from_obsidian_file_text(file_text=text)
+            attachments = ObsidianLinkedAttachment.from_obsidian_file_text(
+                file_text=text, note_path=note_path, obsidian_vault=obsidian_vault
+            )
+            for attachment in attachments:
+                text = text.replace(
+                    attachment.to_obsidian_file_text(), attachment.to_field_text()
+                )
             result.append(
-                ObsidianField(name=header.strip(), text=text, images=images, _markup_translator=markup_translator)
+                ObsidianField(
+                    name=header.strip(),
+                    text=text,
+                    attachments=attachments,
+                    _markup_translator=markup_translator,
+                )
             )
 
         return result
 
     @classmethod
-    def from_field(
-        cls, field: Field, markup_translator: MarkupTranslator, obsidian_config: ObsidianConfig
-    ) -> "ObsidianField":
-        obsidian_images = [
-            ObsidianImage.from_image(image=image, obsidian_config=obsidian_config)
-            for image in field.images
+    def from_fields(
+        cls, fields: List[Field], markup_translator: MarkupTranslator, obsidian_vault: "ObsidianVault"
+    ) -> List["ObsidianField"]:
+        fields = [
+            ObsidianField.from_field(
+                field=field,
+                markup_translator=markup_translator,
+                obsidian_vault=obsidian_vault,
+            )
+            for field in fields
         ]
-        markdown_text = markup_translator.translate_html_to_markdown(html=field.text)
+        return fields
+
+    @classmethod
+    def from_field(
+        cls, field: Field, markup_translator: MarkupTranslator, obsidian_vault: "ObsidianVault"
+    ) -> "ObsidianField":
+        markdown_text = field.to_markdown()
+
+        obsidian_attachments = []
+        for attachment in field.attachments:
+            obsidian_attachment = ObsidianLinkedAttachment.from_attachment(
+                attachment=attachment, obsidian_vault=obsidian_vault
+            )
+            obsidian_attachments.append(obsidian_attachment)
+            markdown_text = markdown_text.replace(
+                attachment.to_field_text(), obsidian_attachment.to_field_text()
+            )
+
         return cls(
-            name=field.name, text=markdown_text, images=obsidian_images, _markup_translator=markup_translator
+            name=field.name,
+            text=markdown_text,
+            attachments=obsidian_attachments,
+            _markup_translator=markup_translator,
         )
 
     def to_obsidian_file_text(self) -> str:
         field_title = self._build_field_title()
-        field_text = f"{field_title}\n{self.text}\n\n"
+        field_text = f"{field_title}\n\n{self.text}\n\n"
+        for attachment in self.attachments:
+            field_text = field_text.replace(
+                attachment.to_field_text(), attachment.to_obsidian_file_text()
+            )
         return field_text
 
     def to_markdown(self) -> str:
         return self.text
 
     def to_html(self) -> str:
-        raise NotImplementedError
+        html_text = self._markup_translator.translate_markdown_to_html(markdown=self.text)
+        return html_text
 
     @staticmethod
     def _get_note_body(file_text: str) -> str:
@@ -277,29 +385,28 @@ class ObsidianField(Field):
 
 
 @dataclass
-class ObsidianImage(Image):
-    def __eq__(self, other):
-        return isinstance(other, type(self)) and self.path == other.path
+class ObsidianLinkedAttachment(LinkedAttachment):
+    _obsidian_file_text_path: str
+    _obsidian_vault: "ObsidianVault"
 
     @classmethod
-    def from_obsidian_file_text(cls, file_text: str) -> List["ObsidianImage"]:
-        image_paths = cls._markdown_image_paths_from_file_text(file_text=file_text)
-        images = [ObsidianImage(path=Path(path)) for path in image_paths]
-        return images
-
-    @classmethod
-    def from_image(cls, image: Image, obsidian_config: ObsidianConfig) -> "ObsidianImage":
-        image_path = obsidian_config.srs_attachments_folder / image.path.name
-        return cls(path=image_path)
-
-    @staticmethod
-    def _markdown_image_paths_from_file_text(file_text: str) -> List[str]:
-        # source: https://stackoverflow.com/a/44227600/6793798
-        extensions_matcher = "|".join(IMAGE_FILE_EXTENSIONS)
-        markdown_image_pattern = rf"""!?\[[^\]]*\]\((.*?\.(?:{extensions_matcher}))\s*("(?:.*[^"])")?\s*\)"""
-        image_paths = [
-            path
-            for path, optional_part in
-            re.findall(markdown_image_pattern, file_text, re.DOTALL)
+    def from_obsidian_file_text(cls, file_text: str, note_path: Path, obsidian_vault: "ObsidianVault") -> List["ObsidianLinkedAttachment"]:
+        attachment_paths = obsidian_vault.attachment_paths_from_file_text(file_text=file_text, note_path=note_path)
+        attachments = [
+            cls(path=path, _obsidian_file_text_path=obsidian_file_text_path, _obsidian_vault=obsidian_vault)
+            for obsidian_file_text_path, path in attachment_paths.items()
         ]
-        return image_paths
+        return attachments
+
+    @classmethod
+    def from_attachment(
+        cls, attachment: LinkedAttachment, obsidian_vault: "ObsidianVault"
+    ) -> "ObsidianLinkedAttachment":
+        obsidian_file_text_path, obsidian_attachment_path = obsidian_vault.ensure_attachment_is_in_obsidian(attachment=attachment)
+        return cls(path=obsidian_attachment_path, _obsidian_file_text_path=obsidian_file_text_path, _obsidian_vault=obsidian_vault)
+
+    def to_field_text(self) -> str:
+        return str(self.path)
+
+    def to_obsidian_file_text(self) -> str:
+        return self._obsidian_file_text_path

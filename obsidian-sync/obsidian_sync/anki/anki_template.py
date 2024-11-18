@@ -29,9 +29,10 @@
 # Any modifications to this file must keep this entire header intact.
 from dataclasses import dataclass
 
+from obsidian_sync.anki.anki_content import AnkiTemplateContent
 from obsidian_sync.base_types.template import Template
 
 
 @dataclass
 class AnkiTemplate(Template):
-    pass
+    content: AnkiTemplateContent

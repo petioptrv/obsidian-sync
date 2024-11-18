@@ -1,163 +1,82 @@
-# -*- coding: utf-8 -*-
-
-# Obsidian Sync Add-on for Anki
-#
-# Copyright (C)  2024 Petrov P.
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version, with the additions
-# listed at the end of the license file that accompanied this program
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-#
-# NOTE: This program is subject to certain additional terms pursuant to
-# Section 7 of the GNU Affero General Public License.  You should have
-# received a copy of these additional terms immediately following the
-# terms and conditions of the GNU Affero General Public License that
-# accompanied this program.
-#
-# If not, please request a copy through one of the means of contact
-# listed here: <mailto:petioptrv@icloud.com>.
-#
-# Any modifications to this file must keep this entire header intact.
-
-import json
-import os
 import logging
-from pathlib import Path
-from typing import Dict
 
-from aqt import mw
-from aqt.utils import showCritical, tooltip
-
-from ..addon_config import AddonConfig
-from ..obsidian.obsidian_config import ObsidianConfig
-from ..change_log import ChangeLogBase
-from ..note_types import AnkiNote, ObsidianNote
-from ..builders.obsidian_note_builder import ObsidianNoteBuilder
-from ..constants import DEFAULT_NODE_ID_FOR_NEW_OBSIDIAN_NOTES, ADD_ON_NAME
-from ..parsers.obsidian_note_parser import ObsidianNoteParser
-from ..utils import format_add_on_message
+from obsidian_sync.addon_config import AddonConfig
+from obsidian_sync.anki.anki_app import AnkiApp
+from obsidian_sync.anki.anki_note import AnkiNote
+from obsidian_sync.constants import ADD_ON_NAME
+from obsidian_sync.markup_translator import MarkupTranslator
+from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
+from obsidian_sync.obsidian.obsidian_note import ObsidianNote
+from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
+from obsidian_sync.utils import format_add_on_message
 
 
 class NotesSynchronizer:
     def __init__(
         self,
+        anki_app: AnkiApp,
         addon_config: AddonConfig,
         obsidian_config: ObsidianConfig,
-        obsidian_note_builder: ObsidianNoteBuilder,
-        obsidian_note_parser: ObsidianNoteParser,
+        obsidian_vault: ObsidianVault,
+        markup_translator: MarkupTranslator,
     ):
+        self._anki_app = anki_app
         self._addon_config = addon_config
         self._obsidian_config = obsidian_config
-        self._obsidian_note_builder = obsidian_note_builder
-        self._obsidian_note_parser = obsidian_note_parser
+        self._obsidian_vault = obsidian_vault
+        self._markup_translator = markup_translator
 
-    def sync_notes(self):
+    def synchronize_notes(self):
         try:
-            anki_notes = self._get_all_anki_notes()
-            obsidian_notes = self._get_all_obsidian_notes()
-            obsidian_deleted_notes = self._get_all_obsidian_deleted_notes()
-
-            change_log = ChangeLogBase.build_log(addon_config=self._addon_config)
+            anki_notes = self._anki_app.get_all_notes()
+            existing_obsidian_notes, new_obsidian_notes = self._obsidian_vault.get_all_obsidian_notes()
+            obsidian_deleted_notes = self._obsidian_vault.get_all_obsidian_deleted_notes()
 
             while len(anki_notes) != 0:
                 note_id, anki_note = anki_notes.popitem()
-                if note_id in obsidian_notes:
-                    obsidian_note = obsidian_notes.pop(note_id)
-                    obsidian_note.update_with_anki_note(anki_note=anki_note, change_log=change_log, print_to_log=True)
-                    anki_note.update_with_obsidian_note(
-                        obsidian_note=obsidian_note, changes_log=change_log, print_to_log=True
+                obsidian_note = existing_obsidian_notes.pop(note_id, None)
+
+                if obsidian_note is not None:
+                    self._synchronize_notes(anki_note=anki_note, obsidian_note=obsidian_note)
+                elif note_id in obsidian_deleted_notes:
+                    anki_note.delete()
+                else:
+                    ObsidianNote.from_note(
+                        note=anki_note,
+                        addon_config=self._addon_config,
+                        obsidian_vault=self._obsidian_vault,
+                        markup_translator=self._markup_translator,
                     )
-                else:
-                    if note_id in obsidian_deleted_notes:
-                        anki_note.delete(change_log=change_log)
-                    else:
-                        ObsidianNote.create_note_file_from_anki_note(
-                            addon_config=self._addon_config,
-                            obsidian_note_builder=self._obsidian_note_builder,
-                            anki_note=anki_note,
-                            change_log=change_log,
-                        )
 
-            while len(obsidian_notes) != 0:
-                note_id, obsidian_note = obsidian_notes.popitem()
-                if note_id == DEFAULT_NODE_ID_FOR_NEW_OBSIDIAN_NOTES:
-                    AnkiNote.create_in_anki_from_obsidian(obsidian_note=obsidian_note, change_log=change_log)
-                else:
-                    obsidian_note.delete_file(change_log=change_log)
+            while len(existing_obsidian_notes) != 0:
+                note_id, obsidian_note = existing_obsidian_notes.popitem()
+                obsidian_note.delete()
 
-            change_log.display_changes()
+            while len(new_obsidian_notes) != 0:
+                obsidian_note = new_obsidian_notes.pop()
+                anki_note = AnkiNote.from_note(
+                    note=obsidian_note,
+                    anki_app=self._anki_app,
+                    addon_config=self._addon_config,
+                )
+                obsidian_note.update_with_note(note=anki_note)  # update note ID and timestamps
 
-            tooltip(format_add_on_message("Notes synced successfully."))
+            self._anki_app.show_tooltip(tip=format_add_on_message("Notes synced successfully."))
         except Exception as e:
             logging.exception("Failed to sync notes.")
-            showCritical(
+            self._anki_app.show_critical(
                 text=format_add_on_message(f"Obsidian sync error: {str(e)}"),
                 title=ADD_ON_NAME,
             )
 
     @staticmethod
-    def _get_all_anki_notes() -> Dict[int, AnkiNote]:
-        notes = {}
+    def _synchronize_notes(anki_note: AnkiNote, obsidian_note: ObsidianNote):
+        anki_note_date_modified = anki_note.content.properties.date_modified_in_anki.timestamp()
+        obsidian_note_date_modified_in_anki = obsidian_note.content.properties.date_modified_in_anki.timestamp()
+        obsidian_note_file_date_modified = obsidian_note.file.path.stat().st_mtime
 
-        for nid in mw.col.find_notes(""):
-            note = mw.col.get_note(nid)
-            notes[nid] = AnkiNote.from_anki_note(note=note)
-
-        return notes
-
-    def _get_all_obsidian_notes(self) -> Dict[int, ObsidianNote]:
-        notes = {}
-        templates_folder_path = self._obsidian_config.templates_folder
-        trash_path = self._obsidian_config.trash_folder
-
-        for root, dirs, files in os.walk(self._addon_config.srs_folder):
-            if Path(root) in [templates_folder_path, trash_path]:
-                continue
-            for file in files:
-                file_path = Path(root) / file
-                obsidian_note = ObsidianNote.build_from_file(
-                    addon_config=self._addon_config,
-                    obsidian_note_parser=self._obsidian_note_parser,
-                    obsidian_note_builder=self._obsidian_note_builder,
-                    file_path=file_path,
-                )
-                if obsidian_note is not None:
-                    notes[obsidian_note.note_id] = obsidian_note
-
-        return notes
-
-    def _get_all_obsidian_deleted_notes(self) -> Dict[int, ObsidianNote]:
-        deleted_notes = {}
-        trash_path = self._obsidian_config.trash_folder
-
-        if trash_path is not None:
-            for root, dirs, deleted_files in os.walk(trash_path):
-                for file in deleted_files:
-                    file_path = Path(root) / file
-                    obsidian_note = ObsidianNote.build_from_file(
-                        addon_config=self._addon_config,
-                        obsidian_note_parser=self._obsidian_note_parser,
-                        obsidian_note_builder=self._obsidian_note_builder,
-                        file_path=file_path,
-                    )
-                    if obsidian_note is not None:
-                        deleted_notes[obsidian_note.note_id] = obsidian_note
-
-        return deleted_notes
-
-    @staticmethod
-    def _store_notes_data_for_testing(notes):
-        addon_dir = os.path.dirname(__file__)
-        file_path = os.path.join(addon_dir, "anki_notes_data.json")
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(notes, f, ensure_ascii=False, indent=2)
+        if anki_note_date_modified != obsidian_note_date_modified_in_anki:
+            if anki_note_date_modified > obsidian_note_file_date_modified:
+                obsidian_note.update_with_note(note=anki_note)
+            else:
+                anki_note.update_with_note(note=obsidian_note)
