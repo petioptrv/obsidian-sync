@@ -125,6 +125,9 @@ class ObsidianNote(Note):
 
         return corrupt
 
+    def save(self):
+        self._file.save()
+
     def delete(self):
         self._file.delete()
 

@@ -1,5 +1,5 @@
 import logging
-from typing import Dict
+from typing import Dict, List
 
 from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.addon_metadata import AddonMetadata
@@ -34,8 +34,9 @@ class NotesSynchronizer:
         try:
             self._metadata.load()
             anki_notes = self._anki_app.get_all_notes()
-            self._sanitize_anki_notes(anki_notes=anki_notes)
+            anki_notes = self._sanitize_anki_notes(anki_notes=anki_notes)
             existing_obsidian_notes, new_obsidian_notes = self._obsidian_vault.get_all_obsidian_notes()
+            new_obsidian_notes = self._sanitize_new_obsidian_notes(new_obsidian_notes=new_obsidian_notes)
             obsidian_deleted_notes = self._obsidian_vault.get_all_obsidian_deleted_notes()
             obsidian_deleted_notes = obsidian_deleted_notes.union(
                 self._metadata.anki_notes_synced_to_obsidian.difference(
@@ -92,9 +93,9 @@ class NotesSynchronizer:
             refactored = False
 
             for field in anki_note.content.fields:
-                sanitized_field_text = self._markup_translator.sanitize_html(html=field.to_html())
-                if sanitized_field_text != field.to_html():
-                    field.text = sanitized_field_text
+                sanitized_field_html = self._markup_translator.sanitize_html(html=field.to_html())
+                if sanitized_field_html != field.to_html():
+                    field.set_from_html(html=sanitized_field_html)
                     refactored = True
 
             if refactored:
@@ -102,6 +103,21 @@ class NotesSynchronizer:
                 anki_notes[note_id] = self._anki_app.get_note_by_id(note_id=note_id)
 
         return anki_notes
+
+    def _sanitize_new_obsidian_notes(self, new_obsidian_notes: List[ObsidianNote]) -> List[ObsidianNote]:
+        for obsidian_note in new_obsidian_notes:
+            refactored = False
+
+            for field in obsidian_note.content.fields:
+                sanitized_field_markdown = self._markup_translator.sanitize_markdown(markdown=field.to_markdown())
+                if field.to_markdown() != sanitized_field_markdown:
+                    field.set_from_markdown(markdown=sanitized_field_markdown)
+                    refactored = True
+
+            if refactored:
+                obsidian_note.save()
+
+        return new_obsidian_notes
 
     @staticmethod
     def _synchronize_notes(anki_note: AnkiNote, obsidian_note: ObsidianNote):

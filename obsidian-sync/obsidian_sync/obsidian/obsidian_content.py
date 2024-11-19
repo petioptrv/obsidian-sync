@@ -378,6 +378,13 @@ class ObsidianField(Field):
             _markup_translator=markup_translator,
         )
 
+    def set_from_markdown(self, markdown: str):
+        self.text = markdown
+
+    def set_from_html(self, html: str):
+        markdown = self._markup_translator.translate_html_to_markdown(html=html)
+        self.text = markdown
+
     def to_obsidian_file_text(self) -> str:
         field_title = self._build_field_title()
         field_text = f"{field_title}\n\n{self.text}\n\n"

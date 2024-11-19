@@ -91,6 +91,12 @@ class AnkiField(Field):
             _markup_translator=markup_translator,
         )
 
+    def set_from_markdown(self, markdown: str):
+        self.text = self._markup_translator.translate_markdown_to_html(markdown=markdown)
+
+    def set_from_html(self, html: str):
+        self.text = html
+
     def to_markdown(self) -> str:
         markdown_text = self._markup_translator.translate_html_to_markdown(html=self.text)
         return markdown_text

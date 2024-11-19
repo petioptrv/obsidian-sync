@@ -94,6 +94,14 @@ class Field(ABC):
         )
 
     @abstractmethod
+    def set_from_markdown(self, markdown: str):
+        ...
+
+    @abstractmethod
+    def set_from_html(self, html: str):
+        ...
+
+    @abstractmethod
     def to_markdown(self) -> str:
         ...
 
