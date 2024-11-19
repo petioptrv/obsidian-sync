@@ -109,7 +109,8 @@ class ObsidianTemplate(Template):
         content_from_template = ObsidianTemplateContent.from_content(
             content=template.content,
             obsidian_vault=self._obsidian_vault,
-            markup_translator=self._markup_translator
+            markup_translator=self._markup_translator,
+            template_path=self._file.path,
         )
         if self._file.content != content_from_template:
             self._file.content = content_from_template

@@ -97,12 +97,14 @@ class ObsidianTemplateContent(ObsidianContent):
         content: TemplateContent,
         obsidian_vault: "ObsidianVault",
         markup_translator: MarkupTranslator,
+        template_path: Path,
     ):
         properties = ObsidianTemplateProperties.from_properties(properties=content.properties)
         fields = ObsidianField.from_fields(
             fields=content.fields,
             markup_translator=markup_translator,
             obsidian_vault=obsidian_vault,
+            note_path=template_path,
         )
         return cls(properties=properties, fields=fields)
 
@@ -121,12 +123,14 @@ class ObsidianNoteContent(ObsidianContent):
         content: NoteContent,
         obsidian_vault: "ObsidianVault",
         markup_translator: MarkupTranslator,
+        note_path: Path,
     ) -> "ObsidianNoteContent":
         properties = ObsidianNoteProperties.from_properties(properties=content.properties)
         fields = ObsidianField.from_fields(
             fields=content.fields,
             markup_translator=markup_translator,
             obsidian_vault=obsidian_vault,
+            note_path=note_path,
         )
         return cls(properties=properties, fields=fields)
 
@@ -322,13 +326,18 @@ class ObsidianField(Field):
 
     @classmethod
     def from_fields(
-        cls, fields: List[Field], markup_translator: MarkupTranslator, obsidian_vault: "ObsidianVault"
+        cls,
+        fields: List[Field],
+        markup_translator: MarkupTranslator,
+        obsidian_vault: "ObsidianVault",
+        note_path: Path,
     ) -> List["ObsidianField"]:
         fields = [
             ObsidianField.from_field(
                 field=field,
                 markup_translator=markup_translator,
                 obsidian_vault=obsidian_vault,
+                note_path=note_path,
             )
             for field in fields
         ]
@@ -336,14 +345,18 @@ class ObsidianField(Field):
 
     @classmethod
     def from_field(
-        cls, field: Field, markup_translator: MarkupTranslator, obsidian_vault: "ObsidianVault"
+        cls,
+        field: Field,
+        markup_translator: MarkupTranslator,
+        obsidian_vault: "ObsidianVault",
+        note_path: Path,
     ) -> "ObsidianField":
         markdown_text = field.to_markdown()
 
         obsidian_attachments = []
         for attachment in field.attachments:
             obsidian_attachment = ObsidianLinkedAttachment.from_attachment(
-                attachment=attachment, obsidian_vault=obsidian_vault
+                attachment=attachment, obsidian_vault=obsidian_vault, note_path=note_path
             )
             obsidian_attachments.append(obsidian_attachment)
             markdown_text = markdown_text.replace(
@@ -390,7 +403,9 @@ class ObsidianLinkedAttachment(LinkedAttachment):
     _obsidian_vault: "ObsidianVault"
 
     @classmethod
-    def from_obsidian_file_text(cls, file_text: str, note_path: Path, obsidian_vault: "ObsidianVault") -> List["ObsidianLinkedAttachment"]:
+    def from_obsidian_file_text(
+        cls, file_text: str, note_path: Path, obsidian_vault: "ObsidianVault"
+    ) -> List["ObsidianLinkedAttachment"]:
         attachment_paths = obsidian_vault.attachment_paths_from_file_text(file_text=file_text, note_path=note_path)
         attachments = [
             cls(path=path, _obsidian_file_text_path=obsidian_file_text_path, _obsidian_vault=obsidian_vault)
@@ -400,10 +415,16 @@ class ObsidianLinkedAttachment(LinkedAttachment):
 
     @classmethod
     def from_attachment(
-        cls, attachment: LinkedAttachment, obsidian_vault: "ObsidianVault"
+        cls, attachment: LinkedAttachment, obsidian_vault: "ObsidianVault", note_path: Path
     ) -> "ObsidianLinkedAttachment":
-        obsidian_file_text_path, obsidian_attachment_path = obsidian_vault.ensure_attachment_is_in_obsidian(attachment=attachment)
-        return cls(path=obsidian_attachment_path, _obsidian_file_text_path=obsidian_file_text_path, _obsidian_vault=obsidian_vault)
+        obsidian_file_text_path, obsidian_attachment_path = obsidian_vault.ensure_attachment_is_in_obsidian(
+            attachment=attachment, note_path=note_path
+        )
+        return cls(
+            path=obsidian_attachment_path,
+            _obsidian_file_text_path=obsidian_file_text_path,
+            _obsidian_vault=obsidian_vault,
+        )
 
     def to_field_text(self) -> str:
         return str(self.path)

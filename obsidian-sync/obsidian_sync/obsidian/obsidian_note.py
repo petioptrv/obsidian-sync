@@ -108,6 +108,7 @@ class ObsidianNote(Note):
             content=note.content,
             obsidian_vault=self._obsidian_vault,
             markup_translator=self._markup_translator,
+            note_path=self._file.path,
         )
         if self._file.content != content_from_note:
             self._file.content = content_from_note
