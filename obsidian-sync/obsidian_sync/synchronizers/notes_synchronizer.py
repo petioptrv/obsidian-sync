@@ -1,4 +1,5 @@
 import logging
+from typing import Dict
 
 from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.addon_metadata import AddonMetadata
@@ -33,6 +34,7 @@ class NotesSynchronizer:
         try:
             self._metadata.load()
             anki_notes = self._anki_app.get_all_notes()
+            self._sanitize_anki_notes(anki_notes=anki_notes)
             existing_obsidian_notes, new_obsidian_notes = self._obsidian_vault.get_all_obsidian_notes()
             obsidian_deleted_notes = self._obsidian_vault.get_all_obsidian_deleted_notes()
             obsidian_deleted_notes = obsidian_deleted_notes.union(
@@ -84,6 +86,23 @@ class NotesSynchronizer:
                 title=ADD_ON_NAME,
             )
 
+    def _sanitize_anki_notes(self, anki_notes: Dict[int, AnkiNote]) -> Dict[int, AnkiNote]:
+        for note_id in list(anki_notes.keys()):
+            anki_note = anki_notes[note_id]
+            refactored = False
+
+            for field in anki_note.content.fields:
+                sanitized_field_text = self._markup_translator.sanitize_html(html=field.to_html())
+                if sanitized_field_text != field.to_html():
+                    field.text = sanitized_field_text
+                    refactored = True
+
+            if refactored:
+                self._anki_app.update_note_in_anki(anki_note=anki_note)
+                anki_notes[note_id] = self._anki_app.get_note_by_id(note_id=note_id)
+
+        return anki_notes
+
     @staticmethod
     def _synchronize_notes(anki_note: AnkiNote, obsidian_note: ObsidianNote):
         anki_note_date_modified = anki_note.content.properties.date_modified_in_anki.timestamp()
@@ -96,5 +115,7 @@ class NotesSynchronizer:
                 obsidian_note.update_with_note(note=anki_note)
             else:
                 anki_note.update_with_note(note=obsidian_note)
-        elif obsidian_note_file_date_modified > last_sync + 1:
+        elif obsidian_note_file_date_modified > last_sync + 1:  # this also covers Obsidian properties updates
             anki_note.update_with_note(note=obsidian_note)
+        elif anki_note.content.properties != obsidian_note.content.properties:  # for props like max difficulty
+            obsidian_note.update_with_note(note=obsidian_note)

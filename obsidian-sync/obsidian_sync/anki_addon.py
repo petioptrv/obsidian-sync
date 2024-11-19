@@ -31,7 +31,7 @@ from obsidian_sync.addon_metadata import AddonMetadata
 
 from obsidian_sync.anki.anki_app import AnkiApp
 from obsidian_sync.addon_config import AddonConfig
-from obsidian_sync.constants import ADD_ON_NAME, OBSIDIAN_LOCAL_TRASH_OPTION_VALUE
+from obsidian_sync.constants import ADD_ON_NAME
 from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
 from obsidian_sync.markup_translator import MarkupTranslator
 from obsidian_sync.obsidian.obsidian_vault import ObsidianVault

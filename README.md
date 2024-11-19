@@ -29,12 +29,13 @@ If a given note has been modified in both apps, the most recent version is kept.
 
 ## Config
 
-| Config                                | Description                                                                                   |
-|---------------------------------------|-----------------------------------------------------------------------------------------------|
-| `vault-path`                          | Path to Obsidian vault.                                                                       |
-| `srs-folder-in-obsidian`              | Set a specific folder path relative to the Obsidian vault to use for SRS notes.               |
-| `sync-with-obsidian-on-anki-web-sync` | If enabled, Anki will sync with Obsidian before every sync with Anki web.                     |
-| `anki-deck-name-for-obsidian-imports` | The name of the Anki deck in which the cards of notes imported from Obsidian will default to. |
+| Config                                | Description                                                                                                                                                            |
+|---------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `vault-path`                          | Path to Obsidian vault.                                                                                                                                                |
+| `srs-folder-in-obsidian`              | Set a specific folder path relative to the Obsidian vault to use for SRS notes.                                                                                        |
+| `sync-with-obsidian-on-anki-web-sync` | If enabled, Anki will sync with Obsidian before every sync with Anki web.                                                                                              |
+| `anki-deck-name-for-obsidian-imports` | The name of the Anki deck in which the cards of notes imported from Obsidian will default to.                                                                          |
+| `add-obsidian-hyperlink-in-anki`      | Adds an extra field to all note models in Anki that will contain a hyperlink to the associated Obsidian note to allow quickly jumping to the note in the Obsidian app. |
 
 ## Shortcuts
 

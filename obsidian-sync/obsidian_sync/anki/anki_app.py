@@ -64,24 +64,29 @@ class AnkiApp:
 
     def get_all_anki_note_templates(self) -> Dict[int, AnkiTemplate]:
         templates = {}
-        all_templates = aqt.mw.col.models.all()
+        all_template_ids = [model["id"] for model in aqt.mw.col.models.all()]
 
-        for model in all_templates:
-            properties = AnkiTemplateProperties(model_id=model["id"], model_name=model["name"])
-            fields = [
-                AnkiField(
-                    name=field["name"],
-                    text="",
-                    attachments=[],
-                    _markup_translator=self._markup_translator,
-                )
-                for field in model["flds"]
-            ]
-            content = AnkiTemplateContent(properties=properties, fields=fields)
-            template = AnkiTemplate(content=content)
-            templates[model["id"]] = template
+        for model_id in all_template_ids:
+            template = self.get_anki_note_template(model_id=model_id)
+            templates[model_id] = template
 
         return templates
+
+    def get_anki_note_template(self, model_id: int) -> AnkiTemplate:
+        model = aqt.mw.col.models.get(id=model_id)
+        properties = AnkiTemplateProperties(model_id=model["id"], model_name=model["name"])
+        fields = [
+            AnkiField(
+                name=field["name"],
+                text="",
+                attachments=[],
+                _markup_translator=self._markup_translator,
+            )
+            for field in model["flds"]
+        ]
+        content = AnkiTemplateContent(properties=properties, fields=fields)
+        template = AnkiTemplate(content=content)
+        return template
 
     def create_new_empty_note_in_anki(self, model_id: int, deck_name: str) -> AnkiNote:
         col = aqt.mw.col
@@ -153,11 +158,6 @@ class AnkiApp:
 
         note_refactored = False
         for field_name, field_text in note.items():
-            sanitized_field_text = self._markup_translator.sanitize_html(html=field_text)
-            if sanitized_field_text != field_text:
-                note_refactored = True
-                note[field_name] = sanitized_field_text
-                field_text = sanitized_field_text
             attachments = []
             adapted_field_text = field_text
             for file_name in col.media.files_in_str(mid=model_id, string=field_text):
