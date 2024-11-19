@@ -40,7 +40,7 @@ from obsidian_sync.anki.anki_content import AnkiField, AnkiTemplateContent, \
     AnkiTemplateProperties, AnkiNoteProperties, AnkiLinkedAttachment, AnkiNoteContent
 from obsidian_sync.anki.anki_note import AnkiNote
 from obsidian_sync.anki.anki_template import AnkiTemplate
-from obsidian_sync.base_types.content import LinkedAttachment
+from obsidian_sync.anki.app.anki_media_manager import AnkiMediaManager
 from obsidian_sync.constants import ADD_ON_NAME
 from obsidian_sync.file_utils import check_is_attachment_file
 from obsidian_sync.markup_translator import MarkupTranslator
@@ -48,6 +48,7 @@ from obsidian_sync.markup_translator import MarkupTranslator
 
 class AnkiApp:
     def __init__(self, markup_translator: MarkupTranslator):
+        self._media_manager = AnkiMediaManager()
         self._markup_translator = markup_translator
 
     @property
@@ -55,8 +56,8 @@ class AnkiApp:
         return aqt.mw.addonManager.getConfig(module=ADD_ON_NAME)
 
     @property
-    def media_directory(self) -> Path:
-        return Path(aqt.mw.col.media.dir())
+    def media_manager(self):
+        return self._media_manager
 
     @property
     def addon_config_editor_will_update_json(self) -> List:
@@ -109,18 +110,11 @@ class AnkiApp:
 
         note.tags = anki_note.content.properties.tags
         note.fields = [
-            field.to_html()
+            field.to_anki_field_text()
             for field in anki_note.content.fields
         ]
 
         col.update_note(note=note)
-
-    def ensure_attachment_is_in_anki(self, attachment: LinkedAttachment) -> Path:
-        media = aqt.mw.col.media
-        if not media.have(fname=attachment.path.name):
-            media.add_file(path=attachment.path)
-        attachment_path = self.media_directory / attachment.path.name
-        return attachment_path
 
     def get_all_notes(self) -> Dict[int, AnkiNote]:
         col = aqt.mw.col
@@ -160,10 +154,9 @@ class AnkiApp:
         for field_name, field_text in note.items():
             attachments = []
             adapted_field_text = field_text
-            for file_name in col.media.files_in_str(mid=model_id, string=field_text):
-                file_path = self.media_directory / file_name
+            for file_path in self._media_manager.get_media_file_paths(model_id=model_id, field_text=field_text):
                 if check_is_attachment_file(path=file_path):
-                    adapted_field_text = adapted_field_text.replace(file_name, str(file_path))
+                    adapted_field_text = adapted_field_text.replace(file_path.name, str(file_path))
                     attachments.append(AnkiLinkedAttachment(path=file_path))
 
             fields.append(

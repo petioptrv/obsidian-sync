@@ -1,11 +1,9 @@
 from dataclasses import dataclass
-from typing import List, TYPE_CHECKING
+from typing import List
 
+from obsidian_sync.anki.app.anki_media_manager import AnkiMediaManager
 from obsidian_sync.base_types.content import Field, Content, Properties, NoteProperties, LinkedAttachment, NoteContent
 from obsidian_sync.markup_translator import MarkupTranslator
-
-if TYPE_CHECKING:  # avoids circular import
-    from obsidian_sync.anki.anki_app import AnkiApp
 
 
 @dataclass
@@ -24,10 +22,15 @@ class AnkiNoteContent(AnkiContent):
     properties: "AnkiNoteProperties"
 
     @classmethod
-    def from_content(cls, content: NoteContent, anki_app: "AnkiApp", markup_translator: MarkupTranslator) -> "AnkiNoteContent":
+    def from_content(
+        cls,
+        content: NoteContent,
+        anki_media_manager: AnkiMediaManager,
+        markup_translator: MarkupTranslator,
+    ) -> "AnkiNoteContent":
         properties = AnkiNoteProperties.from_properties(properties=content.properties)
         fields = AnkiField.from_fields(
-            fields=content.fields, anki_app=anki_app, markup_translator=markup_translator
+            fields=content.fields, anki_media_manager=anki_media_manager, markup_translator=markup_translator
         )
         return cls(properties=properties, fields=fields)
 
@@ -63,21 +66,33 @@ class AnkiField(Field):
     _markup_translator: MarkupTranslator
 
     @classmethod
-    def from_fields(cls, fields: List[Field], anki_app: "AnkiApp", markup_translator: MarkupTranslator) -> List["AnkiField"]:
+    def from_fields(
+        cls,
+        fields: List[Field],
+        anki_media_manager: AnkiMediaManager,
+        markup_translator: MarkupTranslator,
+    ) -> List["AnkiField"]:
         fields = [
-            AnkiField.from_field(field=field, anki_app=anki_app, markup_translator=markup_translator)
+            AnkiField.from_field(
+                field=field, anki_media_manager=anki_media_manager, markup_translator=markup_translator
+            )
             for field in fields
         ]
         return fields
 
     @classmethod
-    def from_field(cls, field: Field, anki_app: "AnkiApp", markup_translator: MarkupTranslator) -> "AnkiField":
+    def from_field(
+        cls,
+        field: Field,
+        anki_media_manager: AnkiMediaManager,
+        markup_translator: MarkupTranslator,
+    ) -> "AnkiField":
         html_text = field.to_html()
 
         anki_attachments = []
         for attachment in field.attachments:
             anki_attachment = AnkiLinkedAttachment.from_attachment(
-                attachment=attachment, anki_app=anki_app
+                attachment=attachment, anki_media_manager=anki_media_manager
             )
             anki_attachments.append(anki_attachment)
             html_text = html_text.replace(
@@ -97,6 +112,16 @@ class AnkiField(Field):
     def set_from_html(self, html: str):
         self.text = html
 
+    def to_anki_field_text(self) -> str:
+        field_text = self.text
+
+        for attachment in self.attachments:
+            field_text = field_text.replace(
+                attachment.to_field_text(), attachment.to_anki_field_text()
+            )
+
+        return field_text
+
     def to_markdown(self) -> str:
         markdown_text = self._markup_translator.translate_html_to_markdown(html=self.text)
         return markdown_text
@@ -109,10 +134,13 @@ class AnkiField(Field):
 class AnkiLinkedAttachment(LinkedAttachment):
     @classmethod
     def from_attachment(
-        cls, attachment: LinkedAttachment, anki_app: "AnkiApp"
+        cls, attachment: LinkedAttachment, anki_media_manager: AnkiMediaManager
     ) -> "AnkiLinkedAttachment":
-        anki_attachment = anki_app.ensure_attachment_is_in_anki(attachment=attachment)
+        anki_attachment = anki_media_manager.ensure_attachment_is_in_anki(attachment=attachment)
         return cls(path=anki_attachment)
+
+    def to_anki_field_text(self) -> str:
+        return self.path.name
 
     def to_field_text(self) -> str:
         return str(self.path)

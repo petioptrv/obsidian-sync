@@ -154,14 +154,14 @@ def test_sync_new_obsidian_note_with_attachment_to_anki(
         file_path=srs_folder_in_obsidian / "test.md",
     )
 
-    assert len(list(anki_test_app.media_directory.iterdir())) == 0
+    assert len(list(anki_test_app.media_manager.media_directory.iterdir())) == 0
 
     notes_synchronizer.synchronize_notes()
 
-    assert len(list(anki_test_app.media_directory.iterdir())) == 1
+    assert len(list(anki_test_app.media_manager.media_directory.iterdir())) == 1
 
     anki_note = list(anki_test_app.get_all_notes().values())[0]
-    attachment_file = Path(list(anki_test_app.media_directory.iterdir())[0])
+    attachment_file = Path(list(anki_test_app.media_manager.media_directory.iterdir())[0])
 
     assert len(anki_note.content.fields[1].attachments) == 1
     assert anki_note.content.fields[1].attachments[0].path == attachment_file

@@ -106,7 +106,7 @@ class ObsidianNote(Note):
 
         content_from_note = ObsidianNoteContent.from_content(
             content=note.content,
-            obsidian_vault=self._obsidian_vault,
+            obsidian_attachments_manager=self._obsidian_vault.attachments_manager,
             markup_translator=self._markup_translator,
             note_path=self._file.path,
         )

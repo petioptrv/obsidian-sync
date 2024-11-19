@@ -38,7 +38,7 @@ from obsidian_sync.anki.anki_template import AnkiTemplate
 from obsidian_sync.markup_translator import MarkupTranslator
 from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
 from obsidian_sync.obsidian.obsidian_template import ObsidianTemplate
-from obsidian_sync.anki.anki_app import AnkiApp
+from obsidian_sync.anki.app.anki_app import AnkiApp
 from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 from obsidian_sync.utils import format_add_on_message
 from obsidian_sync.constants import ADD_ON_NAME

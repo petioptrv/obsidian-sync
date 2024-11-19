@@ -148,7 +148,9 @@ def test_sync_new_anki_note_with_attachment_to_obsidian(
     front_field_html = f"Some front with <img src=\"{image_file_name}\">"
     back_field_html = "Some back"
     anki_attachment = AnkiLinkedAttachment(path=temp_file_path)
-    anki_attachment.path = anki_test_app.ensure_attachment_is_in_anki(attachment=anki_attachment)
+    anki_attachment.path = anki_test_app.media_manager.ensure_attachment_is_in_anki(
+        attachment=anki_attachment
+    )
     note = build_basic_anki_note(
         anki_test_app=anki_test_app,
         markup_translator=markup_translator,

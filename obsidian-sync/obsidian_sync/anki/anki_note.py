@@ -9,7 +9,7 @@ from obsidian_sync.markup_translator import MarkupTranslator
 
 if TYPE_CHECKING:  # avoids circular import
     from obsidian_sync.addon_config import AddonConfig
-    from obsidian_sync.anki.anki_app import AnkiApp
+    from obsidian_sync.anki.app.anki_app import AnkiApp
 
 
 @dataclass
@@ -50,7 +50,9 @@ class AnkiNote(Note):
 
     def update_with_note(self, note: Note):
         content_from_note = AnkiNoteContent.from_content(
-            content=note.content, anki_app=self._anki_app, markup_translator=self._markup_translator
+            content=note.content,
+            anki_media_manager=self._anki_app.media_manager,
+            markup_translator=self._markup_translator,
         )
         if self.content != content_from_note:
             self.content = content_from_note

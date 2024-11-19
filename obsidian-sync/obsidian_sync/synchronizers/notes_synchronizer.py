@@ -3,7 +3,7 @@ from typing import Dict, List
 
 from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.addon_metadata import AddonMetadata
-from obsidian_sync.anki.anki_app import AnkiApp
+from obsidian_sync.anki.app.anki_app import AnkiApp
 from obsidian_sync.anki.anki_note import AnkiNote
 from obsidian_sync.constants import ADD_ON_NAME
 from obsidian_sync.markup_translator import MarkupTranslator

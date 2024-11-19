@@ -108,7 +108,7 @@ class ObsidianTemplate(Template):
 
         content_from_template = ObsidianTemplateContent.from_content(
             content=template.content,
-            obsidian_vault=self._obsidian_vault,
+            obsidian_attachments_manager=self._obsidian_vault.attachments_manager,
             markup_translator=self._markup_translator,
             template_path=self._file.path,
         )

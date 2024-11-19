@@ -9,7 +9,7 @@ import aqt
 
 from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.addon_metadata import AddonMetadata
-from obsidian_sync.anki.anki_app import AnkiApp
+from obsidian_sync.anki.app.anki_app import AnkiApp
 from obsidian_sync.constants import OBSIDIAN_SETTINGS_FOLDER, OBSIDIAN_APP_SETTINGS_FILE, OBSIDIAN_TRASH_OPTION_KEY, \
     OBSIDIAN_PERMA_DELETE_TRASH_OPTION_VALUE, OBSIDIAN_TEMPLATES_SETTINGS_FILE, OBSIDIAN_TEMPLATES_OPTION_KEY, \
     TEMPLATES_FOLDER_JSON_FIELD_NAME, OBSIDIAN_USE_MARKDOWN_LINKS_OPTION_KEY, CONF_VAULT_PATH, ADD_ON_NAME, \

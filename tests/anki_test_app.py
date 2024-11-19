@@ -4,7 +4,7 @@ from typing import List, Dict
 import aqt
 from anki.models import NotetypeDict
 
-from obsidian_sync.anki.anki_app import AnkiApp
+from obsidian_sync.anki.app.anki_app import AnkiApp
 from obsidian_sync.anki.anki_note import AnkiNote
 from obsidian_sync.base_types.note import Note
 from obsidian_sync.constants import DEFAULT_NODE_ID_FOR_NEW_NOTES
@@ -119,5 +119,5 @@ class AnkiTestApp(AnkiApp):
         return created_note
 
     def remove_all_attachments(self):
-        shutil.rmtree(path=self.media_directory)
-        self.media_directory.mkdir()
+        shutil.rmtree(path=self._media_manager.media_directory)
+        self._media_manager.media_directory.mkdir()

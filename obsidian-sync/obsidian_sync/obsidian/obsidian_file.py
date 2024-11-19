@@ -121,7 +121,7 @@ class ObsidianNoteFile(ObsidianFile):
             self._content = ObsidianNoteContent.from_obsidian_file_text(
                 file_text=self.raw_content,
                 note_path=self._path,
-                obsidian_vault=self._obsidian_vault,
+                obsidian_attachments_manager=self._obsidian_vault.attachments_manager,
                 markup_translator=self._markup_translator,
             )
         return self._content
@@ -143,7 +143,7 @@ class ObsidianTemplateFile(ObsidianFile):
             self._content = ObsidianTemplateContent.from_obsidian_file_text(
                 file_text=self.raw_content,
                 note_path=self._path,
-                obsidian_vault=self._obsidian_vault,
+                obsidian_attachments_manager=self._obsidian_vault.attachments_manager,
                 markup_translator=self._markup_translator,
             )
         return self._content

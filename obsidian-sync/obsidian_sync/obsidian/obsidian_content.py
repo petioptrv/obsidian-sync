@@ -32,7 +32,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field as dataclass_field
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, Optional
 
 import yaml
 
@@ -44,9 +44,7 @@ from obsidian_sync.constants import SRS_NOTE_FIELD_IDENTIFIER_COMMENT, \
 from obsidian_sync.base_types.content import Content, Field, LinkedAttachment, NoteProperties, NoteContent, \
     TemplateContent, TemplateProperties
 from obsidian_sync.markup_translator import MarkupTranslator
-
-if TYPE_CHECKING:  # avoid circular imports
-    from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
+from obsidian_sync.obsidian.obsidian_attachments_manager import ObsidianAttachmentsManager
 
 
 @dataclass
@@ -59,14 +57,14 @@ class ObsidianContent(Content, ABC):
         cls,
         file_text: str,
         note_path: Path,
-        obsidian_vault: "ObsidianVault",
+        obsidian_attachments_manager: ObsidianAttachmentsManager,
         markup_translator: MarkupTranslator,
     ) -> "ObsidianContent":
         properties = cls._properties_from_obsidian_file_text(file_text=file_text)
         fields = ObsidianField.from_obsidian_file_text(
             file_text=file_text,
             note_path=note_path,
-            obsidian_vault=obsidian_vault,
+            obsidian_attachments_manager=obsidian_attachments_manager,
             markup_translator=markup_translator,
         )
         content = cls(fields=fields, properties=properties)
@@ -95,7 +93,7 @@ class ObsidianTemplateContent(ObsidianContent):
     def from_content(
         cls,
         content: TemplateContent,
-        obsidian_vault: "ObsidianVault",
+        obsidian_attachments_manager: ObsidianAttachmentsManager,
         markup_translator: MarkupTranslator,
         template_path: Path,
     ):
@@ -103,7 +101,7 @@ class ObsidianTemplateContent(ObsidianContent):
         fields = ObsidianField.from_fields(
             fields=content.fields,
             markup_translator=markup_translator,
-            obsidian_vault=obsidian_vault,
+            obsidian_attachments_manager=obsidian_attachments_manager,
             note_path=template_path,
         )
         return cls(properties=properties, fields=fields)
@@ -121,7 +119,7 @@ class ObsidianNoteContent(ObsidianContent):
     def from_content(
         cls,
         content: NoteContent,
-        obsidian_vault: "ObsidianVault",
+        obsidian_attachments_manager: ObsidianAttachmentsManager,
         markup_translator: MarkupTranslator,
         note_path: Path,
     ) -> "ObsidianNoteContent":
@@ -129,7 +127,7 @@ class ObsidianNoteContent(ObsidianContent):
         fields = ObsidianField.from_fields(
             fields=content.fields,
             markup_translator=markup_translator,
-            obsidian_vault=obsidian_vault,
+            obsidian_attachments_manager=obsidian_attachments_manager,
             note_path=note_path,
         )
         return cls(properties=properties, fields=fields)
@@ -296,7 +294,7 @@ class ObsidianField(Field):
         cls,
         file_text: str,
         note_path: Path,
-        obsidian_vault: "ObsidianVault",
+        obsidian_attachments_manager: ObsidianAttachmentsManager,
         markup_translator: MarkupTranslator,
     ) -> List["ObsidianField"]:
         headers_and_paragraph_matching_pattern = (
@@ -315,7 +313,7 @@ class ObsidianField(Field):
         for header, paragraph in matches:
             text = paragraph.strip()
             attachments = ObsidianLinkedAttachment.from_obsidian_file_text(
-                file_text=text, note_path=note_path, obsidian_vault=obsidian_vault
+                file_text=text, note_path=note_path, obsidian_attachments_manager=obsidian_attachments_manager
             )
             for attachment in attachments:
                 text = text.replace(
@@ -337,14 +335,14 @@ class ObsidianField(Field):
         cls,
         fields: List[Field],
         markup_translator: MarkupTranslator,
-        obsidian_vault: "ObsidianVault",
+        obsidian_attachments_manager: ObsidianAttachmentsManager,
         note_path: Path,
     ) -> List["ObsidianField"]:
         fields = [
             ObsidianField.from_field(
                 field=field,
                 markup_translator=markup_translator,
-                obsidian_vault=obsidian_vault,
+                obsidian_attachments_manager=obsidian_attachments_manager,
                 note_path=note_path,
             )
             for field in fields
@@ -356,7 +354,7 @@ class ObsidianField(Field):
         cls,
         field: Field,
         markup_translator: MarkupTranslator,
-        obsidian_vault: "ObsidianVault",
+        obsidian_attachments_manager: ObsidianAttachmentsManager,
         note_path: Path,
     ) -> "ObsidianField":
         markdown_text = field.to_markdown()
@@ -364,7 +362,9 @@ class ObsidianField(Field):
         obsidian_attachments = []
         for attachment in field.attachments:
             obsidian_attachment = ObsidianLinkedAttachment.from_attachment(
-                attachment=attachment, obsidian_vault=obsidian_vault, note_path=note_path
+                attachment=attachment,
+                obsidian_attachments_manager=obsidian_attachments_manager,
+                note_path=note_path,
             )
             obsidian_attachments.append(obsidian_attachment)
             markdown_text = markdown_text.replace(
@@ -415,30 +415,44 @@ class ObsidianField(Field):
 @dataclass
 class ObsidianLinkedAttachment(LinkedAttachment):
     _obsidian_file_text_path: str
-    _obsidian_vault: "ObsidianVault"
+    _obsidian_attachments_manager: ObsidianAttachmentsManager
 
     @classmethod
     def from_obsidian_file_text(
-        cls, file_text: str, note_path: Path, obsidian_vault: "ObsidianVault"
+        cls,
+        file_text: str,
+        note_path: Path,
+        obsidian_attachments_manager: ObsidianAttachmentsManager,
     ) -> List["ObsidianLinkedAttachment"]:
-        attachment_paths = obsidian_vault.attachment_paths_from_file_text(file_text=file_text, note_path=note_path)
+        attachment_paths = obsidian_attachments_manager.attachment_paths_from_file_text(
+            file_text=file_text, note_path=note_path
+        )
         attachments = [
-            cls(path=path, _obsidian_file_text_path=obsidian_file_text_path, _obsidian_vault=obsidian_vault)
+            cls(
+                path=path,
+                _obsidian_file_text_path=obsidian_file_text_path,
+                _obsidian_attachments_manager=obsidian_attachments_manager,
+            )
             for obsidian_file_text_path, path in attachment_paths.items()
         ]
         return attachments
 
     @classmethod
     def from_attachment(
-        cls, attachment: LinkedAttachment, obsidian_vault: "ObsidianVault", note_path: Path
+        cls,
+        attachment: LinkedAttachment,
+        obsidian_attachments_manager: ObsidianAttachmentsManager,
+        note_path: Path,
     ) -> "ObsidianLinkedAttachment":
-        obsidian_file_text_path, obsidian_attachment_path = obsidian_vault.ensure_attachment_is_in_obsidian(
-            attachment=attachment, note_path=note_path
+        obsidian_file_text_path, obsidian_attachment_path = (
+            obsidian_attachments_manager.ensure_attachment_is_in_obsidian(
+                attachment=attachment, note_path=note_path
+            )
         )
         return cls(
             path=obsidian_attachment_path,
             _obsidian_file_text_path=obsidian_file_text_path,
-            _obsidian_vault=obsidian_vault,
+            _obsidian_attachments_manager=obsidian_attachments_manager,
         )
 
     def to_field_text(self) -> str:
