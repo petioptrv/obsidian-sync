@@ -340,3 +340,5 @@ $RECYCLE.BIN/
 /obsidian-sync/meta.json
 
 *.ankiaddon
+
+obsidian-sync/user_files/*

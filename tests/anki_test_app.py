@@ -1,3 +1,4 @@
+import shutil
 from typing import List, Dict
 
 import aqt
@@ -116,3 +117,7 @@ class AnkiTestApp(AnkiApp):
         created_note = self.get_note_by_id(note_id=anki_note.id)
 
         return created_note
+
+    def remove_all_attachments(self):
+        shutil.rmtree(path=self.media_directory)
+        self.media_directory.mkdir()

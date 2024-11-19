@@ -32,7 +32,7 @@ import os
 import re
 import shutil
 from pathlib import Path
-from typing import Dict, Generator, List, Tuple
+from typing import Dict, Generator, List, Tuple, Set
 
 from obsidian_sync.anki.anki_app import AnkiApp
 from obsidian_sync.base_types.content import LinkedAttachment
@@ -143,8 +143,8 @@ class ObsidianVault:
 
         return existing_notes, new_notes
 
-    def get_all_obsidian_deleted_notes(self) -> Dict[int, ObsidianNote]:
-        deleted_notes = {}
+    def get_all_obsidian_deleted_notes(self) -> Set[int]:
+        deleted_notes = set()
 
         for deleted_file in self._get_deleted_srs_note_files_in_obsidian(markup_translator=self._markup_translator):
             deleted_note = None
@@ -162,7 +162,7 @@ class ObsidianVault:
                     title="Failed to sync deleted note",
                 )
             if deleted_note is not None:
-                deleted_notes[deleted_note.properties.note_id] = deleted_note
+                deleted_notes.add(deleted_note.properties.note_id)
 
         return deleted_notes
 

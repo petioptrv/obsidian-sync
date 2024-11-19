@@ -8,6 +8,7 @@ from PIL import Image as PILImage
 import aqt
 
 from obsidian_sync.addon_config import AddonConfig
+from obsidian_sync.addon_metadata import AddonMetadata
 from obsidian_sync.anki.anki_app import AnkiApp
 from obsidian_sync.constants import OBSIDIAN_SETTINGS_FOLDER, OBSIDIAN_APP_SETTINGS_FILE, OBSIDIAN_TRASH_OPTION_KEY, \
     OBSIDIAN_PERMA_DELETE_TRASH_OPTION_VALUE, OBSIDIAN_TEMPLATES_SETTINGS_FILE, OBSIDIAN_TEMPLATES_OPTION_KEY, \
@@ -19,6 +20,7 @@ from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
 from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 from obsidian_sync.synchronizers.notes_synchronizer import NotesSynchronizer
 from obsidian_sync.synchronizers.templates_synchronizer import TemplatesSynchronizer
+from obsidian_sync import addon_metadata
 from tests.anki_test_app import AnkiTestApp
 
 
@@ -207,6 +209,7 @@ def addon_config(anki_app: AnkiApp) -> AddonConfig:
 
 @pytest.fixture()
 def anki_setup_and_teardown(
+    tmp_path: Path,
     anki_base_folder: Path,
     anki_logs_folder: Path,
     anki_addon_manifest_file: Path,
@@ -217,18 +220,22 @@ def anki_setup_and_teardown(
 ):
     anki_test_app.setup_performed = True
 
+    addon_metadata.ADD_ON_METADATA_PATH = tmp_path / addon_metadata.ADD_ON_METADATA_PATH.name
     shutil.rmtree(anki_logs_folder)
     anki_logs_folder.mkdir()
     anki_addon_manifest_file.write_text(data=json.dumps(obj=anki_addon_manifest_default_data))
     anki_addon_meta_file.write_text(data=json.dumps(obj=anki_addon_meta_default_data))
 
     models_backup = anki_test_app.get_all_models()
-    anki_test_app.remove_all_notes()
 
     yield
 
+    anki_test_app.remove_all_notes()
+    anki_test_app.remove_all_attachments()
     anki_test_app.remove_all_note_models()
     anki_test_app.add_backed_up_note_models(models=models_backup)
+    if addon_metadata.ADD_ON_METADATA_PATH.exists():
+        addon_metadata.ADD_ON_METADATA_PATH.unlink()
 
     anki_test_app.setup_performed = False
 
@@ -314,4 +321,5 @@ def notes_synchronizer(
         obsidian_config=obsidian_config,
         addon_config=addon_config,
         markup_translator=markup_translator,
+        metadata=AddonMetadata(),
     )

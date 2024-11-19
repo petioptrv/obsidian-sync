@@ -28,7 +28,6 @@
 #
 # Any modifications to this file must keep this entire header intact.
 import re
-import shutil
 from hashlib import sha256
 from pathlib import Path
 from string import ascii_letters, digits

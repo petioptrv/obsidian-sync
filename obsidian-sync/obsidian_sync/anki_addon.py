@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+from obsidian_sync.addon_metadata import AddonMetadata
 # Obsidian Sync Add-on for Anki
 #
 # Copyright (C)  2024 Petrov P.
@@ -67,6 +67,7 @@ class AnkiAddon:
             obsidian_config=self._obsidian_config,
             obsidian_vault=self._obsidian_vault,
             markup_translator=self._markup_translator,
+            metadata=AddonMetadata(),
         )
 
         self._add_menu_items()
@@ -86,12 +87,6 @@ class AnkiAddon:
     def _sync_with_obsidian(self):
         # todo: Update associated notes on model update (e.g. changing field names).
         # todo: add maximum card difficulty for note
-
-        from aqt import mw
-        for nid in mw.col.find_notes(""):
-            note = mw.col.get_note(nid)
-            items = list(note.items())
-            print(note)
 
         if self._check_can_sync():
             self._templates_synchronizer.synchronize_templates()
@@ -119,16 +114,6 @@ class AnkiAddon:
             message = (
                 "Obsidian templates must be enabled:"
                 "\n\nOptions -> Core plugins -> check the \"Templates\" option."
-            )
-            self._anki_app.show_critical(
-                text=format_add_on_message(message=message),
-                title=ADD_ON_NAME
-            )
-            can_sync = False
-        if self._obsidian_config.trash_option != OBSIDIAN_LOCAL_TRASH_OPTION_VALUE:
-            message = (
-                "Obsidian must be configured to use the local trash:"
-                "\n\nOptions -> Files and links -> Deleted files -> Move to Obsidian Trash (.trash folder)."
             )
             self._anki_app.show_critical(
                 text=format_add_on_message(message=message),

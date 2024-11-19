@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 from typing import List
 
@@ -12,7 +13,7 @@ from obsidian_sync.constants import MARKDOWN_FILE_SUFFIX, SRS_NOTE_IDENTIFIER_CO
     DEFAULT_NODE_ID_FOR_NEW_NOTES
 from obsidian_sync.file_utils import check_files_are_identical
 from obsidian_sync.markup_translator import MarkupTranslator
-from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
+from obsidian_sync.obsidian.obsidian_content import ObsidianNoteProperties
 from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 from obsidian_sync.synchronizers.notes_synchronizer import NotesSynchronizer
 from tests.anki_test_app import AnkiTestApp
@@ -57,39 +58,6 @@ def build_basic_anki_note(
         ),
     )
     return note
-
-
-def build_basic_obsidian_note(
-    anki_test_app: AnkiTestApp,
-    front_text: str,
-    back_text: str,
-    file_path: Path,
-):
-    model_name = "Basic"
-    model_id = anki_test_app.get_model_id(model_name=model_name)
-    note_text = f"""---
-{MODEL_ID_PROPERTY_NAME}: {model_id}
-{MODEL_NAME_PROPERTY_NAME}: Basic
-{NOTE_ID_PROPERTY_NAME}: {DEFAULT_NODE_ID_FOR_NEW_NOTES}
-{TAGS_PROPERTY_NAME}: []
-{DATE_MODIFIED_PROPERTY_NAME}:
-{DATE_SYNCED_PROPERTY_NAME}:
----
-{SRS_NOTE_IDENTIFIER_COMMENT}
-{SRS_NOTE_FIELD_IDENTIFIER_COMMENT}
-{SRS_HEADER_TITLE_LEVEL} Front
-
-{front_text}
-
-{SRS_NOTE_FIELD_IDENTIFIER_COMMENT}
-{SRS_HEADER_TITLE_LEVEL} Back
-
-{back_text}
-
-"""
-
-    file_path.parent.mkdir(parents=True, exist_ok=True)
-    file_path.write_text(data=note_text)
 
 
 def test_sync_new_anki_note_to_obsidian(
@@ -368,199 +336,84 @@ def test_anki_note_in_obsidian_remains_the_same_on_subsequent_sync(
 
     notes_synchronizer.synchronize_notes()
 
-    second_sync_obsidian_note = obsidian_vault.get_all_obsidian_notes()[0][anki_note.id]
+    existing_obsidian_notes, new_obsidian_notes = obsidian_vault.get_all_obsidian_notes()
+
+    assert len(existing_obsidian_notes) == 1
+    assert len(new_obsidian_notes) == 0
+
+    second_sync_obsidian_note = existing_obsidian_notes[anki_note.id]
 
     assert first_sync_obsidian_note == second_sync_obsidian_note
 
 
-def test_sync_new_obsidian_note_to_anki(
+def test_sync_existing_anki_note_with_updated_field_in_obsidian(
     anki_setup_and_teardown,
     obsidian_setup_and_teardown,
     anki_test_app: AnkiTestApp,
-    srs_folder_in_obsidian: Path,
-    addon_config: AddonConfig,
-    obsidian_config: ObsidianConfig,
     markup_translator: MarkupTranslator,
+    addon_config: AddonConfig,
     notes_synchronizer: NotesSynchronizer,
     obsidian_vault: ObsidianVault,
 ):
-    build_basic_obsidian_note(
+    initial_front_field = "Some front"
+    updated_front_field = "Some back alt"
+    back_field_html = "Some back"
+    note = build_basic_anki_note(
         anki_test_app=anki_test_app,
-        front_text="Some front",
-        back_text="Some back",
-        file_path=srs_folder_in_obsidian / "test.md",
+        markup_translator=markup_translator,
+        front_text=initial_front_field,
+        back_text=back_field_html,
     )
-    existing_obsidian_notes, new_obsidian_notes = obsidian_vault.get_all_obsidian_notes()
-
-    assert len(existing_obsidian_notes) == 0
-    assert len(new_obsidian_notes) == 1
-    assert len(anki_test_app.get_all_notes()) == 0
+    anki_note = anki_test_app.add_note(
+        note=note, deck_name=addon_config.anki_deck_name_for_obsidian_imports
+    )
 
     notes_synchronizer.synchronize_notes()
 
-    assert len(anki_test_app.get_all_notes()) == 1
+    time.sleep(1)  # shouldn't do many of those or the test time will stack up quick
 
-    anki_note = list(anki_test_app.get_all_notes().values())[0]
+    anki_note.content.fields[0].text = updated_front_field
+    anki_test_app.update_note_in_anki(anki_note=anki_note)
+
+    notes_synchronizer.synchronize_notes()
+
     existing_obsidian_notes, new_obsidian_notes = obsidian_vault.get_all_obsidian_notes()
     obsidian_note = existing_obsidian_notes[anki_note.id]
 
-    assert anki_note.id != DEFAULT_NODE_ID_FOR_NEW_NOTES
-    assert anki_note.content.fields[0].text == "<p>Some front</p>"
-    assert anki_note.content.fields[1].text == "<p>Some back</p>"
-    assert obsidian_note.id == anki_note.id
-    assert obsidian_note.content.properties.date_modified_in_anki == anki_note.content.properties.date_modified_in_anki
-    assert obsidian_note.content.properties.date_synced >= anki_note.content.properties.date_modified_in_anki
+    assert obsidian_note.content.fields[0].text == updated_front_field
 
 
-def test_sync_two_new_obsidian_notes_to_anki(
+def test_remove_deleted_anki_note_from_obsidian(
     anki_setup_and_teardown,
     obsidian_setup_and_teardown,
     anki_test_app: AnkiTestApp,
-    srs_folder_in_obsidian: Path,
-    addon_config: AddonConfig,
-    obsidian_config: ObsidianConfig,
     markup_translator: MarkupTranslator,
+    addon_config: AddonConfig,
     notes_synchronizer: NotesSynchronizer,
     obsidian_vault: ObsidianVault,
 ):
-    build_basic_obsidian_note(
+    note = build_basic_anki_note(
         anki_test_app=anki_test_app,
+        markup_translator=markup_translator,
         front_text="Some front",
         back_text="Some back",
-        file_path=srs_folder_in_obsidian / "some_test.md",
     )
-    build_basic_obsidian_note(
-        anki_test_app=anki_test_app,
-        front_text="Another front",
-        back_text="Another back",
-        file_path=srs_folder_in_obsidian / "another_test.md",
+    anki_note = anki_test_app.add_note(
+        note=note, deck_name=addon_config.anki_deck_name_for_obsidian_imports
     )
+
+    notes_synchronizer.synchronize_notes()
+
+    existing_obsidian_notes, new_obsidian_notes = obsidian_vault.get_all_obsidian_notes()
+
+    assert len(existing_obsidian_notes) == 1
+    assert len(new_obsidian_notes) == 0
+
+    anki_test_app.delete_note_in_anki(note=anki_note)
+
+    notes_synchronizer.synchronize_notes()
+
     existing_obsidian_notes, new_obsidian_notes = obsidian_vault.get_all_obsidian_notes()
 
     assert len(existing_obsidian_notes) == 0
-    assert len(new_obsidian_notes) == 2
-    assert len(anki_test_app.get_all_notes()) == 0
-
-    notes_synchronizer.synchronize_notes()
-
-    anki_notes = anki_test_app.get_all_notes()
-    existing_obsidian_notes, new_obsidian_notes = obsidian_vault.get_all_obsidian_notes()
-
-    assert len(anki_notes) == 2
-    assert len(existing_obsidian_notes) == 2
-
-    for note_id, note in anki_notes.items():
-        assert note_id in existing_obsidian_notes
-
-
-def test_sync_new_obsidian_note_with_attachment_to_anki(
-    anki_setup_and_teardown,
-    obsidian_setup_and_teardown,
-    srs_attachments_in_obsidian_folder: Path,
-    some_test_image: PILImage,
-    anki_test_app: AnkiTestApp,
-    srs_folder_in_obsidian: Path,
-    notes_synchronizer: NotesSynchronizer,
-):
-    image_file_name = "img.png"
-    srs_attachments_in_obsidian_folder.mkdir(parents=True)
-    image_file_path = srs_attachments_in_obsidian_folder / image_file_name
-    some_test_image.save(image_file_path)
-    build_basic_obsidian_note(
-        anki_test_app=anki_test_app,
-        front_text="Some front",
-        back_text="Some back with ![image](img.png)",
-        file_path=srs_folder_in_obsidian / "test.md",
-    )
-
-    assert len(list(anki_test_app.media_directory.iterdir())) == 0
-
-    notes_synchronizer.synchronize_notes()
-
-    assert len(list(anki_test_app.media_directory.iterdir())) == 1
-
-    anki_note = list(anki_test_app.get_all_notes().values())[0]
-    attachment_file = Path(list(anki_test_app.media_directory.iterdir())[0])
-
-    assert len(anki_note.content.fields[1].attachments) == 1
-    assert anki_note.content.fields[1].attachments[0].path == attachment_file
-    assert anki_note.content.fields[1].text == f"<p>Some back with <img alt=\"image\" src=\"{attachment_file}\" /></p>"
-
-
-
-
-
-
-
-# def test_update_anki_note_field_in_obsidian():
-#     raise NotImplementedError
-#
-#
-# def test_update_anki_media_in_obsidian(
-#     tmp_path: Path,
-#     srs_attachments_in_obsidian_folder_mock: Path,
-#     anki_mocker: AnkiMocker,
-#     some_test_image: PILImage,
-#     second_test_image: PILImage,
-# ):
-#     srs_attachments_in_obsidian_folder_mock.mkdir(parents=True)
-#     obsidian_image_file = srs_attachments_in_obsidian_folder_mock / "img.jpg"
-#     obsidian_image_file_duplicat = tmp_path / "img-back.jpg"
-#     some_test_image.save(obsidian_image_file)
-#     shutil.copy(src=obsidian_image_file, dst=obsidian_image_file_duplicat)
-#
-#     anki_image_file = tmp_path / "img.jpg"
-#     second_test_image.save(anki_image_file)
-#     anki_mocker.set_media_files(files=[anki_image_file])
-#
-#     assert obsidian_image_file != obsidian_image_file_duplicat
-#     assert filecmp.cmp(f1=obsidian_image_file, f2=obsidian_image_file_duplicat, shallow=False)
-#     assert not filecmp.cmp(f1=anki_image_file, f2=obsidian_image_file, shallow=False)
-#     assert not filecmp.cmp(f1=anki_image_file, f2=obsidian_image_file_duplicat, shallow=False)
-#
-#     media_synchronizer.synchronize_media()
-#
-#     assert len(anki_mocker.get_added_media_files()) == 0
-#     assert not filecmp.cmp(f1=obsidian_image_file, f2=obsidian_image_file_duplicat, shallow=False)
-#     assert filecmp.cmp(f1=anki_image_file, f2=obsidian_image_file, shallow=False)
-#
-#
-# def test_update_obsidian_note_field_in_anki():
-#     raise NotImplementedError
-#
-#
-# def test_update_obsidian_media_in_anki(
-#     tmp_path: Path,
-#     srs_attachments_in_obsidian_folder_mock: Path,
-#     anki_mocker: AnkiMocker,
-#     some_test_image: PILImage,
-#     second_test_image: PILImage,
-# ):
-#     anki_image_file = tmp_path / "img.jpg"
-#     second_test_image.save(anki_image_file)
-#     anki_mocker.set_media_files(files=[anki_image_file])
-#
-#     srs_attachments_in_obsidian_folder_mock.mkdir(parents=True)
-#     obsidian_image_file = srs_attachments_in_obsidian_folder_mock / "img.jpg"
-#     obsidian_image_file_duplicat = tmp_path / "img-back.jpg"
-#     some_test_image.save(obsidian_image_file)
-#     shutil.copy(src=obsidian_image_file, dst=obsidian_image_file_duplicat)
-#
-#     assert obsidian_image_file != obsidian_image_file_duplicat
-#     assert filecmp.cmp(f1=obsidian_image_file, f2=obsidian_image_file_duplicat, shallow=False)
-#     assert not filecmp.cmp(f1=anki_image_file, f2=obsidian_image_file, shallow=False)
-#     assert not filecmp.cmp(f1=anki_image_file, f2=obsidian_image_file_duplicat, shallow=False)
-#
-#     media_synchronizer.synchronize_media()
-#
-#     assert len(anki_mocker.get_added_media_files()) == 1
-#     assert anki_mocker.get_added_media_files()[0] == obsidian_image_file
-#     assert filecmp.cmp(f1=obsidian_image_file, f2=obsidian_image_file_duplicat, shallow=False)
-
-
-# def test_remove_deleted_anki_note_from_obsidian():
-#     raise NotImplementedError
-#
-#
-# def test_remove_deleted_obsidian_note_from_anki():
-#     raise NotImplementedError
+    assert len(new_obsidian_notes) == 0

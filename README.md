@@ -60,7 +60,7 @@ will not be deleted.
 
 #### Note Models and Templates
 
-Anki note models are synced unidirectionally with Anki being the ground truth. This means that any modifications to the
+Anki note models are synced uni-directionally with Anki being the ground truth. This means that any modifications to the
 models must happen in Anki and then be synced to the Obsidian templates.
 
 #### Required Obsidian Settings
@@ -69,8 +69,6 @@ The vault used for syncing with Anki must be configured with the following setti
 
 - The [templates core plugin](https://help.obsidian.md/Plugins/Templates) must be enabled.
 - Must use [Markdown-style links](https://help.obsidian.md/Linking+notes+and+files/Internal+links#Supported+formats+for+internal+links).
-- Must use the Obsidian trash folder option (Settings -> Files and links -> Deleted files ->
-Move to Obsidian trash (.trash folder)).
 
 ## To-Do
 
