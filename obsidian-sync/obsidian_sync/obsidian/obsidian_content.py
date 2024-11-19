@@ -40,7 +40,7 @@ from obsidian_sync.constants import SRS_NOTE_FIELD_IDENTIFIER_COMMENT, \
     SRS_NOTE_IDENTIFIER_COMMENT, \
     MODEL_ID_PROPERTY_NAME, NOTE_ID_PROPERTY_NAME, TAGS_PROPERTY_NAME, DATE_MODIFIED_PROPERTY_NAME, \
     SRS_HEADER_TITLE_LEVEL, DATETIME_FORMAT, DATE_SYNCED_PROPERTY_NAME, \
-    MODEL_NAME_PROPERTY_NAME
+    MODEL_NAME_PROPERTY_NAME, SUSPENDED_PROPERTY_NAME, MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME
 from obsidian_sync.base_types.content import Content, Field, LinkedAttachment, NoteProperties, NoteContent, \
     TemplateContent, TemplateProperties
 from obsidian_sync.markup_translator import MarkupTranslator
@@ -170,6 +170,8 @@ class ObsidianProperties(NoteProperties):
 class ObsidianTemplateProperties(ObsidianProperties):
     note_id: int = dataclass_field(default=0)
     tags: List[str] = dataclass_field(default_factory=list)
+    suspended: bool = dataclass_field(default=False)
+    maximum_card_difficulty: float = dataclass_field(default=0.0)
     date_modified_in_anki: Optional[datetime] = dataclass_field(default=None)
     date_synced: Optional[datetime] = dataclass_field(default=None)
 
@@ -228,6 +230,8 @@ class ObsidianNoteProperties(ObsidianProperties):
             model_name=properties.model_name,
             note_id=properties.note_id,
             tags=properties.tags,
+            suspended=properties.suspended,
+            maximum_card_difficulty=properties.maximum_card_difficulty,
             date_modified_in_anki=properties.date_modified_in_anki,
             date_synced=datetime.now(),
         )
@@ -248,6 +252,8 @@ class ObsidianNoteProperties(ObsidianProperties):
             MODEL_NAME_PROPERTY_NAME: self.model_name,
             NOTE_ID_PROPERTY_NAME: self.note_id,
             TAGS_PROPERTY_NAME: self.tags,
+            SUSPENDED_PROPERTY_NAME: self.suspended,
+            MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME: self.maximum_card_difficulty,
             DATE_MODIFIED_PROPERTY_NAME: date_modified_in_anki,
             DATE_SYNCED_PROPERTY_NAME: date_synced,
         }
@@ -272,6 +278,8 @@ class ObsidianNoteProperties(ObsidianProperties):
             model_name=properties_dict[MODEL_NAME_PROPERTY_NAME],
             model_id=int(properties_dict[MODEL_ID_PROPERTY_NAME]),
             tags=properties_dict[TAGS_PROPERTY_NAME],
+            suspended=properties_dict[SUSPENDED_PROPERTY_NAME],
+            maximum_card_difficulty=properties_dict[MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME],
             date_modified_in_anki=date_modified_in_anki,
             date_synced=date_synced,
         )

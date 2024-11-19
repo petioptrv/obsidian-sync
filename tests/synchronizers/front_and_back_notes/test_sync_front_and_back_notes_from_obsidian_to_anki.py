@@ -31,6 +31,8 @@ def build_basic_obsidian_note(
         model_name="Basic",
         note_id=DEFAULT_NODE_ID_FOR_NEW_NOTES,
         tags=tags or [],
+        suspended=False,
+        maximum_card_difficulty=0,
         date_modified_in_anki=None,
         date_synced=None,
     ).to_obsidian_file_text()

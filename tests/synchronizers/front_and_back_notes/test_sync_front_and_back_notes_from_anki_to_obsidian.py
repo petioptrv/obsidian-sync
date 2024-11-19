@@ -10,10 +10,9 @@ from obsidian_sync.anki.anki_note import AnkiNote
 from obsidian_sync.constants import MARKDOWN_FILE_SUFFIX, SRS_NOTE_IDENTIFIER_COMMENT, DATETIME_FORMAT, \
     MODEL_ID_PROPERTY_NAME, MODEL_NAME_PROPERTY_NAME, NOTE_ID_PROPERTY_NAME, TAGS_PROPERTY_NAME, \
     DATE_MODIFIED_PROPERTY_NAME, DATE_SYNCED_PROPERTY_NAME, SRS_NOTE_FIELD_IDENTIFIER_COMMENT, SRS_HEADER_TITLE_LEVEL, \
-    DEFAULT_NODE_ID_FOR_NEW_NOTES
+    DEFAULT_NODE_ID_FOR_NEW_NOTES, SUSPENDED_PROPERTY_NAME, MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME
 from obsidian_sync.file_utils import check_files_are_identical
 from obsidian_sync.markup_translator import MarkupTranslator
-from obsidian_sync.obsidian.obsidian_content import ObsidianNoteProperties
 from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 from obsidian_sync.synchronizers.notes_synchronizer import NotesSynchronizer
 from tests.anki_test_app import AnkiTestApp
@@ -39,6 +38,8 @@ def build_basic_anki_note(
                 model_name=model_name,
                 note_id=DEFAULT_NODE_ID_FOR_NEW_NOTES,
                 tags=tags or [],
+                suspended=False,
+                maximum_card_difficulty=0,
                 date_modified_in_anki=None,
             ),
             fields=[
@@ -107,6 +108,8 @@ def test_sync_new_anki_note_to_obsidian(
 {MODEL_NAME_PROPERTY_NAME}: Basic
 {NOTE_ID_PROPERTY_NAME}: {anki_note.id}
 {TAGS_PROPERTY_NAME}: []
+{SUSPENDED_PROPERTY_NAME}: false
+{MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME}: 0
 {DATE_MODIFIED_PROPERTY_NAME}: '{obsidian_note.properties.date_modified_in_anki.strftime(DATETIME_FORMAT)}'
 {DATE_SYNCED_PROPERTY_NAME}: '{obsidian_note.properties.date_synced.strftime(DATETIME_FORMAT)}'
 ---

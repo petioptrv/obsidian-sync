@@ -86,7 +86,6 @@ class AnkiAddon:
 
     def _sync_with_obsidian(self):
         # todo: Update associated notes on model update (e.g. changing field names).
-        # todo: add maximum card difficulty for note
 
         if self._check_can_sync():
             self._templates_synchronizer.synchronize_templates()

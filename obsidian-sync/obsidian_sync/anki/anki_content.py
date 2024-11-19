@@ -44,8 +44,6 @@ class AnkiTemplateProperties(AnkiProperties):
 
 @dataclass
 class AnkiNoteProperties(NoteProperties):
-    note_id: int
-
     @classmethod
     def from_properties(cls, properties: NoteProperties) -> "AnkiNoteProperties":
         return cls(
@@ -53,6 +51,8 @@ class AnkiNoteProperties(NoteProperties):
             model_name=properties.model_name,
             note_id=properties.note_id,
             tags=properties.tags,
+            suspended=properties.suspended,
+            maximum_card_difficulty=properties.maximum_card_difficulty,
             date_modified_in_anki=properties.date_modified_in_anki,
         )
 

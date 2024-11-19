@@ -70,6 +70,8 @@ def test_parse_note_properties(
         model_name="Basic",
         note_id=2,
         tags=["one"],
+        suspended=False,
+        maximum_card_difficulty=0.4,
         date_modified_in_anki=datetime.now(),
         date_synced=datetime.now(),
     ).to_obsidian_file_text()
@@ -89,6 +91,8 @@ def test_parse_note_properties(
     assert isinstance(file.properties, ObsidianNoteProperties)
     assert file.properties.note_id == 2
     assert file.properties.tags == ["one"]
+    assert file.properties.suspended is False
+    assert file.properties.maximum_card_difficulty == 0.4
 
 
 def test_parse_note_fields(
@@ -107,6 +111,8 @@ def test_parse_note_fields(
         model_name="Basic",
         note_id=2,
         tags=[],
+        suspended=False,
+        maximum_card_difficulty=0.5,
         date_modified_in_anki=datetime.now(),
         date_synced=datetime.now(),
     ).to_obsidian_file_text()

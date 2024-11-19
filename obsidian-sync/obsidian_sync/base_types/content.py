@@ -73,6 +73,8 @@ class TemplateProperties(Properties):
 class NoteProperties(Properties):
     note_id: int
     tags: List[str]
+    suspended: bool
+    maximum_card_difficulty: float
     date_modified_in_anki: Optional[datetime]
 
 

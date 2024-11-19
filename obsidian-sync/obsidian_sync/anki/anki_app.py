@@ -34,6 +34,7 @@ from typing import Dict, List, Tuple, Callable
 from PyQt6.QtGui import QAction, QKeySequence
 from PyQt6.QtWidgets import QFileDialog, QApplication
 import aqt
+from anki.consts import QUEUE_TYPE_SUSPENDED
 
 from obsidian_sync.anki.anki_content import AnkiField, AnkiTemplateContent, \
     AnkiTemplateProperties, AnkiNoteProperties, AnkiLinkedAttachment, AnkiNoteContent
@@ -129,11 +130,22 @@ class AnkiApp:
     def get_note_by_id(self, note_id: int) -> AnkiNote:
         col = aqt.mw.col
         note = col.get_note(note_id)
+        cards = note.cards()
+
+        maximum_card_difficulty = max(
+            card.memory_state.difficulty
+            if card.memory_state is not None else 0
+            for card in cards
+        )
+        suspended = all(card.queue == QUEUE_TYPE_SUSPENDED for card in cards)
+
         properties = AnkiNoteProperties(
             model_id=note.mid,
             model_name=note.note_type()["name"],
             note_id=note.id,
             tags=note.tags,
+            suspended=suspended,
+            maximum_card_difficulty=maximum_card_difficulty,
             date_modified_in_anki=datetime.fromtimestamp(note.mod or note.id / 1000),
         )
         fields = []
