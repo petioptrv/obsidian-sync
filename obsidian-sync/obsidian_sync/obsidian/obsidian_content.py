@@ -28,6 +28,7 @@
 #
 # Any modifications to this file must keep this entire header intact.
 import re
+import urllib.parse
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field as dataclass_field
 from datetime import datetime
@@ -459,4 +460,5 @@ class ObsidianLinkedAttachment(LinkedAttachment):
         return str(self.path)
 
     def to_obsidian_file_text(self) -> str:
-        return self._obsidian_file_text_path
+        path_quote = urllib.parse.quote(string=self._obsidian_file_text_path)
+        return path_quote

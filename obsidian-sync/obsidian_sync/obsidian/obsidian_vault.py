@@ -162,7 +162,7 @@ class ObsidianVault:
                     text=format_add_on_message(f"Failed to sync deleted note {deleted_file.path}."),
                     title="Failed to sync deleted note",
                 )
-            if deleted_note is not None:
+            if deleted_note is not None and not deleted_note.is_corrupt():
                 deleted_notes.add(deleted_note.properties.note_id)
 
         return deleted_notes

@@ -1,16 +1,15 @@
+import urllib.parse
 from datetime import datetime
 from pathlib import Path
 
 from PIL import Image as PILImage
 
-from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.constants import SRS_NOTE_FIELD_IDENTIFIER_COMMENT, MARKDOWN_FILE_SUFFIX, \
     SRS_NOTE_IDENTIFIER_COMMENT, \
     SRS_HEADER_TITLE_LEVEL, MODEL_ID_PROPERTY_NAME, \
     MODEL_NAME_PROPERTY_NAME, NOTE_ID_PROPERTY_NAME, TAGS_PROPERTY_NAME, DATE_MODIFIED_PROPERTY_NAME, \
     DATE_SYNCED_PROPERTY_NAME
 from obsidian_sync.markup_translator import MarkupTranslator
-from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
 from obsidian_sync.obsidian.obsidian_content import ObsidianTemplateProperties, \
     ObsidianNoteProperties
 from obsidian_sync.obsidian.obsidian_file import ObsidianNoteFile, ObsidianTemplateFile
@@ -125,7 +124,7 @@ Some front
 
 {SRS_NOTE_FIELD_IDENTIFIER_COMMENT}
 {SRS_HEADER_TITLE_LEVEL} Back
-Some back [image link]({image_file.relative_to(obsidian_vault_folder)})
+Some back [image link]({urllib.parse.quote(string=str(image_file.relative_to(obsidian_vault_folder)))})
 
 """
     file_path = srs_folder_in_obsidian / f"test_file{MARKDOWN_FILE_SUFFIX}"

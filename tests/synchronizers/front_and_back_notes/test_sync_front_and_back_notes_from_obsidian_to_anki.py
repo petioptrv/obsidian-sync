@@ -1,4 +1,5 @@
 import time
+import urllib.parse
 from pathlib import Path
 from typing import List
 
@@ -143,14 +144,14 @@ def test_sync_new_obsidian_note_with_attachment_to_anki(
     srs_folder_in_obsidian: Path,
     notes_synchronizer: NotesSynchronizer,
 ):
-    image_file_name = "img.png"
+    image_file_name = "some img.png"
     srs_attachments_in_obsidian_folder.mkdir(parents=True)
     image_file_path = srs_attachments_in_obsidian_folder / image_file_name
     some_test_image.save(image_file_path)
     build_basic_obsidian_note(
         anki_test_app=anki_test_app,
         front_text="Some front",
-        back_text=f"Some back with ![image]({image_file_name})",
+        back_text=f"Some back with ![image]({urllib.parse.quote(string=image_file_name)})",
         file_path=srs_folder_in_obsidian / "test.md",
     )
 

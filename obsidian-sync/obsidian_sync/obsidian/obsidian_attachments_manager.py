@@ -1,5 +1,6 @@
 import re
 import shutil
+import urllib.parse
 from pathlib import Path
 from typing import Dict, Tuple
 
@@ -23,13 +24,14 @@ class ObsidianAttachmentsManager:
         # source: https://stackoverflow.com/a/44227600/6793798
         attachments_matcher = "|\\".join(ATTACHMENT_FILE_SUFFIXES)
         markdown_attachment_pattern = rf"""!?\[[^\]]*\]\((.*?(?:{attachments_matcher}))\s*("(?:.*[^"])")?\s*\)"""
-        attachment_paths = {
-            path_string: self._resolve_attachment_path(
+        attachment_paths = dict()
+
+        for quoted_path_string, optional_part in re.findall(markdown_attachment_pattern, file_text, re.DOTALL):
+            path_string = urllib.parse.unquote(string=quoted_path_string)
+            attachment_paths[path_string] = self._resolve_attachment_path(
                 base_path=Path(path_string), note_path=note_path, not_exist_ok=False
             )
-            for path_string, optional_part in
-            re.findall(markdown_attachment_pattern, file_text, re.DOTALL)
-        }
+
         return attachment_paths
 
     def ensure_attachment_is_in_obsidian(self, attachment: LinkedAttachment, note_path: Path) -> Tuple[str, Path]:

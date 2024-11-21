@@ -1,4 +1,5 @@
 import time
+import urllib.parse
 from pathlib import Path
 from typing import List
 
@@ -141,8 +142,9 @@ def test_sync_new_anki_note_with_attachment_to_obsidian(
     srs_attachments_in_obsidian_folder: Path,
     notes_synchronizer: NotesSynchronizer,
     obsidian_vault: ObsidianVault,
+    srs_folder_in_obsidian: Path,
 ):
-    image_file_name = "img.png"
+    image_file_name = "some img.png"
     temp_file_path = tmp_path / image_file_name
     some_test_image.save(temp_file_path)
     front_field_html = f"Some front with <img src=\"{image_file_name}\">"
@@ -176,8 +178,12 @@ def test_sync_new_anki_note_with_attachment_to_obsidian(
     existing_obsidian_notes, new_obsidian_notes = obsidian_vault.get_all_obsidian_notes()
     obsidian_note = existing_obsidian_notes[anki_note.id]
     first_field = obsidian_note.content.fields[0]
+    obsidian_note_file = list(srs_folder_in_obsidian.iterdir())[0]
 
     assert first_field.to_markdown() == f"Some front with ![]({attachments[image_file_name]})"
+    assert (  # Obsidian makes path ULR-safe
+        f"{urllib.parse.quote(string=attachments[image_file_name].name)}" in obsidian_note_file.read_text()
+    )
     assert len(first_field.attachments) == 1
 
     obsidian_attachment = obsidian_note.content.fields[0].attachments[0]
