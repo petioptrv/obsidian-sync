@@ -48,7 +48,7 @@ class NotesSynchronizer:
                 if obsidian_note is not None:
                     self._synchronize_notes(anki_note=anki_note, obsidian_note=obsidian_note)
                 elif note_id in obsidian_deleted_notes:
-                    anki_note.delete()
+                    self._anki_app.delete_note_in_anki(note=anki_note)
                     self._metadata.anki_notes_synced_to_obsidian.discard(note_id)
                 else:
                     ObsidianNote.from_note(
@@ -66,10 +66,8 @@ class NotesSynchronizer:
 
             while len(new_obsidian_notes) != 0:
                 obsidian_note = new_obsidian_notes.pop()
-                anki_note = AnkiNote.from_note(
-                    note=obsidian_note,
-                    anki_app=self._anki_app,
-                    addon_config=self._addon_config,
+                anki_note = self._anki_app.create_new_note_in_anki_from_note(
+                    note=obsidian_note, deck_name=self._addon_config.anki_deck_name_for_obsidian_imports
                 )
                 obsidian_note.update_with_note(note=anki_note)  # update note ID and timestamps
                 self._metadata.anki_notes_synced_to_obsidian.add(anki_note.id)
@@ -96,7 +94,7 @@ class NotesSynchronizer:
                     refactored = True
 
             if refactored:
-                self._anki_app.update_note_in_anki(anki_note=anki_note)
+                self._anki_app.update_anki_note_with_note(note=anki_note)
                 anki_notes[note_id] = self._anki_app.get_note_by_id(note_id=note_id)
 
         return anki_notes
@@ -116,8 +114,7 @@ class NotesSynchronizer:
 
         return new_obsidian_notes
 
-    @staticmethod
-    def _synchronize_notes(anki_note: AnkiNote, obsidian_note: ObsidianNote):
+    def _synchronize_notes(self, anki_note: AnkiNote, obsidian_note: ObsidianNote):
         anki_note_date_modified = anki_note.content.properties.date_modified_in_anki.timestamp()
         obsidian_note_date_modified_in_anki = obsidian_note.content.properties.date_modified_in_anki.timestamp()
         last_sync = obsidian_note.content.properties.date_synced.timestamp()
@@ -127,8 +124,8 @@ class NotesSynchronizer:
             if anki_note_date_modified > obsidian_note_file_date_modified:
                 obsidian_note.update_with_note(note=anki_note)
             else:
-                anki_note.update_with_note(note=obsidian_note)
+                self._anki_app.update_anki_note_with_note(note=obsidian_note)
         elif obsidian_note_file_date_modified > last_sync + 1:  # this also covers Obsidian properties updates
-            anki_note.update_with_note(note=obsidian_note)
+            self._anki_app.update_anki_note_with_note(note=obsidian_note)
         elif anki_note.content.properties != obsidian_note.content.properties:  # for props like max difficulty
             obsidian_note.update_with_note(note=obsidian_note)

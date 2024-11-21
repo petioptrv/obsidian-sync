@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List
 
 from obsidian_sync.anki.app.anki_media_manager import AnkiMediaManager
@@ -26,11 +26,10 @@ class AnkiNoteContent(AnkiContent):
         cls,
         content: NoteContent,
         anki_media_manager: AnkiMediaManager,
-        markup_translator: MarkupTranslator,
     ) -> "AnkiNoteContent":
         properties = AnkiNoteProperties.from_properties(properties=content.properties)
         fields = AnkiField.from_fields(
-            fields=content.fields, anki_media_manager=anki_media_manager, markup_translator=markup_translator
+            fields=content.fields, anki_media_manager=anki_media_manager
         )
         return cls(properties=properties, fields=fields)
 
@@ -63,18 +62,17 @@ class AnkiNoteProperties(NoteProperties):
 @dataclass
 class AnkiField(Field):
     attachments: List["AnkiLinkedAttachment"]
-    _markup_translator: MarkupTranslator
+    _markup_translator: MarkupTranslator = field(default_factory=MarkupTranslator)
 
     @classmethod
     def from_fields(
         cls,
         fields: List[Field],
         anki_media_manager: AnkiMediaManager,
-        markup_translator: MarkupTranslator,
     ) -> List["AnkiField"]:
         fields = [
             AnkiField.from_field(
-                field=field, anki_media_manager=anki_media_manager, markup_translator=markup_translator
+                field=field, anki_media_manager=anki_media_manager
             )
             for field in fields
         ]
@@ -85,7 +83,6 @@ class AnkiField(Field):
         cls,
         field: Field,
         anki_media_manager: AnkiMediaManager,
-        markup_translator: MarkupTranslator,
     ) -> "AnkiField":
         html_text = field.to_html()
 
@@ -103,7 +100,6 @@ class AnkiField(Field):
             name=field.name,
             text=html_text,
             attachments=anki_attachments,
-            _markup_translator=markup_translator,
         )
 
     def set_from_markdown(self, markdown: str):

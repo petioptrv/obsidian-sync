@@ -31,8 +31,6 @@ def build_basic_anki_note(
     model_name = "Basic"
     model_id = anki_test_app.get_model_id(model_name=model_name)
     note = AnkiNote(
-        anki_app=anki_test_app,
-        markup_translator=markup_translator,
         content=AnkiNoteContent(
             properties=AnkiNoteProperties(
                 model_id=model_id,
@@ -384,7 +382,7 @@ def test_sync_existing_anki_note_with_updated_field_in_obsidian(
     time.sleep(1)  # shouldn't do many of those or the test time will stack up quick
 
     anki_note.content.fields[0].text = updated_front_field
-    anki_test_app.update_note_in_anki(anki_note=anki_note)
+    anki_test_app.update_anki_note_with_note(note=anki_note)
 
     notes_synchronizer.synchronize_notes()
 

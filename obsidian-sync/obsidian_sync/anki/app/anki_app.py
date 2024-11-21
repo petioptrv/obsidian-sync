@@ -41,7 +41,8 @@ from obsidian_sync.anki.anki_content import AnkiField, AnkiTemplateContent, \
 from obsidian_sync.anki.anki_note import AnkiNote
 from obsidian_sync.anki.anki_template import AnkiTemplate
 from obsidian_sync.anki.app.anki_media_manager import AnkiMediaManager
-from obsidian_sync.constants import ADD_ON_NAME
+from obsidian_sync.base_types.note import Note
+from obsidian_sync.constants import ADD_ON_NAME, DEFAULT_NODE_ID_FOR_NEW_NOTES
 from obsidian_sync.file_utils import check_is_attachment_file
 from obsidian_sync.markup_translator import MarkupTranslator
 
@@ -89,6 +90,19 @@ class AnkiApp:
         template = AnkiTemplate(content=content)
         return template
 
+    def create_new_note_in_anki_from_note(self, note: Note, deck_name: str) -> AnkiNote:
+        assert note.content.properties.note_id == DEFAULT_NODE_ID_FOR_NEW_NOTES
+
+        # deck_name = self.config.anki_deck_name_for_obsidian_imports
+        anki_note = self.create_new_empty_note_in_anki(model_id=note.content.properties.model_id, deck_name=deck_name)
+        note.content.properties.note_id = anki_note.id
+
+        self.update_anki_note_with_note(note=note)
+
+        anki_note = self.get_note_by_id(anki_note.id)
+
+        return anki_note
+
     def create_new_empty_note_in_anki(self, model_id: int, deck_name: str) -> AnkiNote:
         col = aqt.mw.col
 
@@ -102,19 +116,22 @@ class AnkiApp:
 
         return anki_note
 
-    @staticmethod
-    def update_note_in_anki(anki_note: AnkiNote):
+    def update_anki_note_with_note(self, note: Note):
         col = aqt.mw.col
 
-        note = col.get_note(id=anki_note.id)
+        anki_system_note = col.get_note(id=note.content.properties.note_id)
+        content_from_note = AnkiNoteContent.from_content(
+            content=note.content,
+            anki_media_manager=self._media_manager,
+        )
 
-        note.tags = anki_note.content.properties.tags
-        note.fields = [
+        anki_system_note.tags = content_from_note.properties.tags
+        anki_system_note.fields = [
             field.to_anki_field_text()
-            for field in anki_note.content.fields
+            for field in content_from_note.fields
         ]
 
-        col.update_note(note=note)
+        col.update_note(note=anki_system_note)
 
     def get_all_notes(self) -> Dict[int, AnkiNote]:
         col = aqt.mw.col
@@ -172,7 +189,7 @@ class AnkiApp:
             col.update_note(note=note)
 
         content = AnkiNoteContent(properties=properties, fields=fields)
-        note = AnkiNote(anki_app=self, content=content, markup_translator=self._markup_translator)
+        note = AnkiNote(content=content)
 
         return note
 
