@@ -37,11 +37,8 @@ class NotesSynchronizer:
             anki_notes = self._sanitize_anki_notes(anki_notes=anki_notes)
             existing_obsidian_notes, new_obsidian_notes = self._obsidian_vault.get_all_obsidian_notes()
             new_obsidian_notes = self._sanitize_new_obsidian_notes(new_obsidian_notes=new_obsidian_notes)
-            obsidian_deleted_notes = self._obsidian_vault.get_all_obsidian_deleted_notes()
-            obsidian_deleted_notes = obsidian_deleted_notes.union(
-                self._metadata.anki_notes_synced_to_obsidian.difference(
-                    set(existing_obsidian_notes.keys())
-                )
+            obsidian_deleted_notes = self._metadata.anki_notes_synced_to_obsidian.difference(
+                set(existing_obsidian_notes.keys())
             )
 
             while len(anki_notes) != 0:

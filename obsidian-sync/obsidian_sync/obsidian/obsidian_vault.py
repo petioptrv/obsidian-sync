@@ -144,29 +144,6 @@ class ObsidianVault:
 
         return existing_notes, new_notes
 
-    def get_all_obsidian_deleted_notes(self) -> Set[int]:
-        deleted_notes = set()
-
-        for deleted_file in self._get_deleted_srs_note_files_in_obsidian(markup_translator=self._markup_translator):
-            deleted_note = None
-            try:
-                deleted_note = ObsidianNote(
-                    file=deleted_file,
-                    addon_config=self._addon_config,
-                    obsidian_vault=self,
-                    markup_translator=self._markup_translator,
-                )
-            except Exception:
-                logging.exception(f"Failed to sync deleted note {deleted_file.path}.")
-                self._anki_app.show_critical(
-                    text=format_add_on_message(f"Failed to sync deleted note {deleted_file.path}."),
-                    title="Failed to sync deleted note",
-                )
-            if deleted_note is not None and not deleted_note.is_corrupt():
-                deleted_notes.add(deleted_note.properties.note_id)
-
-        return deleted_notes
-
     def build_template_file_for_model(self, model_name: str) -> ObsidianTemplateFile:
         template_path = (
             self._obsidian_config.templates_folder / f"{model_name}{MARKDOWN_FILE_SUFFIX}"
