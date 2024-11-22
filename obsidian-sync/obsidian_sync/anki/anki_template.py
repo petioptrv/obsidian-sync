@@ -36,3 +36,6 @@ from obsidian_sync.base_types.template import Template
 @dataclass
 class AnkiTemplate(Template):
     content: AnkiTemplateContent
+
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)

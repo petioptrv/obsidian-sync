@@ -35,10 +35,10 @@ from typing import Dict
 
 from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.anki.anki_template import AnkiTemplate
-from obsidian_sync.markup_translator import MarkupTranslator
 from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
 from obsidian_sync.obsidian.obsidian_template import ObsidianTemplate
 from obsidian_sync.anki.app.anki_app import AnkiApp
+from obsidian_sync.obsidian.obsidian_templates_manager import ObsidianTemplatesManager
 from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 from obsidian_sync.utils import format_add_on_message
 from obsidian_sync.constants import ADD_ON_NAME
@@ -56,19 +56,19 @@ class TemplatesSynchronizer:
         anki_app: AnkiApp,
         addon_config: AddonConfig,
         obsidian_config: ObsidianConfig,
-        obsidian_vault: ObsidianVault,
-        markup_translator: MarkupTranslator,
     ):
         self._anki_app = anki_app
         self._addon_config = addon_config
         self._obsidian_config = obsidian_config
-        self._obsidian_vault = obsidian_vault
-        self._markup_translator = markup_translator
+        obsidian_vault = ObsidianVault(addon_config=addon_config, obsidian_config=obsidian_config)
+        self._obsidian_templates_manager = ObsidianTemplatesManager(
+            anki_app=anki_app, obsidian_config=obsidian_config, obsidian_vault=obsidian_vault
+        )
 
     def synchronize_templates(self):
         try:
             anki_templates = self._anki_app.get_all_anki_note_templates()
-            obsidian_templates = self._obsidian_vault.get_all_obsidian_templates()
+            obsidian_templates = self._obsidian_templates_manager.get_all_obsidian_templates()
 
             obsidian_templates = self._remove_deleted_templates(
                 anki_templates=anki_templates, obsidian_templates=obsidian_templates
@@ -76,14 +76,14 @@ class TemplatesSynchronizer:
 
             for model_id, anki_template in anki_templates.items():
                 if model_id not in obsidian_templates:
-                    ObsidianTemplate.from_template(
-                        template=anki_template,
-                        addon_config=self._addon_config,
-                        obsidian_vault=self._obsidian_vault,
-                        markup_translator=self._markup_translator,
+                    self._obsidian_templates_manager.create_obsidian_template_from_template(
+                        reference_template=anki_template,
                     )
                 else:
-                    obsidian_templates[model_id].update_with_template(template=anki_template)
+                    self._obsidian_templates_manager.update_obsidian_template_with_template(
+                        obsidian_template=obsidian_templates[model_id],
+                        reference_template=anki_template,
+                    )
 
             self._anki_app.show_tooltip(tip=format_add_on_message("Templates synced successfully."))
         except Exception as e:
@@ -93,8 +93,8 @@ class TemplatesSynchronizer:
                 title=ADD_ON_NAME,
             )
 
-    @staticmethod
     def _remove_deleted_templates(
+        self,
         anki_templates: Dict[int, AnkiTemplate],
         obsidian_templates: Dict[int, ObsidianTemplate],
     ) -> Dict[int, ObsidianTemplate]:
@@ -102,7 +102,7 @@ class TemplatesSynchronizer:
 
         for model_id, template in obsidian_templates.items():
             if model_id not in anki_templates:
-                template.delete()
+                self._obsidian_templates_manager.delete_template(template=template)
                 model_ids_to_delete.append(model_id)
 
         for model_id in model_ids_to_delete:

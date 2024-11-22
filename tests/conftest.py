@@ -8,7 +8,6 @@ from PIL import Image as PILImage
 import aqt
 
 from obsidian_sync.addon_config import AddonConfig
-from obsidian_sync.addon_metadata import AddonMetadata
 from obsidian_sync.anki.app.anki_app import AnkiApp
 from obsidian_sync.constants import OBSIDIAN_SETTINGS_FOLDER, OBSIDIAN_APP_SETTINGS_FILE, OBSIDIAN_TRASH_OPTION_KEY, \
     OBSIDIAN_PERMA_DELETE_TRASH_OPTION_VALUE, OBSIDIAN_TEMPLATES_SETTINGS_FILE, OBSIDIAN_TEMPLATES_OPTION_KEY, \
@@ -17,6 +16,8 @@ from obsidian_sync.constants import OBSIDIAN_SETTINGS_FOLDER, OBSIDIAN_APP_SETTI
     SRS_ATTACHMENTS_FOLDER
 from obsidian_sync.markup_translator import MarkupTranslator
 from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
+from obsidian_sync.obsidian.obsidian_notes_manager import ObsidianNotesManager
+from obsidian_sync.obsidian.obsidian_templates_manager import ObsidianTemplatesManager
 from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 from obsidian_sync.synchronizers.notes_synchronizer import NotesSynchronizer
 from obsidian_sync.synchronizers.templates_synchronizer import TemplatesSynchronizer
@@ -193,8 +194,8 @@ def aqt_run(
 
 
 @pytest.fixture(scope="session")
-def anki_test_app(aqt_run: aqt.AnkiApp, markup_translator: MarkupTranslator) -> AnkiTestApp:
-    return AnkiTestApp(markup_translator=markup_translator)
+def anki_test_app(aqt_run: aqt.AnkiApp) -> AnkiTestApp:
+    return AnkiTestApp()
 
 
 @pytest.fixture(scope="session")
@@ -268,13 +269,35 @@ def obsidian_config(
 
 @pytest.fixture()
 def obsidian_vault(
-    anki_app, addon_config, obsidian_config, markup_translator
+    addon_config, obsidian_config
 ) -> ObsidianVault:
     return ObsidianVault(
+        addon_config=addon_config,
+        obsidian_config=obsidian_config,
+    )
+
+
+@pytest.fixture()
+def obsidian_templates_manager(
+    anki_app: AnkiApp, obsidian_config: ObsidianConfig, obsidian_vault: ObsidianVault
+) -> ObsidianTemplatesManager:
+    return ObsidianTemplatesManager(
+        anki_app=anki_app, obsidian_config=obsidian_config, obsidian_vault=obsidian_vault
+    )
+
+
+@pytest.fixture()
+def obsidian_notes_manager(
+    anki_app: AnkiApp,
+    addon_config: AddonConfig,
+    obsidian_config: ObsidianConfig,
+    obsidian_vault: ObsidianVault,
+) -> ObsidianNotesManager:
+    return ObsidianNotesManager(
         anki_app=anki_app,
         addon_config=addon_config,
         obsidian_config=obsidian_config,
-        markup_translator=markup_translator,
+        obsidian_vault=obsidian_vault,
     )
 
 
@@ -300,26 +323,21 @@ def obsidian_setup_and_teardown(
 
 @pytest.fixture()
 def templates_synchronizer(
-    anki_app, obsidian_vault, obsidian_config, addon_config, markup_translator
+    anki_app, obsidian_config, addon_config
 ) -> TemplatesSynchronizer:
     return TemplatesSynchronizer(
         anki_app=anki_app,
-        obsidian_vault=obsidian_vault,
         obsidian_config=obsidian_config,
         addon_config=addon_config,
-        markup_translator=markup_translator,
     )
 
 
 @pytest.fixture()
 def notes_synchronizer(
-    anki_app, obsidian_vault, obsidian_config, addon_config, markup_translator
+    anki_app, obsidian_config, addon_config
 ) -> NotesSynchronizer:
     return NotesSynchronizer(
         anki_app=anki_app,
-        obsidian_vault=obsidian_vault,
         obsidian_config=obsidian_config,
         addon_config=addon_config,
-        markup_translator=markup_translator,
-        metadata=AddonMetadata(),
     )

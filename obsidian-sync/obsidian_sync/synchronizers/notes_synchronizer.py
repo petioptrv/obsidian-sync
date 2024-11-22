@@ -9,6 +9,7 @@ from obsidian_sync.constants import ADD_ON_NAME
 from obsidian_sync.markup_translator import MarkupTranslator
 from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
 from obsidian_sync.obsidian.obsidian_note import ObsidianNote
+from obsidian_sync.obsidian.obsidian_notes_manager import ObsidianNotesManager
 from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 from obsidian_sync.utils import format_add_on_message
 
@@ -19,23 +20,26 @@ class NotesSynchronizer:
         anki_app: AnkiApp,
         addon_config: AddonConfig,
         obsidian_config: ObsidianConfig,
-        obsidian_vault: ObsidianVault,
-        markup_translator: MarkupTranslator,
-        metadata: AddonMetadata,
     ):
         self._anki_app = anki_app
         self._addon_config = addon_config
         self._obsidian_config = obsidian_config
-        self._obsidian_vault = obsidian_vault
-        self._markup_translator = markup_translator
-        self._metadata = metadata
+        obsidian_vault = ObsidianVault(addon_config=addon_config, obsidian_config=obsidian_config)
+        self._obsidian_notes_manager = ObsidianNotesManager(
+            anki_app=anki_app,
+            addon_config=addon_config,
+            obsidian_config=obsidian_config,
+            obsidian_vault=obsidian_vault,
+        )
+        self._markup_translator = MarkupTranslator()
+        self._metadata = AddonMetadata()
 
     def synchronize_notes(self):
         try:
             self._metadata.load()
             anki_notes = self._anki_app.get_all_notes()
             anki_notes = self._sanitize_anki_notes(anki_notes=anki_notes)
-            existing_obsidian_notes, new_obsidian_notes = self._obsidian_vault.get_all_obsidian_notes()
+            existing_obsidian_notes, new_obsidian_notes = self._obsidian_notes_manager.get_all_obsidian_notes()
             new_obsidian_notes = self._sanitize_new_obsidian_notes(new_obsidian_notes=new_obsidian_notes)
             obsidian_deleted_notes = self._metadata.anki_notes_synced_to_obsidian.difference(
                 set(existing_obsidian_notes.keys())
@@ -51,17 +55,14 @@ class NotesSynchronizer:
                     self._anki_app.delete_note_in_anki(note=anki_note)
                     self._metadata.anki_notes_synced_to_obsidian.discard(note_id)
                 else:
-                    ObsidianNote.from_note(
-                        note=anki_note,
-                        addon_config=self._addon_config,
-                        obsidian_vault=self._obsidian_vault,
-                        markup_translator=self._markup_translator,
+                    self._obsidian_notes_manager.create_new_obsidian_note_from_note(
+                        reference_note=anki_note
                     )
                     self._metadata.anki_notes_synced_to_obsidian.add(anki_note.id)
 
             while len(existing_obsidian_notes) != 0:
                 note_id, obsidian_note = existing_obsidian_notes.popitem()
-                obsidian_note.delete()
+                self._obsidian_notes_manager.delete_note(note=obsidian_note)
                 self._metadata.anki_notes_synced_to_obsidian.discard(note_id)
 
             while len(new_obsidian_notes) != 0:
@@ -69,7 +70,9 @@ class NotesSynchronizer:
                 anki_note = self._anki_app.create_new_note_in_anki_from_note(
                     note=obsidian_note, deck_name=self._addon_config.anki_deck_name_for_obsidian_imports
                 )
-                obsidian_note.update_with_note(note=anki_note)  # update note ID and timestamps
+                self._obsidian_notes_manager.update_obsidian_note_with_note(  # update note ID and timestamps
+                    obsidian_note=obsidian_note, reference_note=anki_note
+                )
                 self._metadata.anki_notes_synced_to_obsidian.add(anki_note.id)
 
             self._metadata.save()
@@ -110,7 +113,7 @@ class NotesSynchronizer:
                     refactored = True
 
             if refactored:
-                obsidian_note.save()
+                self._obsidian_notes_manager.save_note(note=obsidian_note)
 
         return new_obsidian_notes
 
@@ -122,10 +125,14 @@ class NotesSynchronizer:
 
         if anki_note_date_modified != obsidian_note_date_modified_in_anki:
             if anki_note_date_modified > obsidian_note_file_date_modified:
-                obsidian_note.update_with_note(note=anki_note)
+                self._obsidian_notes_manager.update_obsidian_note_with_note(
+                    obsidian_note=obsidian_note, reference_note=anki_note
+                )
             else:
                 self._anki_app.update_anki_note_with_note(note=obsidian_note)
         elif obsidian_note_file_date_modified > last_sync + 1:  # this also covers Obsidian properties updates
             self._anki_app.update_anki_note_with_note(note=obsidian_note)
         elif anki_note.content.properties != obsidian_note.content.properties:  # for props like max difficulty
-            obsidian_note.update_with_note(note=obsidian_note)
+            self._obsidian_notes_manager.update_obsidian_note_with_note(
+                obsidian_note=obsidian_note, reference_note=anki_note
+            )

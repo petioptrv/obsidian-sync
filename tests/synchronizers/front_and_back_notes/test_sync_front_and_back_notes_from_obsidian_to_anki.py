@@ -12,6 +12,8 @@ from obsidian_sync.constants import SRS_NOTE_IDENTIFIER_COMMENT, \
 from obsidian_sync.markup_translator import MarkupTranslator
 from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
 from obsidian_sync.obsidian.obsidian_content import ObsidianNoteProperties
+from obsidian_sync.obsidian.obsidian_file import ObsidianNoteFile
+from obsidian_sync.obsidian.obsidian_notes_manager import ObsidianNotesManager
 from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 from obsidian_sync.synchronizers.notes_synchronizer import NotesSynchronizer
 from tests.anki_test_app import AnkiTestApp
@@ -64,7 +66,7 @@ def test_sync_new_obsidian_note_to_anki(
     obsidian_config: ObsidianConfig,
     markup_translator: MarkupTranslator,
     notes_synchronizer: NotesSynchronizer,
-    obsidian_vault: ObsidianVault,
+    obsidian_notes_manager: ObsidianNotesManager,
 ):
     build_basic_obsidian_note(
         anki_test_app=anki_test_app,
@@ -72,7 +74,7 @@ def test_sync_new_obsidian_note_to_anki(
         back_text="Some back",
         file_path=srs_folder_in_obsidian / "test.md",
     )
-    existing_obsidian_notes, new_obsidian_notes = obsidian_vault.get_all_obsidian_notes()
+    existing_obsidian_notes, new_obsidian_notes = obsidian_notes_manager.get_all_obsidian_notes()
 
     assert len(existing_obsidian_notes) == 0
     assert len(new_obsidian_notes) == 1
@@ -83,7 +85,7 @@ def test_sync_new_obsidian_note_to_anki(
     assert len(anki_test_app.get_all_notes()) == 1
 
     anki_note = list(anki_test_app.get_all_notes().values())[0]
-    existing_obsidian_notes, new_obsidian_notes = obsidian_vault.get_all_obsidian_notes()
+    existing_obsidian_notes, new_obsidian_notes = obsidian_notes_manager.get_all_obsidian_notes()
     obsidian_note = existing_obsidian_notes[anki_note.id]
 
     assert anki_note.id != DEFAULT_NODE_ID_FOR_NEW_NOTES
@@ -103,7 +105,7 @@ def test_sync_two_new_obsidian_notes_to_anki(
     obsidian_config: ObsidianConfig,
     markup_translator: MarkupTranslator,
     notes_synchronizer: NotesSynchronizer,
-    obsidian_vault: ObsidianVault,
+    obsidian_notes_manager: ObsidianNotesManager,
 ):
     build_basic_obsidian_note(
         anki_test_app=anki_test_app,
@@ -117,7 +119,7 @@ def test_sync_two_new_obsidian_notes_to_anki(
         back_text="Another back",
         file_path=srs_folder_in_obsidian / "another_test.md",
     )
-    existing_obsidian_notes, new_obsidian_notes = obsidian_vault.get_all_obsidian_notes()
+    existing_obsidian_notes, new_obsidian_notes = obsidian_notes_manager.get_all_obsidian_notes()
 
     assert len(existing_obsidian_notes) == 0
     assert len(new_obsidian_notes) == 2
@@ -126,7 +128,7 @@ def test_sync_two_new_obsidian_notes_to_anki(
     notes_synchronizer.synchronize_notes()
 
     anki_notes = anki_test_app.get_all_notes()
-    existing_obsidian_notes, new_obsidian_notes = obsidian_vault.get_all_obsidian_notes()
+    existing_obsidian_notes, new_obsidian_notes = obsidian_notes_manager.get_all_obsidian_notes()
 
     assert len(anki_notes) == 2
     assert len(existing_obsidian_notes) == 2
@@ -350,7 +352,12 @@ def test_remove_deleted_obsidian_note_from_anki(
 
     assert len(anki_test_app.get_all_notes()) == 1
 
-    obsidian_vault.delete_file(file_path=obsidian_file_path)
+    obsidian_vault.delete_file(
+        file=ObsidianNoteFile(
+            path=obsidian_file_path,
+            attachment_manager=obsidian_vault.attachments_manager
+        ),
+    )
 
     notes_synchronizer.synchronize_notes()
 

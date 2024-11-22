@@ -33,8 +33,6 @@ from obsidian_sync.anki.app.anki_app import AnkiApp
 from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.constants import ADD_ON_NAME
 from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
-from obsidian_sync.markup_translator import MarkupTranslator
-from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 from obsidian_sync.synchronizers.notes_synchronizer import NotesSynchronizer
 from obsidian_sync.synchronizers.templates_synchronizer import TemplatesSynchronizer
 from obsidian_sync.utils import format_add_on_message
@@ -44,30 +42,18 @@ class AnkiAddon:
     """Anki add-on composition root."""
 
     def __init__(self):
-        self._markup_translator = MarkupTranslator()
-        self._anki_app = AnkiApp(markup_translator=self._markup_translator)
+        self._anki_app = AnkiApp()
         self._addon_config = AddonConfig(anki_app=self._anki_app)
         self._obsidian_config = ObsidianConfig(addon_config=self._addon_config)
-        self._obsidian_vault = ObsidianVault(
-            anki_app=self._anki_app,
-            addon_config=self._addon_config,
-            obsidian_config=self._obsidian_config,
-            markup_translator=self._markup_translator,
-        )
         self._templates_synchronizer = TemplatesSynchronizer(
             anki_app=self._anki_app,
             addon_config=self._addon_config,
             obsidian_config=self._obsidian_config,
-            obsidian_vault=self._obsidian_vault,
-            markup_translator=self._markup_translator,
         )
         self._notes_synchronizer = NotesSynchronizer(
             anki_app=self._anki_app,
             addon_config=self._addon_config,
             obsidian_config=self._obsidian_config,
-            obsidian_vault=self._obsidian_vault,
-            markup_translator=self._markup_translator,
-            metadata=AddonMetadata(),
         )
 
         self._add_menu_items()

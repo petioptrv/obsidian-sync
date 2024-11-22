@@ -29,30 +29,25 @@
 # Any modifications to this file must keep this entire header intact.
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, Optional
 
-from obsidian_sync.markup_translator import MarkupTranslator
+from obsidian_sync.obsidian.obsidian_attachments_manager import ObsidianAttachmentsManager
 from obsidian_sync.obsidian.obsidian_content import ObsidianContent, ObsidianField, ObsidianNoteContent, ObsidianTemplateContent, \
     ObsidianTemplateProperties, ObsidianNoteProperties
 from obsidian_sync.file_utils import check_is_markdown_file
 from obsidian_sync.obsidian.obsidian_content import ObsidianProperties
-
-if TYPE_CHECKING:  # avoids circular imports
-    from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 
 
 class ObsidianFile(ABC):
     def __init__(
         self,
         path: Path,
-        obsidian_vault: "ObsidianVault",
-        markup_translator: MarkupTranslator,
+        attachment_manager: ObsidianAttachmentsManager,
     ):
         assert check_is_markdown_file(path=path)
 
         self._path = path
-        self._obsidian_vault = obsidian_vault
-        self._markup_translator = markup_translator
+        self._attachments_manager = attachment_manager
 
         self._raw_content = None
         self._content = None
@@ -100,14 +95,20 @@ class ObsidianFile(ABC):
     def fields(self) -> List[ObsidianField]:
         return self.content.fields
 
-    def save(self):
-        file_text = self.content.to_obsidian_file_text()
+    @content.setter
+    def content(self, value: ObsidianNoteContent):
+        assert isinstance(value, ObsidianNoteContent)
+        self._content = value
 
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(file_text, encoding="utf-8")
+    def is_corrupt(self) -> bool:
+        corrupt = False
 
-    def delete(self):
-        self._obsidian_vault.delete_file(file_path=self.path)
+        try:
+            assert self.content
+        except Exception:
+            corrupt = True
+
+        return corrupt
 
 
 class ObsidianNoteFile(ObsidianFile):
@@ -121,15 +122,13 @@ class ObsidianNoteFile(ObsidianFile):
             self._content = ObsidianNoteContent.from_obsidian_file_text(
                 file_text=self.raw_content,
                 note_path=self._path,
-                obsidian_attachments_manager=self._obsidian_vault.attachments_manager,
-                markup_translator=self._markup_translator,
+                obsidian_attachments_manager=self._attachments_manager,
             )
         return self._content
 
     @content.setter
-    def content(self, value: ObsidianNoteContent):
-        assert isinstance(value, ObsidianNoteContent)
-        self._content = value
+    def content(self, content: ObsidianNoteContent):
+        self._content = content
 
 
 class ObsidianTemplateFile(ObsidianFile):
@@ -143,8 +142,7 @@ class ObsidianTemplateFile(ObsidianFile):
             self._content = ObsidianTemplateContent.from_obsidian_file_text(
                 file_text=self.raw_content,
                 note_path=self._path,
-                obsidian_attachments_manager=self._obsidian_vault.attachments_manager,
-                markup_translator=self._markup_translator,
+                obsidian_attachments_manager=self._attachments_manager,
             )
         return self._content
 

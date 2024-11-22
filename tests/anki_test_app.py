@@ -13,8 +13,8 @@ from obsidian_sync.markup_translator import MarkupTranslator
 
 class AnkiTestApp(AnkiApp):
     """Extends the AnkiApp, providing testing functionality"""
-    def __init__(self, markup_translator: MarkupTranslator):
-        super().__init__(markup_translator=markup_translator)
+    def __init__(self):
+        super().__init__()
         self.setup_performed = False
 
     def get_all_models(self) -> List[NotetypeDict]:

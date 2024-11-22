@@ -10,8 +10,8 @@ class AnkiNote(Note):  # todo: remove the use of AnkiNote in favour of directly 
 
     content: AnkiNoteContent
 
-    def __init__(self, content: AnkiNoteContent):
-        self.content = content
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)
 
     @property
     def id(self) -> int:

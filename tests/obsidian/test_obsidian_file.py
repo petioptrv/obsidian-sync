@@ -43,9 +43,7 @@ def test_parse_template(
     file_path.write_text(file_content)
 
     file = ObsidianTemplateFile(
-        path=file_path,
-        obsidian_vault=obsidian_vault,
-        markup_translator=MarkupTranslator(),
+        path=file_path, attachment_manager=obsidian_vault.attachments_manager
     )
 
     assert isinstance(file.properties, ObsidianTemplateProperties)
@@ -82,9 +80,7 @@ def test_parse_note_properties(
     file_path.write_text(file_content)
 
     file = ObsidianNoteFile(
-        path=file_path,
-        obsidian_vault=obsidian_vault,
-        markup_translator=MarkupTranslator(),
+        path=file_path, attachment_manager=obsidian_vault.attachments_manager
     )
 
     assert isinstance(file.properties, ObsidianNoteProperties)
@@ -131,9 +127,7 @@ Some back [image link]({urllib.parse.quote(string=str(image_file.relative_to(obs
     file_path.write_text(file_content)
 
     file = ObsidianNoteFile(
-        path=file_path,
-        obsidian_vault=obsidian_vault,
-        markup_translator=MarkupTranslator(),
+        path=file_path, attachment_manager=obsidian_vault.attachments_manager
     )
 
     assert len(file.fields) == 2

@@ -1,4 +1,5 @@
 from tests.anki_test_app import AnkiTestApp
+from tests.constants import DEFAULT_ANKI_TEMPLATES_COUNT
 
 
 def test_removing_and_creating_note_models(
@@ -7,7 +8,7 @@ def test_removing_and_creating_note_models(
 ):
     models_backup = anki_test_app.get_all_models()
 
-    assert len(models_backup) == 6
+    assert len(models_backup) == DEFAULT_ANKI_TEMPLATES_COUNT
 
     anki_test_app.remove_all_note_models()
 
@@ -38,4 +39,4 @@ def test_removing_and_creating_note_models(
     anki_test_app.remove_all_note_models()
     anki_test_app.add_backed_up_note_models(models=models_backup)
 
-    assert len(anki_test_app.get_all_models()) == 6
+    assert len(anki_test_app.get_all_models()) == DEFAULT_ANKI_TEMPLATES_COUNT

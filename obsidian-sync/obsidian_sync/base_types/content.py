@@ -52,10 +52,16 @@ class Content(ABC):
 class TemplateContent(Content):
     properties: "TemplateProperties"
 
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)
+
 
 @dataclass
 class NoteContent(Content):
     properties: "NoteProperties"
+
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)
 
 
 @dataclass
@@ -63,10 +69,18 @@ class Properties:
     model_id: int
     model_name: str
 
+    def __eq__(self, other: object) -> bool:
+        return (
+            isinstance(other, type(self))
+            and self.model_id == other.model_id
+            and self.model_name == other.model_name
+        )
+
 
 @dataclass
 class TemplateProperties(Properties):
-    pass
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)
 
 
 @dataclass
@@ -76,6 +90,17 @@ class NoteProperties(Properties):
     suspended: bool
     maximum_card_difficulty: float
     date_modified_in_anki: Optional[datetime]
+
+    def __eq__(self, other: object) -> bool:
+        return (
+            isinstance(other, type(self))
+            and super().__eq__(other)
+            and self.note_id == other.note_id
+            and self.tags == other.tags
+            and self.suspended == other.suspended
+            and self.maximum_card_difficulty == other.maximum_card_difficulty
+            and self.date_modified_in_anki == other.date_modified_in_anki
+        )
 
 
 @dataclass
@@ -115,7 +140,10 @@ class LinkedAttachment(ABC):
     path: Path
 
     def __eq__(self, other):
-        return isinstance(other, type(self)) and self.path == other.path
+        return (
+            isinstance(other, type(self))
+            and self.path == other.path
+        )
 
     @abstractmethod
     def to_field_text(self) -> str:

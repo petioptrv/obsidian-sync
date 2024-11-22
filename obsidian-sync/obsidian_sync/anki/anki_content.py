@@ -11,15 +11,24 @@ class AnkiContent(Content):
     properties: "AnkiProperties"
     fields: List["AnkiField"]
 
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)
+
 
 @dataclass
 class AnkiTemplateContent(AnkiContent):
     properties: "AnkiTemplateProperties"
 
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)
+
 
 @dataclass
 class AnkiNoteContent(AnkiContent):
     properties: "AnkiNoteProperties"
+
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)
 
     @classmethod
     def from_content(
@@ -36,16 +45,23 @@ class AnkiNoteContent(AnkiContent):
 
 @dataclass
 class AnkiProperties(Properties):
-    pass
+
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)
 
 
 @dataclass
 class AnkiTemplateProperties(AnkiProperties):
-    pass
+
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)
 
 
 @dataclass
 class AnkiNoteProperties(NoteProperties):
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)
+
     @classmethod
     def from_properties(cls, properties: NoteProperties) -> "AnkiNoteProperties":
         return cls(
@@ -63,6 +79,9 @@ class AnkiNoteProperties(NoteProperties):
 class AnkiField(Field):
     attachments: List["AnkiLinkedAttachment"]
     _markup_translator: MarkupTranslator = field(default_factory=MarkupTranslator)
+
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)
 
     @classmethod
     def from_fields(
@@ -128,6 +147,9 @@ class AnkiField(Field):
 
 @dataclass
 class AnkiLinkedAttachment(LinkedAttachment):
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)
+
     @classmethod
     def from_attachment(
         cls, attachment: LinkedAttachment, anki_media_manager: AnkiMediaManager

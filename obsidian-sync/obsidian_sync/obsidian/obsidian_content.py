@@ -30,7 +30,7 @@
 import re
 import urllib.parse
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field as dataclass_field
+from dataclasses import dataclass, field as dataclass_field, field
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
@@ -53,20 +53,21 @@ class ObsidianContent(Content, ABC):
     properties: "ObsidianProperties"
     fields: List["ObsidianField"]
 
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)
+
     @classmethod
     def from_obsidian_file_text(
         cls,
         file_text: str,
         note_path: Path,
         obsidian_attachments_manager: ObsidianAttachmentsManager,
-        markup_translator: MarkupTranslator,
     ) -> "ObsidianContent":
         properties = cls._properties_from_obsidian_file_text(file_text=file_text)
         fields = ObsidianField.from_obsidian_file_text(
             file_text=file_text,
             note_path=note_path,
             obsidian_attachments_manager=obsidian_attachments_manager,
-            markup_translator=markup_translator,
         )
         content = cls(fields=fields, properties=properties)
         return content
@@ -90,18 +91,19 @@ class ObsidianContent(Content, ABC):
 class ObsidianTemplateContent(ObsidianContent):
     properties: "ObsidianTemplateProperties"
 
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)
+
     @classmethod
     def from_content(
         cls,
         content: TemplateContent,
         obsidian_attachments_manager: ObsidianAttachmentsManager,
-        markup_translator: MarkupTranslator,
         template_path: Path,
     ):
         properties = ObsidianTemplateProperties.from_properties(properties=content.properties)
         fields = ObsidianField.from_fields(
             fields=content.fields,
-            markup_translator=markup_translator,
             obsidian_attachments_manager=obsidian_attachments_manager,
             note_path=template_path,
         )
@@ -116,18 +118,19 @@ class ObsidianTemplateContent(ObsidianContent):
 class ObsidianNoteContent(ObsidianContent):
     properties: "ObsidianNoteProperties"
 
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)
+
     @classmethod
     def from_content(
         cls,
         content: NoteContent,
         obsidian_attachments_manager: ObsidianAttachmentsManager,
-        markup_translator: MarkupTranslator,
         note_path: Path,
     ) -> "ObsidianNoteContent":
         properties = ObsidianNoteProperties.from_properties(properties=content.properties)
         fields = ObsidianField.from_fields(
             fields=content.fields,
-            markup_translator=markup_translator,
             obsidian_attachments_manager=obsidian_attachments_manager,
             note_path=note_path,
         )
@@ -141,6 +144,13 @@ class ObsidianNoteContent(ObsidianContent):
 @dataclass
 class ObsidianProperties(NoteProperties):
     date_synced: Optional[datetime]
+
+    def __eq__(self, other: object) -> bool:
+        return (
+            isinstance(other, type(self))
+            and super().__eq__(other)
+            and self.date_synced == other.date_synced
+        )
 
     @classmethod
     def from_obsidian_file_text(cls, file_text: str) -> "ObsidianProperties":
@@ -173,6 +183,9 @@ class ObsidianTemplateProperties(ObsidianProperties):
     maximum_card_difficulty: float = dataclass_field(default=0.0)
     date_modified_in_anki: Optional[datetime] = dataclass_field(default=None)
     date_synced: Optional[datetime] = dataclass_field(default=None)
+
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)
 
     @classmethod
     def from_properties(cls, properties: TemplateProperties) -> "ObsidianTemplateProperties":
@@ -221,6 +234,9 @@ class ObsidianNoteProperties(ObsidianProperties):
     tags: List[str]
     date_modified_in_anki: Optional[datetime]
     date_synced: Optional[datetime]
+
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)
 
     @classmethod
     def from_properties(cls, properties: NoteProperties):
@@ -288,7 +304,10 @@ class ObsidianNoteProperties(ObsidianProperties):
 @dataclass
 class ObsidianField(Field):
     attachments: List["ObsidianLinkedAttachment"]
-    _markup_translator: MarkupTranslator
+    _markup_translator: MarkupTranslator = field(default_factory=MarkupTranslator)
+
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)
 
     @classmethod
     def from_obsidian_file_text(
@@ -296,7 +315,6 @@ class ObsidianField(Field):
         file_text: str,
         note_path: Path,
         obsidian_attachments_manager: ObsidianAttachmentsManager,
-        markup_translator: MarkupTranslator,
     ) -> List["ObsidianField"]:
         headers_and_paragraph_matching_pattern = (
             f"{SRS_NOTE_FIELD_IDENTIFIER_COMMENT}\n{SRS_HEADER_TITLE_LEVEL} (.*?)\n"
@@ -325,7 +343,6 @@ class ObsidianField(Field):
                     name=header.strip(),
                     text=text,
                     attachments=attachments,
-                    _markup_translator=markup_translator,
                 )
             )
 
@@ -335,14 +352,12 @@ class ObsidianField(Field):
     def from_fields(
         cls,
         fields: List[Field],
-        markup_translator: MarkupTranslator,
         obsidian_attachments_manager: ObsidianAttachmentsManager,
         note_path: Path,
     ) -> List["ObsidianField"]:
         fields = [
             ObsidianField.from_field(
                 field=field,
-                markup_translator=markup_translator,
                 obsidian_attachments_manager=obsidian_attachments_manager,
                 note_path=note_path,
             )
@@ -354,7 +369,6 @@ class ObsidianField(Field):
     def from_field(
         cls,
         field: Field,
-        markup_translator: MarkupTranslator,
         obsidian_attachments_manager: ObsidianAttachmentsManager,
         note_path: Path,
     ) -> "ObsidianField":
@@ -376,7 +390,6 @@ class ObsidianField(Field):
             name=field.name,
             text=markdown_text,
             attachments=obsidian_attachments,
-            _markup_translator=markup_translator,
         )
 
     def set_from_markdown(self, markdown: str):
@@ -417,6 +430,9 @@ class ObsidianField(Field):
 class ObsidianLinkedAttachment(LinkedAttachment):
     _obsidian_file_text_path: str
     _obsidian_attachments_manager: ObsidianAttachmentsManager
+
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)
 
     @classmethod
     def from_obsidian_file_text(

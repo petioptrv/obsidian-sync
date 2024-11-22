@@ -44,13 +44,11 @@ from obsidian_sync.anki.app.anki_media_manager import AnkiMediaManager
 from obsidian_sync.base_types.note import Note
 from obsidian_sync.constants import ADD_ON_NAME, DEFAULT_NODE_ID_FOR_NEW_NOTES
 from obsidian_sync.file_utils import check_is_attachment_file
-from obsidian_sync.markup_translator import MarkupTranslator
 
 
 class AnkiApp:
-    def __init__(self, markup_translator: MarkupTranslator):
+    def __init__(self):
         self._media_manager = AnkiMediaManager()
-        self._markup_translator = markup_translator
 
     @property
     def config(self):
@@ -82,7 +80,6 @@ class AnkiApp:
                 name=field["name"],
                 text="",
                 attachments=[],
-                _markup_translator=self._markup_translator,
             )
             for field in model["flds"]
         ]
@@ -181,7 +178,6 @@ class AnkiApp:
                     name=field_name,
                     text=adapted_field_text,
                     attachments=attachments,
-                    _markup_translator=self._markup_translator,
                 )
             )
 

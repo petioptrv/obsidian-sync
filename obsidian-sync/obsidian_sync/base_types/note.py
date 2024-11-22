@@ -35,3 +35,9 @@ from obsidian_sync.base_types.content import NoteContent
 @dataclass
 class Note:
     content: NoteContent
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, type(self))
+            and self.content == other.content
+        )
