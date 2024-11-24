@@ -8,7 +8,7 @@ from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.base_types.content import LinkedAttachment
 from obsidian_sync.constants import ATTACHMENT_FILE_SUFFIXES
 from obsidian_sync.file_utils import check_files_are_identical
-from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
+from obsidian_sync.obsidian.config import ObsidianConfig
 
 
 class ObsidianAttachmentsManager:

@@ -36,11 +36,11 @@ from PyQt6.QtWidgets import QFileDialog, QApplication
 import aqt
 from anki.consts import QUEUE_TYPE_SUSPENDED
 
-from obsidian_sync.anki.anki_content import AnkiField, AnkiTemplateContent, \
-    AnkiTemplateProperties, AnkiNoteProperties, AnkiLinkedAttachment, AnkiNoteContent
-from obsidian_sync.anki.anki_note import AnkiNote
-from obsidian_sync.anki.anki_template import AnkiTemplate
-from obsidian_sync.anki.app.anki_media_manager import AnkiMediaManager
+from obsidian_sync.anki.content import AnkiTemplateContent, \
+    AnkiTemplateProperties, AnkiNoteProperties, AnkiLinkedAttachment, AnkiNoteContent, AnkiNoteField, AnkiTemplateField
+from obsidian_sync.anki.note import AnkiNote
+from obsidian_sync.anki.template import AnkiTemplate
+from obsidian_sync.anki.app.media_manager import AnkiMediaManager
 from obsidian_sync.base_types.note import Note
 from obsidian_sync.constants import ADD_ON_NAME, DEFAULT_NODE_ID_FOR_NEW_NOTES
 from obsidian_sync.file_utils import check_is_attachment_file
@@ -62,30 +62,73 @@ class AnkiApp:
     def addon_config_editor_will_update_json(self) -> List:
         return aqt.gui_hooks.addon_config_editor_will_update_json
 
-    def get_all_anki_note_templates(self) -> Dict[int, AnkiTemplate]:
+    def get_all_anki_templates(self) -> Dict[int, AnkiTemplate]:
         templates = {}
         all_template_ids = [model["id"] for model in aqt.mw.col.models.all()]
 
         for model_id in all_template_ids:
-            template = self.get_anki_note_template(model_id=model_id)
+            template = self.get_anki_template(model_id=model_id)
             templates[model_id] = template
 
         return templates
 
-    def get_anki_note_template(self, model_id: int) -> AnkiTemplate:
+    @staticmethod
+    def get_anki_template(model_id: int) -> AnkiTemplate:
         model = aqt.mw.col.models.get(id=model_id)
         properties = AnkiTemplateProperties(model_id=model["id"], model_name=model["name"])
         fields = [
-            AnkiField(
+            AnkiTemplateField(
                 name=field["name"],
-                text="",
-                attachments=[],
+                text=field["description"],
             )
             for field in model["flds"]
         ]
         content = AnkiTemplateContent(properties=properties, fields=fields)
         template = AnkiTemplate(content=content)
         return template
+
+    def add_field_to_anki_template(self, template: AnkiTemplate, field_name: str) -> AnkiTemplate:
+        col = aqt.mw.col
+        models = col.models
+
+        new_field = models.new_field(name=field_name)
+        model = models.get(id=template.model_id)
+        models.add_field(notetype=model, field=new_field)
+        models.update_dict(notetype=model)
+
+        for note_id in models.nids(model):  # Update existing notes
+            anki_system_note = col.getNote(note_id)
+            anki_system_note.fields.append("")  # Initialize the new field
+            col.update_note(note=anki_system_note)
+
+        updated_template = self.get_anki_template(model_id=template.model_id)
+        return updated_template
+
+    def remove_field_from_anki_template(self, template: AnkiTemplate, field_name: str) -> AnkiTemplate:
+        col = aqt.mw.col
+        models = col.models
+
+        model = models.get(id=template.model_id)
+
+        for field in model["flds"]:
+            if field["name"] == field_name:
+                models.remove_field(notetype=model, field=field)
+                break
+
+        models.update_dict(notetype=model)
+
+        for note_id in models.nids(model):  # update existing notes
+            anki_system_note = col.getNote(note_id)
+            anki_system_note.fields = [
+                field
+                for field in anki_system_note.fields
+                if field.name != field_name
+            ]
+
+            col.update_note(note=anki_system_note)
+
+        updated_template = self.get_anki_template(model_id=template.model_id)
+        return updated_template
 
     def create_new_note_in_anki_from_note(self, note: Note, deck_name: str) -> AnkiNote:
         assert note.content.properties.note_id == DEFAULT_NODE_ID_FOR_NEW_NOTES
@@ -174,7 +217,7 @@ class AnkiApp:
                     attachments.append(AnkiLinkedAttachment(path=file_path))
 
             fields.append(
-                AnkiField(
+                AnkiNoteField(
                     name=field_name,
                     text=adapted_field_text,
                     attachments=attachments,

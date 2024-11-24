@@ -28,7 +28,7 @@
 #
 # Any modifications to this file must keep this entire header intact.
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
@@ -51,6 +51,7 @@ class Content(ABC):
 @dataclass
 class TemplateContent(Content):
     properties: "TemplateProperties"
+    fields: List["TemplateField"]
 
     def __eq__(self, other: object) -> bool:
         return super().__eq__(other)
@@ -59,6 +60,7 @@ class TemplateContent(Content):
 @dataclass
 class NoteContent(Content):
     properties: "NoteProperties"
+    fields: List["NoteField"]
 
     def __eq__(self, other: object) -> bool:
         return super().__eq__(other)
@@ -107,15 +109,12 @@ class NoteProperties(Properties):
 class Field(ABC):
     name: str
     text: str
-    attachments: List["LinkedAttachment"]
 
     def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, type(self))
             and self.name == other.name
             and self.text == other.text
-            and len(self.attachments) == len(other.attachments)
-            and all(sa == oa for sa, oa in zip(self.attachments, other.attachments))
         )
 
     @abstractmethod
@@ -133,6 +132,25 @@ class Field(ABC):
     @abstractmethod
     def to_html(self) -> str:
         ...
+
+
+@dataclass
+class TemplateField(Field, ABC):
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)
+
+
+@dataclass
+class NoteField(Field, ABC):
+    attachments: List["LinkedAttachment"]
+
+    def __eq__(self, other: object) -> bool:
+        return (
+            isinstance(other, type(self))
+            and super().__eq__(other)
+            and len(self.attachments) == len(other.attachments)
+            and all(sa == oa for sa, oa in zip(self.attachments, other.attachments))
+        )
 
 
 @dataclass

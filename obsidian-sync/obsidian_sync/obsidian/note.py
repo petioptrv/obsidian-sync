@@ -31,8 +31,9 @@ from dataclasses import dataclass
 from typing import Optional
 
 from obsidian_sync.base_types.note import Note
-from obsidian_sync.obsidian.obsidian_content import ObsidianNoteProperties, ObsidianNoteContent
-from obsidian_sync.obsidian.obsidian_file import ObsidianNoteFile
+from obsidian_sync.obsidian.content.content import ObsidianNoteContent
+from obsidian_sync.obsidian.content.properties import ObsidianNoteProperties
+from obsidian_sync.obsidian.file import ObsidianNoteFile
 
 
 @dataclass

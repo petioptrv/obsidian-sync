@@ -31,11 +31,13 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List, Optional
 
-from obsidian_sync.obsidian.obsidian_attachments_manager import ObsidianAttachmentsManager
-from obsidian_sync.obsidian.obsidian_content import ObsidianContent, ObsidianField, ObsidianNoteContent, ObsidianTemplateContent, \
-    ObsidianTemplateProperties, ObsidianNoteProperties
+from obsidian_sync.addon_config import AddonConfig
+from obsidian_sync.obsidian.attachments_manager import ObsidianAttachmentsManager
+from obsidian_sync.obsidian.content.content import ObsidianContent, ObsidianNoteContent, ObsidianTemplateContent
+from obsidian_sync.obsidian.content.field.field import ObsidianField
 from obsidian_sync.file_utils import check_is_markdown_file
-from obsidian_sync.obsidian.obsidian_content import ObsidianProperties
+from obsidian_sync.obsidian.content.properties import ObsidianProperties, ObsidianTemplateProperties, \
+    ObsidianNoteProperties
 
 
 class ObsidianFile(ABC):
@@ -43,11 +45,13 @@ class ObsidianFile(ABC):
         self,
         path: Path,
         attachment_manager: ObsidianAttachmentsManager,
+        addon_config: AddonConfig,
     ):
         assert check_is_markdown_file(path=path)
 
         self._path = path
         self._attachments_manager = attachment_manager
+        self._addon_config = addon_config
 
         self._raw_content = None
         self._content = None
@@ -111,6 +115,25 @@ class ObsidianFile(ABC):
         return corrupt
 
 
+class ObsidianTemplateFile(ObsidianFile):
+    @property
+    def properties(self) -> ObsidianTemplateProperties:
+        return self.content.properties
+
+    @property
+    def content(self) -> Optional[ObsidianTemplateContent]:
+        if self._content is None and self.raw_content is not None:
+            self._content = ObsidianTemplateContent.from_obsidian_file_text(
+                file_text=self.raw_content, addon_config=self._addon_config
+            )
+        return self._content
+
+    @content.setter
+    def content(self, value: ObsidianTemplateContent):
+        assert isinstance(value, ObsidianTemplateContent)
+        self._content = value
+
+
 class ObsidianNoteFile(ObsidianFile):
     @property
     def properties(self) -> ObsidianNoteProperties:
@@ -123,30 +146,10 @@ class ObsidianNoteFile(ObsidianFile):
                 file_text=self.raw_content,
                 note_path=self._path,
                 obsidian_attachments_manager=self._attachments_manager,
+                addon_config=self._addon_config,
             )
         return self._content
 
     @content.setter
     def content(self, content: ObsidianNoteContent):
         self._content = content
-
-
-class ObsidianTemplateFile(ObsidianFile):
-    @property
-    def properties(self) -> ObsidianTemplateProperties:
-        return self.content.properties
-
-    @property
-    def content(self) -> Optional[ObsidianTemplateContent]:
-        if self._content is None and self.raw_content is not None:
-            self._content = ObsidianTemplateContent.from_obsidian_file_text(
-                file_text=self.raw_content,
-                note_path=self._path,
-                obsidian_attachments_manager=self._attachments_manager,
-            )
-        return self._content
-
-    @content.setter
-    def content(self, value: ObsidianTemplateContent):
-        assert isinstance(value, ObsidianTemplateContent)
-        self._content = value

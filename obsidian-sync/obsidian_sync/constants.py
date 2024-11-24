@@ -55,12 +55,15 @@ ADD_ON_DIR = Path(__file__).parent.parent
 USER_FILES_PATH = ADD_ON_DIR / "user_files"  # persists across add-on updates
 ADD_ON_METADATA_PATH = USER_FILES_PATH / "addon_metadata.json"
 
+OBSIDIAN_LINK_URL_FIELD_NAME = "Obsidian URL"
+
 # ADDON CONFIG
 
 CONF_VAULT_PATH = "vault-path"
 CONF_SRS_FOLDER_IN_OBSIDIAN = "srs-folder-in-obsidian"
 CONF_SYNC_WITH_OBSIDIAN_ON_ANKI_WEB_SYNC = "sync-with-obsidian-on-anki-web-sync"
 CONF_ANKI_DECK_NAME_FOR_OBSIDIAN_IMPORTS = "anki-deck-name-for-obsidian-imports"
+CONF_ADD_OBSIDIAN_URL_IN_ANKI = "add-obsidian-url-in-anki"
 
 # ANKI
 

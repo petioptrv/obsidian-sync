@@ -1,13 +1,13 @@
 import shutil
-from typing import List, Dict
+from typing import List, Dict, Any
 
 import aqt
 from anki.models import NotetypeDict
 
-from obsidian_sync.anki.app.anki_app import AnkiApp
-from obsidian_sync.anki.anki_note import AnkiNote
+from obsidian_sync.anki.app.app import AnkiApp
+from obsidian_sync.anki.note import AnkiNote
 from obsidian_sync.base_types.note import Note
-from obsidian_sync.constants import DEFAULT_NODE_ID_FOR_NEW_NOTES
+from obsidian_sync.constants import DEFAULT_NODE_ID_FOR_NEW_NOTES, ADD_ON_NAME
 from obsidian_sync.markup_translator import MarkupTranslator
 
 
@@ -16,6 +16,11 @@ class AnkiTestApp(AnkiApp):
     def __init__(self):
         super().__init__()
         self.setup_performed = False
+
+    def set_config_value(self, config_name: str, value: Any):
+        config = self.config
+        config[config_name] = value
+        aqt.mw.addonManager.writeConfig(module=ADD_ON_NAME, conf=config)
 
     def get_all_models(self) -> List[NotetypeDict]:
         assert self.setup_performed  # use the anki_setup_and_teardown fixture
@@ -32,8 +37,6 @@ class AnkiTestApp(AnkiApp):
         col = aqt.mw.col
         col.models.remove_all_notetypes()
 
-        col.models._clear_cache()
-
     def add_backed_up_note_models(self, models: List[NotetypeDict]):
         assert self.setup_performed  # use the anki_setup_and_teardown fixture
         col = aqt.mw.col
@@ -44,8 +47,6 @@ class AnkiTestApp(AnkiApp):
                 model_data.pop("id", None)
                 model.update(model_data)
                 col.models.add(model)
-
-        col.models._clear_cache()
 
     def add_custom_model(
         self,
@@ -80,16 +81,12 @@ class AnkiTestApp(AnkiApp):
 
         col.models.add(notetype=model)
 
-        col.models._clear_cache()
-
     def rename_model_field(self, model_name: str, field_order: int, new_name: str):
         assert self.setup_performed  # use the anki_setup_and_teardown fixture
         col = aqt.mw.col
         note_type = col.models.by_name(name=model_name)
         col.models.rename_field(notetype=note_type, field=note_type["flds"][field_order], new_name=new_name)
         col.models.update_dict(notetype=note_type)
-
-        col.models._clear_cache()
 
     def remove_all_notes(self):
         assert self.setup_performed  # use the anki_setup_and_teardown fixture

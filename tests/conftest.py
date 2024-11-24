@@ -8,17 +8,17 @@ from PIL import Image as PILImage
 import aqt
 
 from obsidian_sync.addon_config import AddonConfig
-from obsidian_sync.anki.app.anki_app import AnkiApp
+from obsidian_sync.anki.app.app import AnkiApp
 from obsidian_sync.constants import OBSIDIAN_SETTINGS_FOLDER, OBSIDIAN_APP_SETTINGS_FILE, OBSIDIAN_TRASH_OPTION_KEY, \
     OBSIDIAN_PERMA_DELETE_TRASH_OPTION_VALUE, OBSIDIAN_TEMPLATES_SETTINGS_FILE, OBSIDIAN_TEMPLATES_OPTION_KEY, \
     TEMPLATES_FOLDER_JSON_FIELD_NAME, OBSIDIAN_USE_MARKDOWN_LINKS_OPTION_KEY, CONF_VAULT_PATH, ADD_ON_NAME, \
     CONF_SRS_FOLDER_IN_OBSIDIAN, CONF_SYNC_WITH_OBSIDIAN_ON_ANKI_WEB_SYNC, CONF_ANKI_DECK_NAME_FOR_OBSIDIAN_IMPORTS, \
-    SRS_ATTACHMENTS_FOLDER
+    SRS_ATTACHMENTS_FOLDER, CONF_ADD_OBSIDIAN_URL_IN_ANKI
 from obsidian_sync.markup_translator import MarkupTranslator
-from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
-from obsidian_sync.obsidian.obsidian_notes_manager import ObsidianNotesManager
-from obsidian_sync.obsidian.obsidian_templates_manager import ObsidianTemplatesManager
-from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
+from obsidian_sync.obsidian.config import ObsidianConfig
+from obsidian_sync.obsidian.notes_manager import ObsidianNotesManager
+from obsidian_sync.obsidian.templates_manager import ObsidianTemplatesManager
+from obsidian_sync.obsidian.vault import ObsidianVault
 from obsidian_sync.synchronizers.notes_synchronizer import NotesSynchronizer
 from obsidian_sync.synchronizers.templates_synchronizer import TemplatesSynchronizer
 from obsidian_sync import addon_metadata
@@ -157,6 +157,7 @@ def anki_addon_meta_default_data(
             CONF_SRS_FOLDER_IN_OBSIDIAN: str(srs_folder_in_obsidian),
             CONF_SYNC_WITH_OBSIDIAN_ON_ANKI_WEB_SYNC: False,
             CONF_ANKI_DECK_NAME_FOR_OBSIDIAN_IMPORTS: "",
+            CONF_ADD_OBSIDIAN_URL_IN_ANKI: False,
         },
     }
     return meta
@@ -279,10 +280,16 @@ def obsidian_vault(
 
 @pytest.fixture()
 def obsidian_templates_manager(
-    anki_app: AnkiApp, obsidian_config: ObsidianConfig, obsidian_vault: ObsidianVault
+    anki_app: AnkiApp,
+    obsidian_config: ObsidianConfig,
+    obsidian_vault: ObsidianVault,
+    addon_config: AddonConfig,
 ) -> ObsidianTemplatesManager:
     return ObsidianTemplatesManager(
-        anki_app=anki_app, obsidian_config=obsidian_config, obsidian_vault=obsidian_vault
+        anki_app=anki_app,
+        obsidian_config=obsidian_config,
+        obsidian_vault=obsidian_vault,
+        addon_config=addon_config,
     )
 
 

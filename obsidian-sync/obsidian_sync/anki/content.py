@@ -1,8 +1,9 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List
 
-from obsidian_sync.anki.app.anki_media_manager import AnkiMediaManager
-from obsidian_sync.base_types.content import Field, Content, Properties, NoteProperties, LinkedAttachment, NoteContent
+from obsidian_sync.anki.app.media_manager import AnkiMediaManager
+from obsidian_sync.base_types.content import Field, Content, Properties, NoteProperties, LinkedAttachment, NoteContent, \
+    NoteField, TemplateField
 from obsidian_sync.markup_translator import MarkupTranslator
 
 
@@ -18,6 +19,7 @@ class AnkiContent(Content):
 @dataclass
 class AnkiTemplateContent(AnkiContent):
     properties: "AnkiTemplateProperties"
+    fields: List["AnkiTemplateField"]
 
     def __eq__(self, other: object) -> bool:
         return super().__eq__(other)
@@ -26,6 +28,7 @@ class AnkiTemplateContent(AnkiContent):
 @dataclass
 class AnkiNoteContent(AnkiContent):
     properties: "AnkiNoteProperties"
+    fields: List["AnkiNoteField"]
 
     def __eq__(self, other: object) -> bool:
         return super().__eq__(other)
@@ -37,7 +40,7 @@ class AnkiNoteContent(AnkiContent):
         anki_media_manager: AnkiMediaManager,
     ) -> "AnkiNoteContent":
         properties = AnkiNoteProperties.from_properties(properties=content.properties)
-        fields = AnkiField.from_fields(
+        fields = AnkiNoteField.from_fields(
             fields=content.fields, anki_media_manager=anki_media_manager
         )
         return cls(properties=properties, fields=fields)
@@ -77,8 +80,35 @@ class AnkiNoteProperties(NoteProperties):
 
 @dataclass
 class AnkiField(Field):
+    def __post_init__(self):
+        self._markup_translator = MarkupTranslator()
+
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)
+
+    def set_from_markdown(self, markdown: str):
+        self.text = self._markup_translator.translate_markdown_to_html(markdown=markdown)
+
+    def set_from_html(self, html: str):
+        self.text = html
+
+    def to_markdown(self) -> str:
+        markdown_text = self._markup_translator.translate_html_to_markdown(html=self.text)
+        return markdown_text
+
+    def to_html(self) -> str:
+        return self.text
+
+
+@dataclass
+class AnkiTemplateField(TemplateField, AnkiField):
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)
+
+
+@dataclass
+class AnkiNoteField(NoteField, AnkiField):
     attachments: List["AnkiLinkedAttachment"]
-    _markup_translator: MarkupTranslator = field(default_factory=MarkupTranslator)
 
     def __eq__(self, other: object) -> bool:
         return super().__eq__(other)
@@ -86,11 +116,11 @@ class AnkiField(Field):
     @classmethod
     def from_fields(
         cls,
-        fields: List[Field],
+        fields: List[NoteField],
         anki_media_manager: AnkiMediaManager,
-    ) -> List["AnkiField"]:
+    ) -> List["AnkiNoteField"]:
         fields = [
-            AnkiField.from_field(
+            AnkiNoteField.from_field(
                 field=field, anki_media_manager=anki_media_manager
             )
             for field in fields
@@ -100,9 +130,9 @@ class AnkiField(Field):
     @classmethod
     def from_field(
         cls,
-        field: Field,
+        field: NoteField,
         anki_media_manager: AnkiMediaManager,
-    ) -> "AnkiField":
+    ) -> "AnkiNoteField":
         html_text = field.to_html()
 
         anki_attachments = []
@@ -121,12 +151,6 @@ class AnkiField(Field):
             attachments=anki_attachments,
         )
 
-    def set_from_markdown(self, markdown: str):
-        self.text = self._markup_translator.translate_markdown_to_html(markdown=markdown)
-
-    def set_from_html(self, html: str):
-        self.text = html
-
     def to_anki_field_text(self) -> str:
         field_text = self.text
 
@@ -136,13 +160,6 @@ class AnkiField(Field):
             )
 
         return field_text
-
-    def to_markdown(self) -> str:
-        markdown_text = self._markup_translator.translate_html_to_markdown(html=self.text)
-        return markdown_text
-
-    def to_html(self) -> str:
-        return self.text
 
 
 @dataclass

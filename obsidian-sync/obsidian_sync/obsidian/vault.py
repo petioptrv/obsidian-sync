@@ -31,11 +31,11 @@ from pathlib import Path
 
 from obsidian_sync.file_utils import move_file_to_system_trash
 from obsidian_sync.addon_config import AddonConfig
-from obsidian_sync.obsidian.obsidian_attachments_manager import ObsidianAttachmentsManager
+from obsidian_sync.obsidian.attachments_manager import ObsidianAttachmentsManager
 from obsidian_sync.constants import OBSIDIAN_SYSTEM_TRASH_OPTION_VALUE, OBSIDIAN_LOCAL_TRASH_OPTION_VALUE, \
     OBSIDIAN_LOCAL_TRASH_FOLDER, OBSIDIAN_PERMA_DELETE_TRASH_OPTION_VALUE
-from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
-from obsidian_sync.obsidian.obsidian_file import ObsidianFile
+from obsidian_sync.obsidian.config import ObsidianConfig
+from obsidian_sync.obsidian.file import ObsidianFile
 
 
 class ObsidianVault:

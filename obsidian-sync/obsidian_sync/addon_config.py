@@ -32,11 +32,11 @@ import json
 from pathlib import Path
 from typing import Tuple, Callable, List
 
-from obsidian_sync.anki.app.anki_app import AnkiApp
+from obsidian_sync.anki.app.app import AnkiApp
 from obsidian_sync.utils import format_add_on_message
 from obsidian_sync.constants import (
     ADD_ON_NAME, ADD_ON_ID, CONF_VAULT_PATH, CONF_SRS_FOLDER_IN_OBSIDIAN, CONF_SYNC_WITH_OBSIDIAN_ON_ANKI_WEB_SYNC,
-    CONF_ANKI_DECK_NAME_FOR_OBSIDIAN_IMPORTS
+    CONF_ANKI_DECK_NAME_FOR_OBSIDIAN_IMPORTS, CONF_ADD_OBSIDIAN_URL_IN_ANKI
 )
 
 
@@ -80,6 +80,10 @@ class AddonConfig:
     @property
     def anki_deck_name_for_obsidian_imports(self) -> str:
         return self.config[CONF_ANKI_DECK_NAME_FOR_OBSIDIAN_IMPORTS]
+
+    @property
+    def add_obsidian_url_in_anki(self) -> bool:
+        return self.config[CONF_ADD_OBSIDIAN_URL_IN_ANKI]
 
     def register_config_update_listener(self, listener: AddonConfigUpdateListener):
         self._config_update_listeners.append(listener)

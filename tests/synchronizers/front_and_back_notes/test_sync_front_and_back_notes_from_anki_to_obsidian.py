@@ -6,22 +6,22 @@ from typing import List
 from PIL import Image as PILImage
 
 from obsidian_sync.addon_config import AddonConfig
-from obsidian_sync.anki.anki_content import AnkiNoteContent, AnkiNoteProperties, AnkiField, AnkiLinkedAttachment
-from obsidian_sync.anki.anki_note import AnkiNote
+from obsidian_sync.anki.content import AnkiNoteContent, AnkiNoteProperties, AnkiNoteField, AnkiLinkedAttachment
+from obsidian_sync.anki.note import AnkiNote
 from obsidian_sync.constants import MARKDOWN_FILE_SUFFIX, SRS_NOTE_IDENTIFIER_COMMENT, DATETIME_FORMAT, \
     MODEL_ID_PROPERTY_NAME, MODEL_NAME_PROPERTY_NAME, NOTE_ID_PROPERTY_NAME, TAGS_PROPERTY_NAME, \
     DATE_MODIFIED_PROPERTY_NAME, DATE_SYNCED_PROPERTY_NAME, SRS_NOTE_FIELD_IDENTIFIER_COMMENT, SRS_HEADER_TITLE_LEVEL, \
-    DEFAULT_NODE_ID_FOR_NEW_NOTES, SUSPENDED_PROPERTY_NAME, MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME
+    DEFAULT_NODE_ID_FOR_NEW_NOTES, SUSPENDED_PROPERTY_NAME, MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME, \
+    CONF_ADD_OBSIDIAN_URL_IN_ANKI, OBSIDIAN_LINK_URL_FIELD_NAME
 from obsidian_sync.file_utils import check_files_are_identical
 from obsidian_sync.markup_translator import MarkupTranslator
-from obsidian_sync.obsidian.obsidian_notes_manager import ObsidianNotesManager
+from obsidian_sync.obsidian.notes_manager import ObsidianNotesManager
 from obsidian_sync.synchronizers.notes_synchronizer import NotesSynchronizer
 from tests.anki_test_app import AnkiTestApp
 
 
 def build_basic_anki_note(
     anki_test_app: AnkiTestApp,
-    markup_translator: MarkupTranslator,
     front_text: str,
     back_text: str,
     front_attachments: List[AnkiLinkedAttachment] = None,
@@ -42,17 +42,15 @@ def build_basic_anki_note(
                 date_modified_in_anki=None,
             ),
             fields=[
-                AnkiField(
+                AnkiNoteField(
                     name="Front",
                     text=front_text,
                     attachments=front_attachments or [],
-                    _markup_translator=markup_translator,
                 ),
-                AnkiField(
+                AnkiNoteField(
                     name="Back",
                     text=back_text,
                     attachments=back_attachments or [],
-                    _markup_translator=markup_translator,
                 ),
             ],
         ),
@@ -74,7 +72,6 @@ def test_sync_new_anki_note_to_obsidian(
     back_field_html = "Some back"
     note = build_basic_anki_note(
         anki_test_app=anki_test_app,
-        markup_translator=markup_translator,
         front_text=front_field_html,
         back_text=back_field_html,
     )
@@ -129,6 +126,41 @@ def test_sync_new_anki_note_to_obsidian(
     assert note_text == expected_text
 
 
+def test_sync_new_anki_note_to_obsidian_with_obsidian_id_field_enabled_but_not_shown_in_obsidian_file(
+    anki_setup_and_teardown,
+    obsidian_setup_and_teardown,
+    anki_test_app: AnkiTestApp,
+    markup_translator: MarkupTranslator,
+    addon_config: AddonConfig,
+    notes_synchronizer: NotesSynchronizer,
+    obsidian_notes_manager: ObsidianNotesManager,
+    srs_folder_in_obsidian: Path,
+):
+    anki_test_app.set_config_value(config_name=CONF_ADD_OBSIDIAN_URL_IN_ANKI, value=True)
+
+    note = build_basic_anki_note(
+        anki_test_app=anki_test_app,
+        front_text="Some front",
+        back_text="Some back",
+    )
+    anki_note = anki_test_app.add_note(
+        note=note, deck_name=addon_config.anki_deck_name_for_obsidian_imports
+    )
+
+    notes_synchronizer.synchronize_notes()
+
+    existing_obsidian_notes, new_obsidian_notes = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_note = existing_obsidian_notes[anki_note.id]
+
+    assert len(obsidian_note.content.fields) == 3
+    assert obsidian_note.content.fields[-1].name == OBSIDIAN_LINK_URL_FIELD_NAME
+
+    obsidian_note_file = list(srs_folder_in_obsidian.iterdir())[0]
+    note_text = obsidian_note_file.read_text()
+
+    assert OBSIDIAN_LINK_URL_FIELD_NAME not in note_text
+
+
 def test_sync_new_anki_note_with_attachment_to_obsidian(
     anki_setup_and_teardown,
     obsidian_setup_and_teardown,
@@ -153,7 +185,6 @@ def test_sync_new_anki_note_with_attachment_to_obsidian(
     )
     note = build_basic_anki_note(
         anki_test_app=anki_test_app,
-        markup_translator=markup_translator,
         front_text=front_field_html,
         back_text=back_field_html,
         front_attachments=[anki_attachment],
@@ -203,7 +234,6 @@ def test_sync_new_anki_note_with_tag_to_obsidian(
     tag = "test"
     note = build_basic_anki_note(
         anki_test_app=anki_test_app,
-        markup_translator=markup_translator,
         front_text=front_field_html,
         back_text=back_field_html,
         tags=[tag],
@@ -234,7 +264,6 @@ def test_sync_new_anki_note_with_external_link_to_obsidian(
     back_field_html = "Some back"
     note = build_basic_anki_note(
         anki_test_app=anki_test_app,
-        markup_translator=markup_translator,
         front_text=front_field_html,
         back_text=back_field_html,
     )
@@ -267,7 +296,6 @@ and a block equation:&nbsp;<anki-mathjax block="true">{block_equation}</anki-mat
     back_field_html = "Some back"
     note = build_basic_anki_note(
         anki_test_app=anki_test_app,
-        markup_translator=markup_translator,
         front_text=front_field_html,
         back_text=back_field_html,
     )
@@ -300,7 +328,6 @@ def test_sync_new_anki_note_with_code_to_obsidian(
     back_field_html = "Some back"
     note = build_basic_anki_note(
         anki_test_app=anki_test_app,
-        markup_translator=markup_translator,
         front_text=front_field_html,
         back_text=back_field_html,
     )
@@ -331,7 +358,6 @@ def test_anki_note_in_obsidian_remains_the_same_on_subsequent_sync(
     back_field_html = "Some back"
     note = build_basic_anki_note(
         anki_test_app=anki_test_app,
-        markup_translator=markup_translator,
         front_text=front_field_html,
         back_text=back_field_html,
     )
@@ -369,7 +395,6 @@ def test_sync_existing_anki_note_with_updated_field_in_obsidian(
     back_field_html = "Some back"
     note = build_basic_anki_note(
         anki_test_app=anki_test_app,
-        markup_translator=markup_translator,
         front_text=initial_front_field,
         back_text=back_field_html,
     )
@@ -403,7 +428,6 @@ def test_remove_deleted_anki_note_from_obsidian(
 ):
     note = build_basic_anki_note(
         anki_test_app=anki_test_app,
-        markup_translator=markup_translator,
         front_text="Some front",
         back_text="Some back",
     )

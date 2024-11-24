@@ -8,14 +8,15 @@ from PIL import Image as PILImage
 from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.constants import SRS_NOTE_IDENTIFIER_COMMENT, \
     SRS_NOTE_FIELD_IDENTIFIER_COMMENT, SRS_HEADER_TITLE_LEVEL, \
-    DEFAULT_NODE_ID_FOR_NEW_NOTES
+    DEFAULT_NODE_ID_FOR_NEW_NOTES, CONF_ADD_OBSIDIAN_URL_IN_ANKI, OBSIDIAN_LINK_URL_FIELD_NAME
 from obsidian_sync.markup_translator import MarkupTranslator
-from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
-from obsidian_sync.obsidian.obsidian_content import ObsidianNoteProperties
-from obsidian_sync.obsidian.obsidian_file import ObsidianNoteFile
-from obsidian_sync.obsidian.obsidian_notes_manager import ObsidianNotesManager
-from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
+from obsidian_sync.obsidian.config import ObsidianConfig
+from obsidian_sync.obsidian.content.properties import ObsidianNoteProperties
+from obsidian_sync.obsidian.file import ObsidianNoteFile
+from obsidian_sync.obsidian.notes_manager import ObsidianNotesManager
+from obsidian_sync.obsidian.vault import ObsidianVault
 from obsidian_sync.synchronizers.notes_synchronizer import NotesSynchronizer
+from obsidian_sync.synchronizers.templates_synchronizer import TemplatesSynchronizer
 from tests.anki_test_app import AnkiTestApp
 
 
@@ -94,6 +95,41 @@ def test_sync_new_obsidian_note_to_anki(
     assert obsidian_note.id == anki_note.id
     assert obsidian_note.content.properties.date_modified_in_anki == anki_note.content.properties.date_modified_in_anki
     assert obsidian_note.content.properties.date_synced >= anki_note.content.properties.date_modified_in_anki
+
+
+def test_sync_new_obsidian_note_with_obsidian_id_to_anki(
+    anki_setup_and_teardown,
+    obsidian_setup_and_teardown,
+    anki_test_app: AnkiTestApp,
+    srs_folder_in_obsidian: Path,
+    templates_synchronizer: TemplatesSynchronizer,
+    notes_synchronizer: NotesSynchronizer,
+    obsidian_vault_folder: Path,
+):
+    anki_test_app.set_config_value(config_name=CONF_ADD_OBSIDIAN_URL_IN_ANKI, value=True)
+
+    note_file_path = srs_folder_in_obsidian / "test note.md"
+    build_basic_obsidian_note(
+        anki_test_app=anki_test_app,
+        front_text="Some front",
+        back_text="Some back",
+        file_path=note_file_path,
+    )
+
+    templates_synchronizer.synchronize_templates()
+    notes_synchronizer.synchronize_notes()
+
+    anki_note = list(anki_test_app.get_all_notes().values())[0]
+
+    assert len(anki_note.content.fields) == 3
+
+    obsidian_id_field = anki_note.content.fields[-1]
+    note_path_relative_to_vault = note_file_path.relative_to(obsidian_vault_folder)
+    raw_url = f"obsidian://open?vault={obsidian_vault_folder.name}&file={note_path_relative_to_vault}"
+    expected_obsidian_url = urllib.parse.quote(string=str(raw_url))
+
+    assert obsidian_id_field.name == OBSIDIAN_LINK_URL_FIELD_NAME
+    assert obsidian_id_field.text == f"<p>{expected_obsidian_url}</p>"
 
 
 def test_sync_two_new_obsidian_notes_to_anki(

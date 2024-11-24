@@ -30,8 +30,10 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
-from obsidian_sync.obsidian.obsidian_content import ObsidianField, ObsidianTemplateContent, ObsidianTemplateProperties
-from obsidian_sync.obsidian.obsidian_file import ObsidianTemplateFile
+from obsidian_sync.obsidian.content.content import ObsidianTemplateContent
+from obsidian_sync.obsidian.content.field.field import ObsidianField
+from obsidian_sync.obsidian.content.properties import ObsidianTemplateProperties
+from obsidian_sync.obsidian.file import ObsidianTemplateFile
 from obsidian_sync.base_types.template import Template
 
 

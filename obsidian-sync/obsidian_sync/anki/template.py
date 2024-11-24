@@ -29,7 +29,7 @@
 # Any modifications to this file must keep this entire header intact.
 from dataclasses import dataclass
 
-from obsidian_sync.anki.anki_content import AnkiTemplateContent
+from obsidian_sync.anki.content import AnkiTemplateContent
 from obsidian_sync.base_types.template import Template
 
 
@@ -39,3 +39,7 @@ class AnkiTemplate(Template):
 
     def __eq__(self, other: object) -> bool:
         return super().__eq__(other)
+
+    @property
+    def model_id(self) -> int:
+        return self.content.properties.model_id

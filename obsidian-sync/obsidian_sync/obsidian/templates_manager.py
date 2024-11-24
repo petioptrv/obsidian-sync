@@ -1,15 +1,16 @@
 import logging
 from typing import Dict, Generator
 
-from obsidian_sync.anki.app.anki_app import AnkiApp
+from obsidian_sync.addon_config import AddonConfig
+from obsidian_sync.anki.app.app import AnkiApp
 from obsidian_sync.base_types.template import Template
 from obsidian_sync.constants import MARKDOWN_FILE_SUFFIX
 from obsidian_sync.file_utils import check_is_srs_file
-from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
-from obsidian_sync.obsidian.obsidian_content import ObsidianTemplateContent
-from obsidian_sync.obsidian.obsidian_file import ObsidianTemplateFile
-from obsidian_sync.obsidian.obsidian_template import ObsidianTemplate
-from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
+from obsidian_sync.obsidian.config import ObsidianConfig
+from obsidian_sync.obsidian.content.content import ObsidianTemplateContent
+from obsidian_sync.obsidian.file import ObsidianTemplateFile
+from obsidian_sync.obsidian.template import ObsidianTemplate
+from obsidian_sync.obsidian.vault import ObsidianVault
 from obsidian_sync.utils import format_add_on_message
 
 
@@ -19,10 +20,12 @@ class ObsidianTemplatesManager:
         anki_app: AnkiApp,
         obsidian_config: ObsidianConfig,
         obsidian_vault: ObsidianVault,
+        addon_config: AddonConfig,
     ):
         self._anki_app = anki_app
         self._obsidian_config = obsidian_config
         self._obsidian_vault = obsidian_vault
+        self._addon_config = addon_config
 
     def create_obsidian_template_from_template(self, reference_template: Template) -> ObsidianTemplate:
         obsidian_template = ObsidianTemplate()
@@ -51,8 +54,6 @@ class ObsidianTemplatesManager:
 
         content_from_template = ObsidianTemplateContent.from_content(
             content=reference_template.content,
-            obsidian_attachments_manager=self._obsidian_vault.attachments_manager,
-            template_path=file.path,
         )
         if file.content != content_from_template:
             file.content = content_from_template
@@ -103,7 +104,9 @@ class ObsidianTemplatesManager:
             self._obsidian_config.templates_folder / f"{model_name}{MARKDOWN_FILE_SUFFIX}"
         )
         file = ObsidianTemplateFile(
-            path=template_path, attachment_manager=self._obsidian_vault.attachments_manager
+            path=template_path,
+            attachment_manager=self._obsidian_vault.attachments_manager,
+            addon_config=self._addon_config,
         )
         return file
 
@@ -114,6 +117,8 @@ class ObsidianTemplatesManager:
         for file_path in templates_folder_path.iterdir():
             if check_is_srs_file(path=file_path):
                 obsidian_file = ObsidianTemplateFile(
-                    path=file_path, attachment_manager=self._obsidian_vault.attachments_manager
+                    path=file_path,
+                    attachment_manager=self._obsidian_vault.attachments_manager,
+                    addon_config=self._addon_config,
                 )
                 yield obsidian_file

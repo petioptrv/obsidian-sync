@@ -29,10 +29,10 @@ from obsidian_sync.addon_metadata import AddonMetadata
 #
 # Any modifications to this file must keep this entire header intact.
 
-from obsidian_sync.anki.app.anki_app import AnkiApp
+from obsidian_sync.anki.app.app import AnkiApp
 from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.constants import ADD_ON_NAME
-from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
+from obsidian_sync.obsidian.config import ObsidianConfig
 from obsidian_sync.synchronizers.notes_synchronizer import NotesSynchronizer
 from obsidian_sync.synchronizers.templates_synchronizer import TemplatesSynchronizer
 from obsidian_sync.utils import format_add_on_message

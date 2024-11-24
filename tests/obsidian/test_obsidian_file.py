@@ -9,11 +9,9 @@ from obsidian_sync.constants import SRS_NOTE_FIELD_IDENTIFIER_COMMENT, MARKDOWN_
     SRS_HEADER_TITLE_LEVEL, MODEL_ID_PROPERTY_NAME, \
     MODEL_NAME_PROPERTY_NAME, NOTE_ID_PROPERTY_NAME, TAGS_PROPERTY_NAME, DATE_MODIFIED_PROPERTY_NAME, \
     DATE_SYNCED_PROPERTY_NAME
-from obsidian_sync.markup_translator import MarkupTranslator
-from obsidian_sync.obsidian.obsidian_content import ObsidianTemplateProperties, \
-    ObsidianNoteProperties
-from obsidian_sync.obsidian.obsidian_file import ObsidianNoteFile, ObsidianTemplateFile
-from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
+from obsidian_sync.obsidian.content.properties import ObsidianTemplateProperties, ObsidianNoteProperties
+from obsidian_sync.obsidian.file import ObsidianNoteFile, ObsidianTemplateFile
+from obsidian_sync.obsidian.vault import ObsidianVault
 
 
 def test_parse_template(

@@ -4,15 +4,15 @@ from pathlib import Path
 from typing import Generator, Tuple, Dict, List
 
 from obsidian_sync.addon_config import AddonConfig
-from obsidian_sync.anki.app.anki_app import AnkiApp
+from obsidian_sync.anki.app.app import AnkiApp
 from obsidian_sync.base_types.note import Note
 from obsidian_sync.constants import MAX_OBSIDIAN_NOTE_FILE_NAME_LENGTH, DEFAULT_NODE_ID_FOR_NEW_NOTES
 from obsidian_sync.file_utils import clean_string_for_file_name, check_is_srs_file
-from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
-from obsidian_sync.obsidian.obsidian_content import ObsidianNoteContent
-from obsidian_sync.obsidian.obsidian_file import ObsidianNoteFile
-from obsidian_sync.obsidian.obsidian_note import ObsidianNote
-from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
+from obsidian_sync.obsidian.config import ObsidianConfig
+from obsidian_sync.obsidian.content.content import ObsidianNoteContent
+from obsidian_sync.obsidian.file import ObsidianNoteFile
+from obsidian_sync.obsidian.note import ObsidianNote
+from obsidian_sync.obsidian.vault import ObsidianVault
 from obsidian_sync.utils import format_add_on_message
 
 
@@ -43,7 +43,11 @@ class ObsidianNotesManager:
             if file is not None:
                 self._obsidian_vault.delete_file(file=file)
             note_path = self._build_obsidian_note_path_from_note(note=reference_note)
-            file = ObsidianNoteFile(path=note_path, attachment_manager=self._obsidian_vault.attachments_manager)
+            file = ObsidianNoteFile(
+                path=note_path,
+                attachment_manager=self._obsidian_vault.attachments_manager,
+                addon_config=self._addon_config,
+            )
             if file.exists:
                 self._obsidian_vault.delete_file(file=file)
 
@@ -125,10 +129,8 @@ class ObsidianNotesManager:
                 file_path = Path(root) / file
                 if check_is_srs_file(path=file_path):
                     obsidian_file = ObsidianNoteFile(
-                        path=file_path, attachment_manager=self._obsidian_vault.attachments_manager
+                        path=file_path,
+                        attachment_manager=self._obsidian_vault.attachments_manager,
+                        addon_config=self._addon_config,
                     )
                     yield obsidian_file
-        
-        
-        
-    

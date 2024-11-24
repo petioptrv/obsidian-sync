@@ -34,14 +34,14 @@ import os
 from typing import Dict
 
 from obsidian_sync.addon_config import AddonConfig
-from obsidian_sync.anki.anki_template import AnkiTemplate
-from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
-from obsidian_sync.obsidian.obsidian_template import ObsidianTemplate
-from obsidian_sync.anki.app.anki_app import AnkiApp
-from obsidian_sync.obsidian.obsidian_templates_manager import ObsidianTemplatesManager
-from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
+from obsidian_sync.anki.template import AnkiTemplate
+from obsidian_sync.obsidian.config import ObsidianConfig
+from obsidian_sync.obsidian.template import ObsidianTemplate
+from obsidian_sync.anki.app.app import AnkiApp
+from obsidian_sync.obsidian.templates_manager import ObsidianTemplatesManager
+from obsidian_sync.obsidian.vault import ObsidianVault
 from obsidian_sync.utils import format_add_on_message
-from obsidian_sync.constants import ADD_ON_NAME
+from obsidian_sync.constants import ADD_ON_NAME, OBSIDIAN_LINK_URL_FIELD_NAME
 
 
 class TemplatesSynchronizer:
@@ -62,12 +62,16 @@ class TemplatesSynchronizer:
         self._obsidian_config = obsidian_config
         obsidian_vault = ObsidianVault(addon_config=addon_config, obsidian_config=obsidian_config)
         self._obsidian_templates_manager = ObsidianTemplatesManager(
-            anki_app=anki_app, obsidian_config=obsidian_config, obsidian_vault=obsidian_vault
+            anki_app=anki_app,
+            obsidian_config=obsidian_config,
+            obsidian_vault=obsidian_vault,
+            addon_config=addon_config,
         )
 
     def synchronize_templates(self):
         try:
-            anki_templates = self._anki_app.get_all_anki_note_templates()
+            anki_templates = self._anki_app.get_all_anki_templates()
+            anki_templates = self._check_anki_templates(anki_templates=anki_templates)
             obsidian_templates = self._obsidian_templates_manager.get_all_obsidian_templates()
 
             obsidian_templates = self._remove_deleted_templates(
@@ -92,6 +96,28 @@ class TemplatesSynchronizer:
                 text=format_add_on_message(f"Error syncing note templates: {str(e)}"),
                 title=ADD_ON_NAME,
             )
+
+    def _check_anki_templates(self, anki_templates: Dict[int, AnkiTemplate]) -> Dict[int, AnkiTemplate]:
+        if self._addon_config.add_obsidian_url_in_anki:
+            for anki_template in list(anki_templates.values()):
+                if not any(
+                    field.name == OBSIDIAN_LINK_URL_FIELD_NAME
+                    for field in anki_template.content.fields
+                ):
+                    anki_templates[anki_template.model_id] = self._anki_app.add_field_to_anki_template(
+                        template=anki_template, field_name=OBSIDIAN_LINK_URL_FIELD_NAME
+                    )
+        else:
+            for anki_template in list(anki_templates.values()):
+                if any(
+                    field.name == OBSIDIAN_LINK_URL_FIELD_NAME
+                    for field in anki_template.content.fields
+                ):
+                    anki_templates[anki_template.model_id] = self._anki_app.remove_field_from_anki_template(
+                        template=anki_template, field_name=OBSIDIAN_LINK_URL_FIELD_NAME
+                    )
+
+        return anki_templates
 
     def _remove_deleted_templates(
         self,
