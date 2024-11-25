@@ -324,6 +324,7 @@ def test_obsidian_note_in_anki_remains_the_same_on_subsequent_sync(
     notes_synchronizer.synchronize_notes()
 
     first_sync_anki_note = list(anki_test_app.get_all_notes().values())[0]
+    time.sleep(1)
 
     notes_synchronizer.synchronize_notes()
 
@@ -368,6 +369,39 @@ def test_sync_existing_obsidian_note_with_updated_field_to_anki(
     assert anki_note.content.fields[0].text == f"<p>{updated_front_field}</p>"
 
 
+def test_sync_existing_obsidian_note_with_updated_tag_property_to_anki(
+    anki_setup_and_teardown,
+    obsidian_setup_and_teardown,
+    anki_test_app: AnkiTestApp,
+    srs_folder_in_obsidian: Path,
+    notes_synchronizer: NotesSynchronizer,
+    obsidian_notes_manager: ObsidianNotesManager,
+):
+    test_tag = "test"
+    obsidian_file_path = srs_folder_in_obsidian / "test.md"
+    build_basic_obsidian_note(
+        anki_test_app=anki_test_app,
+        front_text="Some front",
+        back_text="Some back",
+        file_path=obsidian_file_path,
+    )
+
+    notes_synchronizer.synchronize_notes()
+
+    time.sleep(1)
+
+    obsidian_existing_notes, obsidian_new_notes = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_note = list(obsidian_existing_notes.values())[0]
+    obsidian_note.properties.tags.append(test_tag)
+    obsidian_notes_manager.save_note(note=obsidian_note)
+
+    notes_synchronizer.synchronize_notes()
+
+    anki_note = list(anki_test_app.get_all_notes().values())[0]
+
+    assert anki_note.content.properties.tags == [test_tag]
+
+
 def test_remove_deleted_obsidian_note_from_anki(
     anki_setup_and_teardown,
     obsidian_setup_and_teardown,
@@ -375,6 +409,7 @@ def test_remove_deleted_obsidian_note_from_anki(
     srs_folder_in_obsidian: Path,
     notes_synchronizer: NotesSynchronizer,
     obsidian_vault: ObsidianVault,
+    addon_config: AddonConfig,
 ):
     obsidian_file_path = srs_folder_in_obsidian / "test.md"
     build_basic_obsidian_note(
@@ -391,7 +426,8 @@ def test_remove_deleted_obsidian_note_from_anki(
     obsidian_vault.delete_file(
         file=ObsidianNoteFile(
             path=obsidian_file_path,
-            attachment_manager=obsidian_vault.attachments_manager
+            attachment_manager=obsidian_vault.attachments_manager,
+            addon_config=addon_config,
         ),
     )
 

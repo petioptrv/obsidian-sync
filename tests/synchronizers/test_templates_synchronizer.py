@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from obsidian_sync.addon_config import AddonConfig
@@ -5,7 +6,9 @@ from obsidian_sync.constants import MARKDOWN_FILE_SUFFIX, \
     MODEL_NAME_PROPERTY_NAME, NOTE_ID_PROPERTY_NAME, TAGS_PROPERTY_NAME, \
     DATE_MODIFIED_PROPERTY_NAME, DATE_SYNCED_PROPERTY_NAME, \
     SRS_NOTE_IDENTIFIER_COMMENT, SRS_NOTE_FIELD_IDENTIFIER_COMMENT, SRS_HEADER_TITLE_LEVEL, \
-    CONF_ADD_OBSIDIAN_URL_IN_ANKI, OBSIDIAN_LINK_URL_FIELD_NAME
+    CONF_ADD_OBSIDIAN_URL_IN_ANKI, OBSIDIAN_LINK_URL_FIELD_NAME, DEFAULT_NODE_ID_FOR_NEW_NOTES, \
+    DEFAULT_NOTE_SUSPENDED_STATE_FOR_NEW_NOTES, DEFAULT_NOTE_MAXIMUM_CARD_DIFFICULTY_FOR_NEW_NOTES, \
+    MODEL_ID_PROPERTY_NAME, SUSPENDED_PROPERTY_NAME, MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME
 from obsidian_sync.obsidian.config import ObsidianConfig
 from obsidian_sync.obsidian.templates_manager import ObsidianTemplatesManager
 from obsidian_sync.synchronizers.templates_synchronizer import TemplatesSynchronizer
@@ -21,26 +24,64 @@ def test_create_new_anki_template_in_obsidian(
     obsidian_templates_folder: Path,
     templates_synchronizer: TemplatesSynchronizer,
 ):
-    anki_test_app.remove_all_note_models()
-
-    model_name = "Basic"  # Basic always added as default
+    anki_test_app.remove_all_note_models()  # the default Basic model is always kept by Anki
 
     assert len(obsidian_templates_manager.get_all_obsidian_templates()) == 0
 
     templates_synchronizer.synchronize_templates()
 
+    anki_templates = anki_test_app.get_all_anki_templates()
     obsidian_templates = obsidian_templates_manager.get_all_obsidian_templates()
 
     assert len(obsidian_templates) == 1
     assert len(list(obsidian_templates_folder.iterdir())) == 1
 
+    anki_template = list(anki_templates.values())[0]
     obsidian_template = list(obsidian_templates.values())[0]
 
-    assert obsidian_template.model_name == model_name
-    assert obsidian_template.file.path.name == f"{model_name}{MARKDOWN_FILE_SUFFIX}"
+    assert obsidian_template.file.path.name == f"{anki_template.model_name}{MARKDOWN_FILE_SUFFIX}"
+
+    # properties
+    assert obsidian_template.properties.model_id == anki_template.model_id
+    assert obsidian_template.properties.model_name == anki_template.model_name
+    assert obsidian_template.properties.note_id == DEFAULT_NODE_ID_FOR_NEW_NOTES
+    assert obsidian_template.properties.tags == []
+    assert obsidian_template.properties.suspended == DEFAULT_NOTE_SUSPENDED_STATE_FOR_NEW_NOTES
+    assert obsidian_template.properties.maximum_card_difficulty == DEFAULT_NOTE_MAXIMUM_CARD_DIFFICULTY_FOR_NEW_NOTES
+    assert obsidian_template.properties.date_modified_in_anki is None
+    assert obsidian_template.properties.date_synced is None
+
+    # fields
     assert len(obsidian_template.fields) == 2
     assert obsidian_template.fields[0].name == "Front"
     assert obsidian_template.fields[1].name == "Back"
+
+    expected_text = f"""---
+{MODEL_ID_PROPERTY_NAME}: {anki_template.model_id}
+{MODEL_NAME_PROPERTY_NAME}: {anki_template.model_name}
+{NOTE_ID_PROPERTY_NAME}: {DEFAULT_NODE_ID_FOR_NEW_NOTES}
+{TAGS_PROPERTY_NAME}: []
+{SUSPENDED_PROPERTY_NAME}: {json.dumps(DEFAULT_NOTE_SUSPENDED_STATE_FOR_NEW_NOTES)}
+{MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME}: {json.dumps(DEFAULT_NOTE_MAXIMUM_CARD_DIFFICULTY_FOR_NEW_NOTES)}
+{DATE_MODIFIED_PROPERTY_NAME}: {json.dumps(None)}
+{DATE_SYNCED_PROPERTY_NAME}: {json.dumps(None)}
+---
+{SRS_NOTE_IDENTIFIER_COMMENT}
+{SRS_NOTE_FIELD_IDENTIFIER_COMMENT}
+{SRS_HEADER_TITLE_LEVEL} Front
+
+
+
+{SRS_NOTE_FIELD_IDENTIFIER_COMMENT}
+{SRS_HEADER_TITLE_LEVEL} Back
+
+
+
+"""
+
+    template_file = list(obsidian_templates_folder.iterdir())[0]
+
+    assert template_file.read_text() == expected_text
 
 
 def test_add_obsidian_url_field_to_anki_templates_on_sync(

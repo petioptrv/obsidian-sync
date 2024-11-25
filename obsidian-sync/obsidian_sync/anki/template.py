@@ -43,3 +43,7 @@ class AnkiTemplate(Template):
     @property
     def model_id(self) -> int:
         return self.content.properties.model_id
+
+    @property
+    def model_name(self) -> str:
+        return self.content.properties.model_name

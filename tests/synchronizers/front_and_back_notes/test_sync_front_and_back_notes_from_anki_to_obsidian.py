@@ -368,6 +368,7 @@ def test_anki_note_in_obsidian_remains_the_same_on_subsequent_sync(
     notes_synchronizer.synchronize_notes()
 
     first_sync_obsidian_note = obsidian_notes_manager.get_all_obsidian_notes()[0][anki_note.id]
+    time.sleep(1)
 
     notes_synchronizer.synchronize_notes()
 

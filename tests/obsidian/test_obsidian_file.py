@@ -4,6 +4,7 @@ from pathlib import Path
 
 from PIL import Image as PILImage
 
+from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.constants import SRS_NOTE_FIELD_IDENTIFIER_COMMENT, MARKDOWN_FILE_SUFFIX, \
     SRS_NOTE_IDENTIFIER_COMMENT, \
     SRS_HEADER_TITLE_LEVEL, MODEL_ID_PROPERTY_NAME, \
@@ -17,6 +18,7 @@ from obsidian_sync.obsidian.vault import ObsidianVault
 def test_parse_template(
     tmp_path: Path,
     obsidian_vault: ObsidianVault,
+    addon_config: AddonConfig,
 ):
     file_content = f"""---
 {MODEL_ID_PROPERTY_NAME}: 1
@@ -41,7 +43,7 @@ def test_parse_template(
     file_path.write_text(file_content)
 
     file = ObsidianTemplateFile(
-        path=file_path, attachment_manager=obsidian_vault.attachments_manager
+        path=file_path, attachment_manager=obsidian_vault.attachments_manager, addon_config=addon_config
     )
 
     assert isinstance(file.properties, ObsidianTemplateProperties)
@@ -58,6 +60,7 @@ def test_parse_template(
 def test_parse_note_properties(
     tmp_path: Path,
     obsidian_vault: ObsidianVault,
+    addon_config: AddonConfig,
 ):
     file_content = f"""{
     ObsidianNoteProperties(
@@ -78,7 +81,7 @@ def test_parse_note_properties(
     file_path.write_text(file_content)
 
     file = ObsidianNoteFile(
-        path=file_path, attachment_manager=obsidian_vault.attachments_manager
+        path=file_path, attachment_manager=obsidian_vault.attachments_manager, addon_config=addon_config
     )
 
     assert isinstance(file.properties, ObsidianNoteProperties)
@@ -94,6 +97,7 @@ def test_parse_note_fields(
     obsidian_vault_folder: Path,
     srs_folder_in_obsidian: Path,
     srs_attachments_in_obsidian_folder: Path,
+    addon_config: AddonConfig,
 ):
     srs_attachments_in_obsidian_folder.mkdir(parents=True)
     image_file = srs_attachments_in_obsidian_folder / "img.jpg"
@@ -125,7 +129,7 @@ Some back [image link]({urllib.parse.quote(string=str(image_file.relative_to(obs
     file_path.write_text(file_content)
 
     file = ObsidianNoteFile(
-        path=file_path, attachment_manager=obsidian_vault.attachments_manager
+        path=file_path, attachment_manager=obsidian_vault.attachments_manager, addon_config=addon_config
     )
 
     assert len(file.fields) == 2

@@ -41,7 +41,7 @@ class Content(ABC):
 
     def __eq__(self, other: object) -> bool:
         return (
-            isinstance(other, type(self))
+            isinstance(other, Content)
             and self.properties == other.properties
             and len(self.fields) == len(other.fields)
             and all(sf == of for sf, of in zip(self.fields, other.fields))
@@ -73,7 +73,7 @@ class Properties:
 
     def __eq__(self, other: object) -> bool:
         return (
-            isinstance(other, type(self))
+            isinstance(other, Properties)
             and self.model_id == other.model_id
             and self.model_name == other.model_name
         )
@@ -95,7 +95,7 @@ class NoteProperties(Properties):
 
     def __eq__(self, other: object) -> bool:
         return (
-            isinstance(other, type(self))
+            isinstance(other, NoteProperties)
             and super().__eq__(other)
             and self.note_id == other.note_id
             and self.tags == other.tags
@@ -112,7 +112,7 @@ class Field(ABC):
 
     def __eq__(self, other: object) -> bool:
         return (
-            isinstance(other, type(self))
+            isinstance(other, Field)
             and self.name == other.name
             and self.text == other.text
         )
@@ -146,7 +146,7 @@ class NoteField(Field, ABC):
 
     def __eq__(self, other: object) -> bool:
         return (
-            isinstance(other, type(self))
+            isinstance(other, NoteField)
             and super().__eq__(other)
             and len(self.attachments) == len(other.attachments)
             and all(sa == oa for sa, oa in zip(self.attachments, other.attachments))
