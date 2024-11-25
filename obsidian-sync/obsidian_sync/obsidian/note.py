@@ -31,6 +31,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from obsidian_sync.base_types.note import Note
+from obsidian_sync.constants import DEFAULT_NOTE_ID_FOR_NEW_NOTES
 from obsidian_sync.obsidian.content.content import ObsidianNoteContent
 from obsidian_sync.obsidian.content.properties import ObsidianNoteProperties
 from obsidian_sync.obsidian.file import ObsidianNoteFile
@@ -64,6 +65,9 @@ class ObsidianNote(Note):
     @property
     def properties(self) -> ObsidianNoteProperties:
         return self._file.properties
+
+    def is_new(self) -> bool:
+        return self._file is None or self.id == DEFAULT_NOTE_ID_FOR_NEW_NOTES
 
     def is_corrupt(self) -> bool:
         return self._file.is_corrupt()

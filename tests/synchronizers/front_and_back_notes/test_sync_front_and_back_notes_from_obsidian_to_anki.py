@@ -75,10 +75,10 @@ def test_sync_new_obsidian_note_to_anki(
         back_text="Some back",
         file_path=srs_folder_in_obsidian / "test.md",
     )
-    existing_obsidian_notes, new_obsidian_notes = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
 
-    assert len(existing_obsidian_notes) == 0
-    assert len(new_obsidian_notes) == 1
+    assert len(obsidian_notes_result.existing_obsidian_notes) == 0
+    assert len(obsidian_notes_result.new_obsidian_notes) == 1
     assert len(anki_test_app.get_all_notes()) == 0
 
     notes_synchronizer.synchronize_notes()
@@ -86,8 +86,8 @@ def test_sync_new_obsidian_note_to_anki(
     assert len(anki_test_app.get_all_notes()) == 1
 
     anki_note = list(anki_test_app.get_all_notes().values())[0]
-    existing_obsidian_notes, new_obsidian_notes = obsidian_notes_manager.get_all_obsidian_notes()
-    obsidian_note = existing_obsidian_notes[anki_note.id]
+    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_note = obsidian_notes_result.existing_obsidian_notes[anki_note.id]
 
     assert anki_note.id != DEFAULT_NOTE_ID_FOR_NEW_NOTES
     assert anki_note.content.fields[0].text == "<p>Some front</p>"
@@ -155,22 +155,22 @@ def test_sync_two_new_obsidian_notes_to_anki(
         back_text="Another back",
         file_path=srs_folder_in_obsidian / "another_test.md",
     )
-    existing_obsidian_notes, new_obsidian_notes = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
 
-    assert len(existing_obsidian_notes) == 0
-    assert len(new_obsidian_notes) == 2
+    assert len(obsidian_notes_result.existing_obsidian_notes) == 0
+    assert len(obsidian_notes_result.new_obsidian_notes) == 2
     assert len(anki_test_app.get_all_notes()) == 0
 
     notes_synchronizer.synchronize_notes()
 
     anki_notes = anki_test_app.get_all_notes()
-    existing_obsidian_notes, new_obsidian_notes = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
 
     assert len(anki_notes) == 2
-    assert len(existing_obsidian_notes) == 2
+    assert len(obsidian_notes_result.existing_obsidian_notes) == 2
 
     for note_id, note in anki_notes.items():
-        assert note_id in existing_obsidian_notes
+        assert note_id in obsidian_notes_result.existing_obsidian_notes
 
 
 def test_sync_new_obsidian_note_with_attachment_to_anki(
@@ -376,6 +376,7 @@ def test_sync_existing_obsidian_note_with_updated_tag_property_to_anki(
     srs_folder_in_obsidian: Path,
     notes_synchronizer: NotesSynchronizer,
     obsidian_notes_manager: ObsidianNotesManager,
+    obsidian_vault: ObsidianVault,
 ):
     test_tag = "test"
     obsidian_file_path = srs_folder_in_obsidian / "test.md"
@@ -390,10 +391,10 @@ def test_sync_existing_obsidian_note_with_updated_tag_property_to_anki(
 
     time.sleep(1)
 
-    obsidian_existing_notes, obsidian_new_notes = obsidian_notes_manager.get_all_obsidian_notes()
-    obsidian_note = list(obsidian_existing_notes.values())[0]
+    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_note = list(obsidian_notes_result.existing_obsidian_notes.values())[0]
     obsidian_note.properties.tags.append(test_tag)
-    obsidian_notes_manager.save_note(note=obsidian_note)
+    obsidian_vault.save_file(file=obsidian_note.file)
 
     notes_synchronizer.synchronize_notes()
 

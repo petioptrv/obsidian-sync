@@ -2,7 +2,6 @@ import logging
 from typing import Dict, List
 
 from obsidian_sync.addon_config import AddonConfig
-from obsidian_sync.addon_metadata import AddonMetadata
 from obsidian_sync.anki.app.app import AnkiApp
 from obsidian_sync.anki.note import AnkiNote
 from obsidian_sync.constants import ADD_ON_NAME
@@ -32,50 +31,44 @@ class NotesSynchronizer:
             obsidian_vault=obsidian_vault,
         )
         self._markup_translator = MarkupTranslator()
-        self._metadata = AddonMetadata()
 
     def synchronize_notes(self):
         try:
-            self._metadata.load()
             anki_notes = self._anki_app.get_all_notes()
             anki_notes = self._sanitize_anki_notes(anki_notes=anki_notes)
-            existing_obsidian_notes, new_obsidian_notes = self._obsidian_notes_manager.get_all_obsidian_notes()
-            new_obsidian_notes = self._sanitize_new_obsidian_notes(new_obsidian_notes=new_obsidian_notes)
-            obsidian_deleted_notes = self._metadata.anki_notes_synced_to_obsidian.difference(
-                set(existing_obsidian_notes.keys())
+            self._obsidian_notes_manager.start_sync()
+            obsidian_notes_result = self._obsidian_notes_manager.get_all_obsidian_notes()
+            obsidian_notes_result.new_obsidian_notes = self._sanitize_new_obsidian_notes(
+                new_obsidian_notes=obsidian_notes_result.new_obsidian_notes
             )
 
             while len(anki_notes) != 0:
                 note_id, anki_note = anki_notes.popitem()
-                obsidian_note = existing_obsidian_notes.pop(note_id, None)
+                obsidian_note = obsidian_notes_result.existing_obsidian_notes.pop(note_id, None)
 
                 if obsidian_note is not None:
                     self._synchronize_notes(anki_note=anki_note, obsidian_note=obsidian_note)
-                elif note_id in obsidian_deleted_notes:
+                elif note_id in obsidian_notes_result.deleted_note_ids:
                     self._anki_app.delete_note_in_anki(note=anki_note)
-                    self._metadata.anki_notes_synced_to_obsidian.discard(note_id)
                 else:
                     self._obsidian_notes_manager.create_new_obsidian_note_from_note(
                         reference_note=anki_note
                     )
-                    self._metadata.anki_notes_synced_to_obsidian.add(anki_note.id)
 
-            while len(existing_obsidian_notes) != 0:
-                note_id, obsidian_note = existing_obsidian_notes.popitem()
+            while len(obsidian_notes_result.existing_obsidian_notes) != 0:
+                note_id, obsidian_note = obsidian_notes_result.existing_obsidian_notes.popitem()
                 self._obsidian_notes_manager.delete_note(note=obsidian_note)
-                self._metadata.anki_notes_synced_to_obsidian.discard(note_id)
 
-            while len(new_obsidian_notes) != 0:
-                obsidian_note = new_obsidian_notes.pop()
+            while len(obsidian_notes_result.new_obsidian_notes) != 0:
+                obsidian_note = obsidian_notes_result.new_obsidian_notes.pop()
                 anki_note = self._anki_app.create_new_note_in_anki_from_note(
                     note=obsidian_note, deck_name=self._addon_config.anki_deck_name_for_obsidian_imports
                 )
                 self._obsidian_notes_manager.update_obsidian_note_with_note(  # update note ID and timestamps
                     obsidian_note=obsidian_note, reference_note=anki_note
                 )
-                self._metadata.anki_notes_synced_to_obsidian.add(anki_note.id)
 
-            self._metadata.save()
+            self._obsidian_notes_manager.commit_sync()
 
             self._anki_app.show_tooltip(tip=format_add_on_message("Notes synced successfully."))
         except Exception as e:
@@ -114,7 +107,9 @@ class NotesSynchronizer:
                     refactored = True
 
             if refactored:
-                self._obsidian_notes_manager.save_note(note=obsidian_note)
+                self._obsidian_notes_manager.update_obsidian_note_with_note(
+                    obsidian_note=obsidian_note, reference_note=obsidian_note
+                )
 
         return new_obsidian_notes
 

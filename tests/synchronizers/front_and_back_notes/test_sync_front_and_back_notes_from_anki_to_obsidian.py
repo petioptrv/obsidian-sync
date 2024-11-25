@@ -78,20 +78,21 @@ def test_sync_new_anki_note_to_obsidian(
     anki_note = anki_test_app.add_note(
         note=note, deck_name=addon_config.anki_deck_name_for_obsidian_imports
     )
-    existing_notes, new_notes = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
 
-    assert len(existing_notes) == 0
-    assert len(new_notes) == 0
+    assert len(obsidian_notes_result.existing_obsidian_notes) == 0
+    assert len(obsidian_notes_result.new_obsidian_notes) == 0
+    assert len(obsidian_notes_result.deleted_note_ids) == 0
     assert not srs_folder_in_obsidian.exists()
 
     notes_synchronizer.synchronize_notes()
-    existing_obsidian_notes, new_obsidian_notes = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
 
-    assert len(existing_obsidian_notes) == 1
+    assert len(obsidian_notes_result.existing_obsidian_notes) == 1
     assert srs_folder_in_obsidian.exists()
     assert len(list(srs_folder_in_obsidian.iterdir())) == 1
 
-    obsidian_note = existing_obsidian_notes[anki_note.id]
+    obsidian_note = obsidian_notes_result.existing_obsidian_notes[anki_note.id]
     obsidian_note_file = list(srs_folder_in_obsidian.iterdir())[0]
 
     assert obsidian_note_file.suffix == f"{MARKDOWN_FILE_SUFFIX}"
@@ -149,8 +150,8 @@ def test_sync_new_anki_note_to_obsidian_with_obsidian_id_field_enabled_but_not_s
 
     notes_synchronizer.synchronize_notes()
 
-    existing_obsidian_notes, new_obsidian_notes = obsidian_notes_manager.get_all_obsidian_notes()
-    obsidian_note = existing_obsidian_notes[anki_note.id]
+    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_note = obsidian_notes_result.existing_obsidian_notes[anki_note.id]
 
     assert len(obsidian_note.content.fields) == 3
     assert obsidian_note.content.fields[-1].name == OBSIDIAN_LINK_URL_FIELD_NAME
@@ -204,10 +205,10 @@ def test_sync_new_anki_note_with_attachment_to_obsidian(
     assert len(attachments) == 1
     assert image_file_name in attachments
 
-    existing_obsidian_notes, new_obsidian_notes = obsidian_notes_manager.get_all_obsidian_notes()
-    obsidian_note = existing_obsidian_notes[anki_note.id]
+    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_note = obsidian_notes_result.existing_obsidian_notes[anki_note.id]
     first_field = obsidian_note.content.fields[0]
-    obsidian_note_file = list(srs_folder_in_obsidian.iterdir())[0]
+    obsidian_note_file = [f for f in srs_folder_in_obsidian.iterdir() if f.is_file()][0]
 
     assert first_field.to_markdown() == f"Some front with ![]({attachments[image_file_name]})"
     assert (  # Obsidian makes path ULR-safe
@@ -244,8 +245,8 @@ def test_sync_new_anki_note_with_tag_to_obsidian(
 
     notes_synchronizer.synchronize_notes()
 
-    existing_obsidian_notes, new_obsidian_notes = obsidian_notes_manager.get_all_obsidian_notes()
-    obsidian_note = existing_obsidian_notes[anki_note.id]
+    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_note = obsidian_notes_result.existing_obsidian_notes[anki_note.id]
 
     assert tag in obsidian_note.content.properties.tags
 
@@ -273,8 +274,8 @@ def test_sync_new_anki_note_with_external_link_to_obsidian(
 
     notes_synchronizer.synchronize_notes()
 
-    existing_obsidian_notes, new_obsidian_notes = obsidian_notes_manager.get_all_obsidian_notes()
-    obsidian_note = existing_obsidian_notes[anki_note.id]
+    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_note = obsidian_notes_result.existing_obsidian_notes[anki_note.id]
     first_field = obsidian_note.content.fields[0]
 
     assert f"[external site]({external_url})" in first_field.to_markdown()
@@ -305,8 +306,8 @@ and a block equation:&nbsp;\[{block_equation}\]"""
 
     notes_synchronizer.synchronize_notes()
 
-    existing_obsidian_notes, new_obsidian_notes = obsidian_notes_manager.get_all_obsidian_notes()
-    obsidian_note = existing_obsidian_notes[anki_note.id]
+    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_note = obsidian_notes_result.existing_obsidian_notes[anki_note.id]
     first_field = obsidian_note.content.fields[0]
 
     assert f"${in_line_equation}$" in first_field.to_markdown()
@@ -337,8 +338,8 @@ def test_sync_new_anki_note_with_code_to_obsidian(
 
     notes_synchronizer.synchronize_notes()
 
-    existing_obsidian_notes, new_obsidian_notes = obsidian_notes_manager.get_all_obsidian_notes()
-    obsidian_note = existing_obsidian_notes[anki_note.id]
+    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_note = obsidian_notes_result.existing_obsidian_notes[anki_note.id]
     first_field = obsidian_note.content.fields[0]
 
     assert f"`{in_line_code}`" in first_field.to_markdown()
@@ -367,19 +368,56 @@ def test_anki_note_in_obsidian_remains_the_same_on_subsequent_sync(
 
     notes_synchronizer.synchronize_notes()
 
-    first_sync_obsidian_note = obsidian_notes_manager.get_all_obsidian_notes()[0][anki_note.id]
+    first_sync_obsidian_note = obsidian_notes_manager.get_all_obsidian_notes().existing_obsidian_notes[anki_note.id]
     time.sleep(1)
 
     notes_synchronizer.synchronize_notes()
 
-    existing_obsidian_notes, new_obsidian_notes = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
 
-    assert len(existing_obsidian_notes) == 1
-    assert len(new_obsidian_notes) == 0
+    assert len(obsidian_notes_result.existing_obsidian_notes) == 1
+    assert len(obsidian_notes_result.new_obsidian_notes) == 0
+    assert len(obsidian_notes_result.deleted_note_ids) == 0
 
-    second_sync_obsidian_note = existing_obsidian_notes[anki_note.id]
+    second_sync_obsidian_note = obsidian_notes_result.existing_obsidian_notes[anki_note.id]
 
     assert first_sync_obsidian_note == second_sync_obsidian_note
+
+
+def test_corrupted_note_in_obsidian_gets_replaced_on_sync(
+    anki_setup_and_teardown,
+    obsidian_setup_and_teardown,
+    anki_test_app: AnkiTestApp,
+    markup_translator: MarkupTranslator,
+    addon_config: AddonConfig,
+    notes_synchronizer: NotesSynchronizer,
+    srs_folder_in_obsidian: Path,
+    obsidian_notes_manager: ObsidianNotesManager,
+):
+    note = build_basic_anki_note(
+        anki_test_app=anki_test_app,
+        front_text="Some front",
+        back_text="Some back",
+    )
+    anki_note = anki_test_app.add_note(
+        note=note, deck_name=addon_config.anki_deck_name_for_obsidian_imports
+    )
+
+    notes_synchronizer.synchronize_notes()
+
+    obsidian_note_file = list(srs_folder_in_obsidian.iterdir())[0]
+    obsidian_note_file_lines = obsidian_note_file.read_text().splitlines()
+    obsidian_note_file_lines.pop(1)  # corrupts file by removing the model ID property
+    obsidian_note_file.write_text("\n".join(obsidian_note_file_lines))
+
+    notes_synchronizer.synchronize_notes()
+
+    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+
+    assert len(obsidian_notes_result.existing_obsidian_notes) == 1
+    assert len(obsidian_notes_result.new_obsidian_notes) == 0
+    assert len(obsidian_notes_result.deleted_note_ids) == 0
+    assert anki_note.id in obsidian_notes_result.existing_obsidian_notes
 
 
 def test_sync_existing_anki_note_with_updated_field_in_obsidian(
@@ -412,8 +450,9 @@ def test_sync_existing_anki_note_with_updated_field_in_obsidian(
 
     notes_synchronizer.synchronize_notes()
 
-    existing_obsidian_notes, new_obsidian_notes = obsidian_notes_manager.get_all_obsidian_notes()
-    obsidian_note = existing_obsidian_notes[anki_note.id]
+    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+
+    obsidian_note = obsidian_notes_result.existing_obsidian_notes[anki_note.id]
 
     assert obsidian_note.content.fields[0].text == updated_front_field
 
@@ -438,16 +477,18 @@ def test_remove_deleted_anki_note_from_obsidian(
 
     notes_synchronizer.synchronize_notes()
 
-    existing_obsidian_notes, new_obsidian_notes = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
 
-    assert len(existing_obsidian_notes) == 1
-    assert len(new_obsidian_notes) == 0
+    assert len(obsidian_notes_result.existing_obsidian_notes) == 1
+    assert len(obsidian_notes_result.new_obsidian_notes) == 0
+    assert len(obsidian_notes_result.deleted_note_ids) == 0
 
     anki_test_app.delete_note_in_anki(note=anki_note)
 
     notes_synchronizer.synchronize_notes()
 
-    existing_obsidian_notes, new_obsidian_notes = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
 
-    assert len(existing_obsidian_notes) == 0
-    assert len(new_obsidian_notes) == 0
+    assert len(obsidian_notes_result.existing_obsidian_notes) == 0
+    assert len(obsidian_notes_result.new_obsidian_notes) == 0
+    assert len(obsidian_notes_result.deleted_note_ids) == 0

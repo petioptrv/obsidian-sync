@@ -119,6 +119,7 @@ class ObsidianNoteProperties(ObsidianProperties):
 
     @classmethod
     def from_properties(cls, properties: NoteProperties):
+        date_synced = datetime.now() if not isinstance(properties, ObsidianNoteProperties) else properties.date_synced
         return cls(
             model_id=properties.model_id,
             model_name=properties.model_name,
@@ -127,7 +128,7 @@ class ObsidianNoteProperties(ObsidianProperties):
             suspended=properties.suspended,
             maximum_card_difficulty=properties.maximum_card_difficulty,
             date_modified_in_anki=properties.date_modified_in_anki,
-            date_synced=datetime.now(),
+            date_synced=date_synced,
         )
 
     def to_obsidian_file_text(self) -> str:

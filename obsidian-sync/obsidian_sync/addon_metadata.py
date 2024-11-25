@@ -28,23 +28,13 @@
 #
 # Any modifications to this file must keep this entire header intact.
 import json
-from dataclasses import dataclass, field, asdict
 from pathlib import Path
-from typing import Set
+from typing import Set, Dict
 
 from obsidian_sync.constants import ADD_ON_METADATA_PATH
+from obsidian_sync.obsidian.note import ObsidianNote
 
 
-class SetEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, set):
-            ret = list(obj)
-        else:
-            ret = json.JSONEncoder.default(self, obj)
-        return ret
-
-
-@dataclass
 class AddonMetadata:
     """Used to store metadata across sessions.
 
@@ -60,22 +50,54 @@ class AddonMetadata:
     the "none" trash option is configured in the Anki settings (i.e. files are unlinked
     instead of moved to a trash folder.
     """
-    anki_notes_synced_to_obsidian: Set[int] = field(default_factory=set)
+    def __init__(self):
+        self._anki_notes_synced_to_obsidian: Dict[int, str] = {}
+        self._sync_started = False
 
-    def load(self):
+    @property
+    def anki_notes_synced_to_obsidian(self) -> Set[int]:
+        return set(self._anki_notes_synced_to_obsidian.keys())
+
+    def start_sync(self):
+        self._load()
+        self._sync_started = True
+
+    def commit_sync(self):
+        self._save()
+        self._sync_started = False
+
+    def add_synced_note(self, note: ObsidianNote):
+        assert self._sync_started
+        if not note.is_corrupt() and not note.is_new():
+            self._anki_notes_synced_to_obsidian[note.id] = str(note.file.path)
+
+    def remove_synced_note(self, note: ObsidianNote):
+        assert self._sync_started
+        if not note.is_corrupt():
+            self._anki_notes_synced_to_obsidian.pop(note.id, None)
+        elif note.file is not None:
+            for note_id, path_str in self._anki_notes_synced_to_obsidian.items():
+                if Path(path_str) == note.file.path:
+                    self._anki_notes_synced_to_obsidian.pop(note_id)
+                    break
+
+    def _load(self):
         file_path = self._get_file_path()
         if file_path.exists():
             string = file_path.read_text()
             metadata_json = json.loads(s=string)
-            self.anki_notes_synced_to_obsidian = set(
-                metadata_json["anki_notes_synced_to_obsidian"]
-            )
+            self._anki_notes_synced_to_obsidian = {
+                int(note_id_str): path_str
+                for note_id_str, path_str in metadata_json["anki_notes_synced_to_obsidian"].items()
+            }
 
-    def save(self):
+    def _save(self):
         file_path = self._get_file_path()
         with open(file_path, "w") as f:
-            dict_ = asdict(self)
-            json.dump(obj=dict_, fp=f, cls=SetEncoder)
+            dict_ = {
+                "anki_notes_synced_to_obsidian": self._anki_notes_synced_to_obsidian,
+            }
+            json.dump(obj=dict_, fp=f)
 
     @staticmethod
     def _get_file_path() -> Path:
