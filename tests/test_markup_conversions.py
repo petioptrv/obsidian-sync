@@ -4,7 +4,7 @@ from markdown import markdown
 from obsidian_sync.markup_translator import ExtendedHTMLToMarkdownConverter
 
 
-def test_adapted_markdown_converter_unescape():
+def test_adapted_markdown_converter_unescape_reverts_to_original():
     amc = ExtendedHTMLToMarkdownConverter(heading_style=ATX)
 
     original_texts = [

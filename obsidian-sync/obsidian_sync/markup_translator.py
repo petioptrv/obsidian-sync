@@ -6,62 +6,6 @@ from markdown import Markdown as MarkdownToHTMLConverter
 from markdown.postprocessors import Postprocessor as MarkdownToHTMLPostprocessor
 
 
-class ExtendedHTMLToMarkdownConverter(HTMLToMarkdownConverter):
-    def __getattr__(self, item):
-        item = item.replace("-", "_")
-        return self.__getattribute__(item)
-
-    def convert_pre(self, el, text, convert_as_inline):  # adapted for use with Anki
-        if not text:
-            return ""
-        text = text.strip()
-        code_language = self.options["code_language"]
-
-        if self.options["code_language_callback"]:
-            code_language = self.options["code_language_callback"](el) or code_language
-
-        return "\n```%s\n%s\n```\n" % (code_language, text)
-
-    def convert_anki_mathjax(self, el: Tag, text: str, convert_as_inline: bool) -> str:
-        text = self.unescape(text=text)
-        block = el.attrs.get("block", "false")
-        punctuation = "$$" if block == "true" else "$"
-        return f"{punctuation}{text}{punctuation}"
-
-    def unescape(self, text):
-        if not text:
-            return ""
-        if self.options["escape_underscores"]:
-            text = text.replace(r"\_", "_")
-        if self.options["escape_asterisks"]:
-            text = text.replace(r"\*", "*")
-        if self.options["escape_misc"]:
-            text = re.sub(r"\\([\\&<`[>~#=+|-])", r"\1", text)
-            text = re.sub(r"([0-9])\\([.)])", r"\1\2", text)
-        return text
-    
-    
-class ExtendedMarkdownToHTMLMathPostprocessor(MarkdownToHTMLPostprocessor):
-    def run(self, text):
-        block_equation_pattern = r"\$\$(.+?)\$\$"
-        block_equation_repl = r'<anki-mathjax block="true">\1</anki-mathjax>'
-        in_line_equation_pattern = r"\$(.+?)\$"
-        in_line_equation_repl = r"<anki-mathjax>\1</anki-mathjax>"
-
-        text = re.sub(  # should be matched first
-            pattern=block_equation_pattern,
-            repl=block_equation_repl,
-            string=text,
-            flags=re.DOTALL,  # allows spanning multiple lines
-        )
-        text = re.sub(
-            pattern=in_line_equation_pattern,
-            repl=in_line_equation_repl,
-            string=text,
-        )
-        return text
-
-
 class MarkupTranslator:
     def __init__(self):
         self._html_to_markdown_converter = ExtendedHTMLToMarkdownConverter(
@@ -102,4 +46,86 @@ class MarkupTranslator:
 
     def translate_markdown_to_html(self, markdown: str) -> str:
         return self._markdown_to_html_converter.convert(source=markdown)
+
+
+class ExtendedHTMLToMarkdownConverter(HTMLToMarkdownConverter):
+    def convert_pre(self, el, text, convert_as_inline):  # adapted for use with Anki
+        if not text:
+            return ""
+        text = text.strip()
+        code_language = self.options["code_language"]
+
+        if self.options["code_language_callback"]:
+            code_language = self.options["code_language_callback"](el) or code_language
+
+        return "\n```%s\n%s\n```\n" % (code_language, text)
+
+    def process_text(self, el):
+        text = super().process_text(el=el)
+        text = re.sub(  # Convert block LaTeX: \[ ... \] → $$ ... $$
+            r"\\\[(.*?)\\\]", r"$$\1$$", text, flags=re.DOTALL
+        )
+        text = re.sub(  # Convert inline LaTeX: \( ... \) → $ ... $
+            r"\\\((.*?)\\\)", r"$\1$", text, flags=re.DOTALL
+        )
+        return text
+
+    def escape(self, text):
+        if not text:
+            return ""
+
+        def escape_non_latex(part):
+            if self.options["escape_misc"]:
+                part = re.sub(r"([\\&<`[>~#=+|-])", r"\\\1", part)
+                part = re.sub(r"([0-9])([.)])", r"\1\\\2", part)
+            if self.options["escape_asterisks"]:
+                part = part.replace("*", r"\*")
+            if self.options["escape_underscores"]:
+                part = part.replace("_", r"\_")
+            return part
+
+        latex_pattern = r"(\$.*?\$|\$\$.*?\$\$|\\\(.*?\\\)|\\\[.*?\\\])"
+        parts = re.split(latex_pattern, text)
+
+        escaped = "".join(
+            part
+            if re.match(latex_pattern, part)
+            else escape_non_latex(part)
+            for part in parts
+        )
+
+        return escaped
+
+    def unescape(self, text):
+        if not text:
+            return ""
+        if self.options["escape_underscores"]:
+            text = text.replace(r"\_", "_")
+        if self.options["escape_asterisks"]:
+            text = text.replace(r"\*", "*")
+        if self.options["escape_misc"]:
+            text = re.sub(r"\\([\\&<`[>~#=+|-])", r"\1", text)
+            text = re.sub(r"([0-9])\\([.)])", r"\1\2", text)
+        return text
+
+
+class ExtendedMarkdownToHTMLMathPostprocessor(MarkdownToHTMLPostprocessor):
+    def run(self, text):
+        block_equation_pattern = r"\$\$(.+?)\$\$"
+        block_equation_repl = r'\[\1\]'
+        in_line_equation_pattern = r"\$(.+?)\$"
+        in_line_equation_repl = r"\(\1\)"
+
+        text = re.sub(  # should be matched first
+            pattern=block_equation_pattern,
+            repl=block_equation_repl,
+            string=text,
+            flags=re.DOTALL,  # allows spanning multiple lines
+        )
+        text = re.sub(
+            pattern=in_line_equation_pattern,
+            repl=in_line_equation_repl,
+            string=text,
+        )
+        return text
 

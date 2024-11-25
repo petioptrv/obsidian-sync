@@ -6,7 +6,7 @@ from typing import Generator, Tuple, Dict, List
 from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.anki.app.app import AnkiApp
 from obsidian_sync.base_types.note import Note
-from obsidian_sync.constants import MAX_OBSIDIAN_NOTE_FILE_NAME_LENGTH, DEFAULT_NODE_ID_FOR_NEW_NOTES
+from obsidian_sync.constants import MAX_OBSIDIAN_NOTE_FILE_NAME_LENGTH, DEFAULT_NOTE_ID_FOR_NEW_NOTES
 from obsidian_sync.file_utils import clean_string_for_file_name, check_is_srs_file
 from obsidian_sync.obsidian.config import ObsidianConfig
 from obsidian_sync.obsidian.content.content import ObsidianNoteContent
@@ -93,7 +93,7 @@ class ObsidianNotesManager:
                             ),
                             title="Duplicate Anki note templates",
                         )
-                    elif note.id == DEFAULT_NODE_ID_FOR_NEW_NOTES:
+                    elif note.id == DEFAULT_NOTE_ID_FOR_NEW_NOTES:
                         new_notes.append(note)
                     else:
                         existing_notes[note.properties.note_id] = note

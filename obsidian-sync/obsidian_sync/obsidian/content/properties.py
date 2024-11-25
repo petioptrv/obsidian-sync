@@ -9,7 +9,7 @@ from obsidian_sync.base_types.content import NoteProperties, TemplateProperties
 from obsidian_sync.constants import DATETIME_FORMAT, MODEL_ID_PROPERTY_NAME, MODEL_NAME_PROPERTY_NAME, \
     NOTE_ID_PROPERTY_NAME, TAGS_PROPERTY_NAME, DATE_MODIFIED_PROPERTY_NAME, DATE_SYNCED_PROPERTY_NAME, \
     SUSPENDED_PROPERTY_NAME, MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME, DEFAULT_NOTE_MAXIMUM_CARD_DIFFICULTY_FOR_NEW_NOTES, \
-    DEFAULT_NODE_ID_FOR_NEW_NOTES, DEFAULT_NOTE_SUSPENDED_STATE_FOR_NEW_NOTES
+    DEFAULT_NOTE_ID_FOR_NEW_NOTES, DEFAULT_NOTE_SUSPENDED_STATE_FOR_NEW_NOTES
 
 
 @dataclass
@@ -48,7 +48,7 @@ class ObsidianProperties(NoteProperties):
 
 @dataclass
 class ObsidianTemplateProperties(ObsidianProperties):
-    note_id: int = dataclass_field(default=DEFAULT_NODE_ID_FOR_NEW_NOTES)
+    note_id: int = dataclass_field(default=DEFAULT_NOTE_ID_FOR_NEW_NOTES)
     tags: List[str] = dataclass_field(default_factory=list)
     suspended: bool = dataclass_field(default=DEFAULT_NOTE_SUSPENDED_STATE_FOR_NEW_NOTES)
     maximum_card_difficulty: float = dataclass_field(default=DEFAULT_NOTE_MAXIMUM_CARD_DIFFICULTY_FOR_NEW_NOTES)
@@ -97,6 +97,12 @@ class ObsidianTemplateProperties(ObsidianProperties):
         properties = cls(
             model_id=int(properties_dict[MODEL_ID_PROPERTY_NAME]),
             model_name=properties_dict[MODEL_NAME_PROPERTY_NAME],
+            note_id=properties_dict[NOTE_ID_PROPERTY_NAME],
+            tags=properties_dict[TAGS_PROPERTY_NAME],
+            suspended=properties_dict[SUSPENDED_PROPERTY_NAME],
+            maximum_card_difficulty=properties_dict[MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME],
+            date_modified_in_anki=properties_dict[DATE_MODIFIED_PROPERTY_NAME],
+            date_synced=properties_dict[DATE_SYNCED_PROPERTY_NAME],
         )
         return properties
 

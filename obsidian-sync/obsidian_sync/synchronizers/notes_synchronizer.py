@@ -91,8 +91,9 @@ class NotesSynchronizer:
             refactored = False
 
             for field in anki_note.content.fields:
-                sanitized_field_html = self._markup_translator.sanitize_html(html=field.to_html())
-                if sanitized_field_html != field.to_html():
+                original_field_html = field.to_html()
+                sanitized_field_html = self._markup_translator.sanitize_html(html=original_field_html)
+                if sanitized_field_html != original_field_html:
                     field.set_from_html(html=sanitized_field_html)
                     refactored = True
 

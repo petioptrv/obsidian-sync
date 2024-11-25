@@ -8,7 +8,7 @@ from PIL import Image as PILImage
 from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.constants import SRS_NOTE_IDENTIFIER_COMMENT, \
     SRS_NOTE_FIELD_IDENTIFIER_COMMENT, SRS_HEADER_TITLE_LEVEL, \
-    DEFAULT_NODE_ID_FOR_NEW_NOTES, CONF_ADD_OBSIDIAN_URL_IN_ANKI, OBSIDIAN_LINK_URL_FIELD_NAME
+    DEFAULT_NOTE_ID_FOR_NEW_NOTES, CONF_ADD_OBSIDIAN_URL_IN_ANKI, OBSIDIAN_LINK_URL_FIELD_NAME
 from obsidian_sync.markup_translator import MarkupTranslator
 from obsidian_sync.obsidian.config import ObsidianConfig
 from obsidian_sync.obsidian.content.properties import ObsidianNoteProperties
@@ -33,7 +33,7 @@ def build_basic_obsidian_note(
     ObsidianNoteProperties(
         model_id=model_id,
         model_name="Basic",
-        note_id=DEFAULT_NODE_ID_FOR_NEW_NOTES,
+        note_id=DEFAULT_NOTE_ID_FOR_NEW_NOTES,
         tags=tags or [],
         suspended=False,
         maximum_card_difficulty=0,
@@ -89,7 +89,7 @@ def test_sync_new_obsidian_note_to_anki(
     existing_obsidian_notes, new_obsidian_notes = obsidian_notes_manager.get_all_obsidian_notes()
     obsidian_note = existing_obsidian_notes[anki_note.id]
 
-    assert anki_note.id != DEFAULT_NODE_ID_FOR_NEW_NOTES
+    assert anki_note.id != DEFAULT_NOTE_ID_FOR_NEW_NOTES
     assert anki_note.content.fields[0].text == "<p>Some front</p>"
     assert anki_note.content.fields[1].text == "<p>Some back</p>"
     assert obsidian_note.id == anki_note.id
@@ -277,8 +277,8 @@ and a block equation $${block_equation}$$"""
 
     anki_note = list(anki_test_app.get_all_notes().values())[0]
 
-    assert f"<anki-mathjax>{in_line_equation}</anki-mathjax>" in anki_note.content.fields[0].text
-    assert f"<anki-mathjax block=\"true\">{block_equation}</anki-mathjax>" in anki_note.content.fields[0].text
+    assert f"\\({in_line_equation}\\)" in anki_note.content.fields[0].text
+    assert f"\\[{block_equation}\\]" in anki_note.content.fields[0].text
 
 
 def test_sync_new_obsidian_note_with_code_to_anki(

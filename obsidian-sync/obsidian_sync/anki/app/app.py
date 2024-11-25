@@ -42,7 +42,7 @@ from obsidian_sync.anki.note import AnkiNote
 from obsidian_sync.anki.template import AnkiTemplate
 from obsidian_sync.anki.app.media_manager import AnkiMediaManager
 from obsidian_sync.base_types.note import Note
-from obsidian_sync.constants import ADD_ON_NAME, DEFAULT_NODE_ID_FOR_NEW_NOTES
+from obsidian_sync.constants import ADD_ON_NAME, DEFAULT_NOTE_ID_FOR_NEW_NOTES
 from obsidian_sync.file_utils import check_is_attachment_file
 
 
@@ -131,7 +131,7 @@ class AnkiApp:
         return updated_template
 
     def create_new_note_in_anki_from_note(self, note: Note, deck_name: str) -> AnkiNote:
-        assert note.content.properties.note_id == DEFAULT_NODE_ID_FOR_NEW_NOTES
+        assert note.content.properties.note_id == DEFAULT_NOTE_ID_FOR_NEW_NOTES
 
         # deck_name = self.config.anki_deck_name_for_obsidian_imports
         anki_note = self.create_new_empty_note_in_anki(model_id=note.content.properties.model_id, deck_name=deck_name)

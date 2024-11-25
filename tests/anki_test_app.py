@@ -7,7 +7,7 @@ from anki.models import NotetypeDict
 from obsidian_sync.anki.app.app import AnkiApp
 from obsidian_sync.anki.note import AnkiNote
 from obsidian_sync.base_types.note import Note
-from obsidian_sync.constants import DEFAULT_NODE_ID_FOR_NEW_NOTES, ADD_ON_NAME
+from obsidian_sync.constants import DEFAULT_NOTE_ID_FOR_NEW_NOTES, ADD_ON_NAME
 from obsidian_sync.markup_translator import MarkupTranslator
 
 
@@ -96,7 +96,7 @@ class AnkiTestApp(AnkiApp):
         col.remove_notes(note_ids)
 
     def add_note(self, note: Note, deck_name: str) -> AnkiNote:
-        assert note.content.properties.note_id == DEFAULT_NODE_ID_FOR_NEW_NOTES  # ID is set by Anki
+        assert note.content.properties.note_id == DEFAULT_NOTE_ID_FOR_NEW_NOTES  # ID is set by Anki
 
         col = aqt.mw.col
 
