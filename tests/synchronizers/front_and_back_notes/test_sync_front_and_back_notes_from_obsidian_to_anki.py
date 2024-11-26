@@ -436,6 +436,39 @@ def test_sync_existing_obsidian_note_with_updated_tag_property_to_anki(
     assert anki_note.content.properties.tags == [test_tag]
 
 
+def test_sync_existing_obsidian_note_with_updated_suspended_property_to_anki(
+    anki_setup_and_teardown,
+    obsidian_setup_and_teardown,
+    anki_test_app: AnkiTestApp,
+    srs_folder_in_obsidian: Path,
+    notes_synchronizer: NotesSynchronizer,
+    obsidian_notes_manager: ObsidianNotesManager,
+    obsidian_vault: ObsidianVault,
+):
+    obsidian_file_path = srs_folder_in_obsidian / "test.md"
+    build_basic_obsidian_note(
+        anki_test_app=anki_test_app,
+        front_text="Some front",
+        back_text="Some back",
+        file_path=obsidian_file_path,
+    )
+
+    notes_synchronizer.synchronize_notes()
+
+    time.sleep(1)
+
+    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_note = list(obsidian_notes_result.existing_obsidian_notes.values())[0]
+    obsidian_note.properties.suspended = True
+    obsidian_vault.save_file(file=obsidian_note.file)
+
+    notes_synchronizer.synchronize_notes()
+
+    anki_note = list(anki_test_app.get_all_notes().values())[0]
+
+    assert anki_note.content.properties.suspended is True
+
+
 def test_remove_deleted_obsidian_note_from_anki(
     anki_setup_and_teardown,
     obsidian_setup_and_teardown,

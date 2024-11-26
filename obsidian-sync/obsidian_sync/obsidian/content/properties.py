@@ -163,11 +163,15 @@ class ObsidianNoteProperties(ObsidianProperties):
         date_modified_in_anki_value = properties_dict[DATE_MODIFIED_PROPERTY_NAME]
         date_modified_in_anki = (
             datetime.strptime(date_modified_in_anki_value, DATETIME_FORMAT)
-            if date_modified_in_anki_value is not None
+            if isinstance(date_modified_in_anki_value, str)
             else date_modified_in_anki_value
         )
         date_synced_value = properties_dict[DATE_SYNCED_PROPERTY_NAME]
-        date_synced = datetime.strptime(date_synced_value, DATETIME_FORMAT) if date_synced_value else None
+        date_synced = (
+            datetime.strptime(date_synced_value, DATETIME_FORMAT)
+            if isinstance(date_synced_value, str)
+            else date_synced_value
+        )
         properties = cls(
             note_id=int(properties_dict[NOTE_ID_PROPERTY_NAME]),
             model_name=properties_dict[MODEL_NAME_PROPERTY_NAME],

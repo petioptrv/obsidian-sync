@@ -12,7 +12,7 @@ from obsidian_sync.constants import SRS_NOTE_FIELD_IDENTIFIER_COMMENT, MARKDOWN_
     MODEL_NAME_PROPERTY_NAME, NOTE_ID_PROPERTY_NAME, TAGS_PROPERTY_NAME, DATE_MODIFIED_PROPERTY_NAME, \
     DATE_SYNCED_PROPERTY_NAME, DEFAULT_NOTE_ID_FOR_NEW_NOTES, SUSPENDED_PROPERTY_NAME, \
     DEFAULT_NOTE_SUSPENDED_STATE_FOR_NEW_NOTES, MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME, \
-    DEFAULT_NOTE_MAXIMUM_CARD_DIFFICULTY_FOR_NEW_NOTES
+    DEFAULT_NOTE_MAXIMUM_CARD_DIFFICULTY_FOR_NEW_NOTES, DATETIME_FORMAT
 from obsidian_sync.obsidian.content.properties import ObsidianTemplateProperties, ObsidianNoteProperties
 from obsidian_sync.obsidian.file import ObsidianNoteFile, ObsidianTemplateFile
 from obsidian_sync.obsidian.vault import ObsidianVault
@@ -67,18 +67,17 @@ def test_parse_note_properties(
     obsidian_vault: ObsidianVault,
     addon_config: AddonConfig,
 ):
-    file_content = f"""{
-    ObsidianNoteProperties(
-        model_id=1,
-        model_name="Basic",
-        note_id=2,
-        tags=["one"],
-        suspended=False,
-        maximum_card_difficulty=0.4,
-        date_modified_in_anki=datetime.now(),
-        date_synced=datetime.now(),
-    ).to_obsidian_file_text()
-}
+    file_content = f"""---
+{MODEL_ID_PROPERTY_NAME}: 1
+{MODEL_NAME_PROPERTY_NAME}: Basic
+{NOTE_ID_PROPERTY_NAME}: 2
+{TAGS_PROPERTY_NAME}:
+  - one
+{SUSPENDED_PROPERTY_NAME}: false
+{MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME}: 0.4
+{DATE_MODIFIED_PROPERTY_NAME}: {datetime.now().strftime(DATETIME_FORMAT)}
+{DATE_SYNCED_PROPERTY_NAME}: {datetime.now().strftime(DATETIME_FORMAT)}
+---
 {SRS_NOTE_IDENTIFIER_COMMENT}
 
 """

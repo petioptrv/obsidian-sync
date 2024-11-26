@@ -20,12 +20,17 @@ If a given note has been modified in both apps, the most recent version is kept.
 
 ### Supported Features
 
-- Supports the set of embedded media (image, audio, video) files officially supported by Obsidian.
+- All default Anki note types.
+- The set of embedded media (image, audio, video) files officially supported by Obsidian.
   - See [this page](https://help.obsidian.md/Files+and+folders/Accepted+file+formats) for the file formats supported by Obsidian.
   - See the [limitations section](#media) for details on how media files are handled.
+  - The files are copied from one platform to the other so that the changes are reflected on mobile as well.
 - LaTex, both in-line and blocks.
 - Code, both in-line and blocks.
-- All Anki note types ?????????????
+- Syncing "suspended" status on a per-note basis.
+  - If all cards associated with the note are suspended in Anki, this property will be checked in Obsidian, otherwise it will be unchecked.
+  - If a note is "suspended" (i.e. all its cards are suspended in Anki) and the property is unchecked in Obsidian, this will cause the associated Anki cards to be unsuspended.
+  - If a note is not "suspended" (i.e. at least one of its cards is not suspended in Anki) and the property is checked in Obsidian, this will cause the associated Anki cards to be suspended.
 
 ## Config
 
@@ -54,10 +59,9 @@ and your [Obsidian vault](https://help.obsidian.md/Getting+started/Back+up+your+
 
 #### Media
 
-Currently, all attachments for the Obsidian notes are copied to a dedicated folder called `ankimedia` placed under the
-designated folder used for Anki cards (see [the configs section](#config) to learn about setting the designated folder).
-This includes attachments that are already in the Obsidian vault but not under that specific folder. The original files
-will not be deleted.
+Currently, all attachments imported from Anki to Obsidian are copied to a dedicated folder called `srs-media` placed
+under the designated folder used for Anki cards (see [the configs section](#config) to learn about setting the
+designated folder).
 
 #### Note Models and Templates
 

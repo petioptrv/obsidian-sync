@@ -166,6 +166,20 @@ class AnkiApp:
         )
 
         anki_system_note.tags = content_from_note.properties.tags
+
+        cards = anki_system_note.cards()
+        anki_system_note_suspended = all(card.queue == QUEUE_TYPE_SUSPENDED for card in cards)
+        has_been_suspended = not anki_system_note_suspended and content_from_note.properties.suspended
+        has_been_unsuspended = anki_system_note_suspended and not content_from_note.properties.suspended
+        if has_been_suspended or has_been_unsuspended:
+            for card in anki_system_note.cards():
+                card.queue = (
+                    QUEUE_TYPE_SUSPENDED
+                    if has_been_suspended
+                    else card.type
+                )
+                col.update_card(card=card)
+
         anki_system_note.fields = [
             field.to_anki_field_text()
             for field in content_from_note.fields
