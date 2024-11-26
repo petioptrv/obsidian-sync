@@ -1,6 +1,7 @@
 import re
+from textwrap import fill
 
-from bs4 import Tag
+from bs4 import Tag  # todo: remove
 from markdownify import ATX, MarkdownConverter as HTMLToMarkdownConverter
 from markdown import Markdown as MarkdownToHTMLConverter
 from markdown.postprocessors import Postprocessor as MarkdownToHTMLPostprocessor
@@ -49,6 +50,16 @@ class MarkupTranslator:
 
 
 class ExtendedHTMLToMarkdownConverter(HTMLToMarkdownConverter):
+    def convert_p(self, el, text, convert_as_inline):
+        if convert_as_inline:
+            return text
+        if self.options["wrap"]:
+            text = fill(text,
+                        width=self.options["wrap_width"],
+                        break_long_words=False,
+                        break_on_hyphens=False)
+        return "\n%s\n" % text if text else ""
+
     def convert_pre(self, el, text, convert_as_inline):  # adapted for use with Anki
         if not text:
             return ""

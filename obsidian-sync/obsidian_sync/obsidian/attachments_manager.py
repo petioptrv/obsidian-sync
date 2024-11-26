@@ -1,5 +1,6 @@
 import re
 import shutil
+import unicodedata
 import urllib.parse
 from pathlib import Path
 from typing import Dict, Tuple
@@ -56,24 +57,34 @@ class ObsidianAttachmentsManager:
         If there are duplicates in folders other than the note's folder, Obsidian will
         use paths relative to the vault directory."""
 
-        if base_path.name == str(base_path):
-            if (note_path / base_path.name).exists():
-                attachment_path = note_path / base_path
+        sanitized_path = Path(self._sanitize_path_string(path_string=str(base_path)))
+
+        if sanitized_path.name == str(sanitized_path):
+            if (note_path / sanitized_path.name).exists():
+                attachment_path = note_path / sanitized_path
             else:
                 try:
                     attachment_path = next(
-                        self._addon_config.obsidian_vault_path.rglob(pattern=str(base_path))
+                        self._addon_config.obsidian_vault_path.rglob(pattern=str(sanitized_path))
                     )
                 except StopIteration:  # does not exist in Obsidian
                     if not_exist_ok:
                         default_attachment_folder = self._get_default_attachment_folder(note_path=note_path)
-                        attachment_path = default_attachment_folder / base_path
+                        attachment_path = default_attachment_folder / sanitized_path
                     else:
                         raise
         else:  # path relative to vault directory
-            attachment_path = self._addon_config.obsidian_vault_path / base_path
+            attachment_path = self._addon_config.obsidian_vault_path / sanitized_path
 
         return attachment_path
+
+    @staticmethod
+    def _sanitize_path_string(path_string: str) -> str:
+        path_string = "".join(   # Replace all non-standard spaces and whitespace
+            " " if unicodedata.category(char).startswith("Z") else char for char in path_string
+        )
+        path_string = re.sub(r"\s", " ", path_string)  # Remove any other problematic characters if needed
+        return path_string
 
     def _get_default_attachment_folder(self, note_path: Path) -> Path:
         return self._obsidian_config.srs_attachments_folder

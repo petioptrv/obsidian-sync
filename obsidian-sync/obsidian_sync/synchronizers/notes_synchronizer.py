@@ -35,7 +35,6 @@ class NotesSynchronizer:
     def synchronize_notes(self):
         try:
             anki_notes = self._anki_app.get_all_notes()
-            anki_notes = self._sanitize_anki_notes(anki_notes=anki_notes)
             self._obsidian_notes_manager.start_sync()
             obsidian_notes_result = self._obsidian_notes_manager.get_all_obsidian_notes()
             obsidian_notes_result.new_obsidian_notes = self._sanitize_new_obsidian_notes(
@@ -51,6 +50,7 @@ class NotesSynchronizer:
                 elif note_id in obsidian_notes_result.deleted_note_ids:
                     self._anki_app.delete_note_in_anki(note=anki_note)
                 else:
+                    anki_note = self._sanitize_anki_note(anki_note=anki_note)
                     self._obsidian_notes_manager.create_new_obsidian_note_from_note(
                         reference_note=anki_note
                     )
@@ -78,41 +78,6 @@ class NotesSynchronizer:
                 title=ADD_ON_NAME,
             )
 
-    def _sanitize_anki_notes(self, anki_notes: Dict[int, AnkiNote]) -> Dict[int, AnkiNote]:
-        for note_id in list(anki_notes.keys()):
-            anki_note = anki_notes[note_id]
-            refactored = False
-
-            for field in anki_note.content.fields:
-                original_field_html = field.to_html()
-                sanitized_field_html = self._markup_translator.sanitize_html(html=original_field_html)
-                if sanitized_field_html != original_field_html:
-                    field.set_from_html(html=sanitized_field_html)
-                    refactored = True
-
-            if refactored:
-                self._anki_app.update_anki_note_with_note(note=anki_note)
-                anki_notes[note_id] = self._anki_app.get_note_by_id(note_id=note_id)
-
-        return anki_notes
-
-    def _sanitize_new_obsidian_notes(self, new_obsidian_notes: List[ObsidianNote]) -> List[ObsidianNote]:
-        for obsidian_note in new_obsidian_notes:
-            refactored = False
-
-            for field in obsidian_note.content.fields:
-                sanitized_field_markdown = self._markup_translator.sanitize_markdown(markdown=field.to_markdown())
-                if field.to_markdown() != sanitized_field_markdown:
-                    field.set_from_markdown(markdown=sanitized_field_markdown)
-                    refactored = True
-
-            if refactored:
-                self._obsidian_notes_manager.update_obsidian_note_with_note(
-                    obsidian_note=obsidian_note, reference_note=obsidian_note
-                )
-
-        return new_obsidian_notes
-
     def _synchronize_notes(self, anki_note: AnkiNote, obsidian_note: ObsidianNote):
         anki_note_date_modified = anki_note.content.properties.date_modified_in_anki.timestamp()
         obsidian_note_date_modified_in_anki = obsidian_note.content.properties.date_modified_in_anki.timestamp()
@@ -121,14 +86,64 @@ class NotesSynchronizer:
 
         if anki_note_date_modified != obsidian_note_date_modified_in_anki:
             if anki_note_date_modified > obsidian_note_file_date_modified:
+                anki_note = self._sanitize_anki_note(anki_note=anki_note)
                 self._obsidian_notes_manager.update_obsidian_note_with_note(
                     obsidian_note=obsidian_note, reference_note=anki_note
                 )
             else:
+                obsidian_note = self._sanitize_obsidian_note(obsidian_note=obsidian_note)
                 self._anki_app.update_anki_note_with_note(note=obsidian_note)
         elif obsidian_note_file_date_modified > last_sync + 1:  # this also covers Obsidian properties updates
+            obsidian_note = self._sanitize_obsidian_note(obsidian_note=obsidian_note)
             self._anki_app.update_anki_note_with_note(note=obsidian_note)
         elif anki_note.content.properties != obsidian_note.content.properties:  # for props like max difficulty
+            anki_note = self._sanitize_anki_note(anki_note=anki_note)
             self._obsidian_notes_manager.update_obsidian_note_with_note(
                 obsidian_note=obsidian_note, reference_note=anki_note
             )
+
+    def _sanitize_anki_notes(self, anki_notes: Dict[int, AnkiNote]) -> Dict[int, AnkiNote]:
+        for note_id in list(anki_notes.keys()):
+            anki_note = anki_notes[note_id]
+            anki_notes[note_id] = self._sanitize_anki_note(anki_note=anki_note)
+
+        return anki_notes
+
+    def _sanitize_anki_note(self, anki_note: AnkiNote) -> AnkiNote:
+        refactored = False
+
+        for field in anki_note.content.fields:
+            original_field_html = field.to_html()
+            sanitized_field_html = self._markup_translator.sanitize_html(html=original_field_html)
+            if sanitized_field_html != original_field_html:
+                field.set_from_html(html=sanitized_field_html)
+                refactored = True
+
+        if refactored:
+            self._anki_app.update_anki_note_with_note(note=anki_note)
+            anki_note = self._anki_app.get_note_by_id(note_id=anki_note.id)
+
+        return anki_note
+
+    def _sanitize_new_obsidian_notes(self, new_obsidian_notes: List[ObsidianNote]) -> List[ObsidianNote]:
+        new_obsidian_notes = [
+            self._sanitize_obsidian_note(obsidian_note=obsidian_note)
+            for obsidian_note in new_obsidian_notes
+        ]
+        return new_obsidian_notes
+
+    def _sanitize_obsidian_note(self, obsidian_note: ObsidianNote) -> ObsidianNote:
+        refactored = False
+
+        for field in obsidian_note.content.fields:
+            sanitized_field_markdown = self._markup_translator.sanitize_markdown(markdown=field.to_markdown())
+            if field.to_markdown() != sanitized_field_markdown:
+                field.set_from_markdown(markdown=sanitized_field_markdown)
+                refactored = True
+
+        if refactored:
+            obsidian_note = self._obsidian_notes_manager.update_obsidian_note_with_note(
+                obsidian_note=obsidian_note, reference_note=obsidian_note
+            )
+
+        return obsidian_note

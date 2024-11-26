@@ -369,6 +369,39 @@ def test_sync_existing_obsidian_note_with_updated_field_to_anki(
     assert anki_note.content.fields[0].text == f"<p>{updated_front_field}</p>"
 
 
+def test_sync_existing_obsidian_note_with_updated_field_with_code_to_anki(
+    anki_setup_and_teardown,
+    obsidian_setup_and_teardown,
+    anki_test_app: AnkiTestApp,
+    srs_folder_in_obsidian: Path,
+    notes_synchronizer: NotesSynchronizer,
+):
+    initial_front_field = "Some front"
+    updated_front_field = "Some front with ```\npython=3\n```"
+    expected_front_field = "<p>Some front with <code>python=3</code></p>"
+    obsidian_file_path = srs_folder_in_obsidian / "test.md"
+    build_basic_obsidian_note(
+        anki_test_app=anki_test_app,
+        front_text=initial_front_field,
+        back_text="Some back",
+        file_path=obsidian_file_path,
+    )
+
+    notes_synchronizer.synchronize_notes()
+
+    time.sleep(1)
+
+    obsidian_file_text = obsidian_file_path.read_text()
+    updated_obsidian_file_text = obsidian_file_text.replace(initial_front_field, updated_front_field)
+    obsidian_file_path.write_text(updated_obsidian_file_text)
+
+    notes_synchronizer.synchronize_notes()
+
+    anki_note = list(anki_test_app.get_all_notes().values())[0]
+
+    assert anki_note.content.fields[0].text == expected_front_field
+
+
 def test_sync_existing_obsidian_note_with_updated_tag_property_to_anki(
     anki_setup_and_teardown,
     obsidian_setup_and_teardown,
