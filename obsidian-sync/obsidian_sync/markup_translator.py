@@ -1,7 +1,6 @@
 import re
 from textwrap import fill
 
-from bs4 import Tag  # todo: remove
 from markdownify import ATX, MarkdownConverter as HTMLToMarkdownConverter
 from markdown import Markdown as MarkdownToHTMLConverter
 from markdown.postprocessors import Postprocessor as MarkdownToHTMLPostprocessor
