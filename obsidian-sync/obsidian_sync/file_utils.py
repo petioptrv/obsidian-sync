@@ -34,7 +34,7 @@ from string import ascii_letters, digits
 
 from send2trash import send2trash
 
-from obsidian_sync.constants import MARKDOWN_FILE_SUFFIX, SRS_NOTE_IDENTIFIER_COMMENT, ATTACHMENT_FILE_SUFFIXES, \
+from obsidian_sync.constants import MARKDOWN_FILE_SUFFIX, SRS_NOTE_IDENTIFIER_COMMENT, MEDIA_FILE_SUFFIXES, \
     SMALL_FILE_SIZE_MB_CUT_OFF, MEDIUM_FILE_SIZE_MG_CUT_OFF
 
 
@@ -45,8 +45,8 @@ def check_is_srs_file(path: Path) -> bool:
     )
 
 
-def check_is_attachment_file(path: Path) -> bool:
-    return path.suffix in ATTACHMENT_FILE_SUFFIXES
+def check_is_media_file(path: Path) -> bool:
+    return path.suffix in MEDIA_FILE_SUFFIXES
 
 
 def check_is_markdown_file(path: Path) -> bool:

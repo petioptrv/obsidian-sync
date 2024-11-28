@@ -1,3 +1,33 @@
+# -*- coding: utf-8 -*-
+# Obsidian Sync Add-on for Anki
+#
+# Copyright (C)  2024 Petrov P.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version, with the additions
+# listed at the end of the license file that accompanied this program
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# NOTE: This program is subject to certain additional terms pursuant to
+# Section 7 of the GNU Affero General Public License.  You should have
+# received a copy of these additional terms immediately following the
+# terms and conditions of the GNU Affero General Public License that
+# accompanied this program.
+#
+# If not, please request a copy through one of the means of contact
+# listed here: <mailto:petioptrv@icloud.com>.
+#
+# Any modifications to this file must keep this entire header intact.
+
 import re
 from textwrap import fill
 
@@ -12,7 +42,9 @@ class MarkupTranslator:
             heading_style=ATX,
             convert_as_inline=True,
         )
-        self._markdown_to_html_converter = MarkdownToHTMLConverter(extensions=["fenced_code"])
+        self._markdown_to_html_converter = MarkdownToHTMLConverter(
+            extensions=["fenced_code"], output_format="html"
+        )
         self._markdown_to_html_converter.postprocessors.register(
             item=ExtendedMarkdownToHTMLMathPostprocessor(md=self._markdown_to_html_converter),
             name="extended_markdown_to_html",
@@ -46,6 +78,10 @@ class MarkupTranslator:
 
     def translate_markdown_to_html(self, markdown: str) -> str:
         return self._markdown_to_html_converter.convert(source=markdown)
+
+    @staticmethod
+    def to_markdown_link(text: str, url: str) -> str:
+        return f"[{text}]({url})"
 
 
 class ExtendedHTMLToMarkdownConverter(HTMLToMarkdownConverter):

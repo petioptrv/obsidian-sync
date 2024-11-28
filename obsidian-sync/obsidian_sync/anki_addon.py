@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from obsidian_sync.addon_metadata import AddonMetadata
 # Obsidian Sync Add-on for Anki
 #
 # Copyright (C)  2024 Petrov P.
@@ -39,7 +38,12 @@ from obsidian_sync.utils import format_add_on_message
 
 
 class AnkiAddon:
-    """Anki add-on composition root."""
+    """Anki add-on composition root.
+
+    todo: explore using wikilinks (the markdown converters have support for it)
+    todo: add initialization walkthrough for first-time users to setup the configs interactively
+    todo: Explore adding an option to include links in Obsidian that open the note in Anki using AnkiConnect
+    """
 
     def __init__(self):
         self._anki_app = AnkiApp()
@@ -61,7 +65,6 @@ class AnkiAddon:
 
     def _add_menu_items(self):
         self._anki_app.add_menu_item(title="Obsidian Sync", key_sequence="Ctrl+Y", callback=self._sync_with_obsidian)
-        # todo: add option to open Obsidian note from selected Anki note (both shown on the review screen and if selected in the browse window)
 
     def _add_hooks(self):
         self._anki_app.add_sync_hook(self._sync_with_obsidian_on_anki_web_sync)
@@ -71,8 +74,6 @@ class AnkiAddon:
             self._sync_with_obsidian()
 
     def _sync_with_obsidian(self):
-        # todo: Update associated notes on model update (e.g. changing field names).
-
         if self._check_can_sync():
             self._templates_synchronizer.synchronize_templates()
             self._notes_synchronizer.synchronize_notes()

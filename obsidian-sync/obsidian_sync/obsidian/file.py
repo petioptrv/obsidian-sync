@@ -32,25 +32,24 @@ from pathlib import Path
 from typing import List, Optional
 
 from obsidian_sync.addon_config import AddonConfig
-from obsidian_sync.obsidian.attachments_manager import ObsidianAttachmentsManager
+from obsidian_sync.obsidian.content.field.note_field import ObsidianNoteFieldFactory, ObsidianNoteField
+from obsidian_sync.obsidian.content.field.template_field import ObsidianTemplateFieldFactory, ObsidianTemplateField
 from obsidian_sync.obsidian.content.content import ObsidianContent, ObsidianNoteContent, ObsidianTemplateContent
-from obsidian_sync.obsidian.content.field.field import ObsidianField
 from obsidian_sync.file_utils import check_is_markdown_file
 from obsidian_sync.obsidian.content.properties import ObsidianProperties, ObsidianTemplateProperties, \
     ObsidianNoteProperties
+from obsidian_sync.obsidian.utils import obsidian_url_for_note_path
 
 
 class ObsidianFile(ABC):
     def __init__(
         self,
         path: Path,
-        attachment_manager: ObsidianAttachmentsManager,
         addon_config: AddonConfig,
     ):
         assert check_is_markdown_file(path=path)
 
         self._path = path
-        self._attachments_manager = attachment_manager
         self._addon_config = addon_config
 
         self._raw_content = None
@@ -62,6 +61,16 @@ class ObsidianFile(ABC):
             and self.path == other.path
             and self.content == other.content
         )
+
+    @property
+    @abstractmethod
+    def content(self) -> Optional[ObsidianContent]:
+        ...
+
+    @content.setter
+    @abstractmethod
+    def content(self, value: ObsidianContent):
+        ...
 
     @property
     def exists(self) -> bool:
@@ -82,40 +91,42 @@ class ObsidianFile(ABC):
         return self._raw_content
 
     @property
-    @abstractmethod
-    def content(self) -> Optional[ObsidianContent]:
-        ...
-
-    @content.setter
-    @abstractmethod
-    def content(self, value: ObsidianContent):
-        ...
-
-    @property
     def properties(self) -> ObsidianProperties:
         return self.content.properties
-
-    @property
-    def fields(self) -> List[ObsidianField]:
-        return self.content.fields
 
     @content.setter
     def content(self, value: ObsidianNoteContent):
         assert isinstance(value, ObsidianNoteContent)
         self._content = value
 
+    @property
+    def obsidian_url(self) -> str:
+        obsidian_url = obsidian_url_for_note_path(
+            vault_path=self._addon_config.obsidian_vault_path, note_path=self.path
+        )
+        return obsidian_url
+
     def is_corrupt(self) -> bool:
         corrupt = False
 
         try:
             assert self.content
-        except Exception:
+        except Exception as e:
             corrupt = True
 
         return corrupt
 
 
 class ObsidianTemplateFile(ObsidianFile):
+    def __init__(
+        self,
+        path: Path,
+        addon_config: AddonConfig,
+        field_factory: ObsidianTemplateFieldFactory,
+    ):
+        super().__init__(path=path, addon_config=addon_config)
+        self._field_factory = field_factory
+
     @property
     def properties(self) -> ObsidianTemplateProperties:
         return self.content.properties
@@ -124,7 +135,7 @@ class ObsidianTemplateFile(ObsidianFile):
     def content(self) -> Optional[ObsidianTemplateContent]:
         if self._content is None and self.raw_content is not None:
             self._content = ObsidianTemplateContent.from_obsidian_file_text(
-                file_text=self.raw_content, addon_config=self._addon_config
+                file_text=self.raw_content, field_factory=self._field_factory
             )
         return self._content
 
@@ -133,8 +144,21 @@ class ObsidianTemplateFile(ObsidianFile):
         assert isinstance(value, ObsidianTemplateContent)
         self._content = value
 
+    @property
+    def fields(self) -> List[ObsidianTemplateField]:
+        return self.content.fields
+
 
 class ObsidianNoteFile(ObsidianFile):
+    def __init__(
+        self,
+        path: Path,
+        addon_config: AddonConfig,
+        field_factory: ObsidianNoteFieldFactory,
+    ):
+        super().__init__(path=path, addon_config=addon_config)
+        self._field_factory = field_factory
+
     @property
     def properties(self) -> ObsidianNoteProperties:
         return self.content.properties
@@ -145,11 +169,14 @@ class ObsidianNoteFile(ObsidianFile):
             self._content = ObsidianNoteContent.from_obsidian_file_text(
                 file_text=self.raw_content,
                 note_path=self._path,
-                obsidian_attachments_manager=self._attachments_manager,
-                addon_config=self._addon_config,
+                obsidian_field_factory=self._field_factory,
             )
         return self._content
 
     @content.setter
     def content(self, content: ObsidianNoteContent):
         self._content = content
+
+    @property
+    def fields(self) -> List[ObsidianNoteField]:
+        return self.content.fields

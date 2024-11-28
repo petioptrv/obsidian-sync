@@ -32,8 +32,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 
-from obsidian_sync.addon_config import AddonConfig
-
 from obsidian_sync.constants import SRS_NOTE_IDENTIFIER_COMMENT
 from obsidian_sync.base_types.content import Content, NoteContent, \
     TemplateContent
@@ -42,7 +40,7 @@ from obsidian_sync.obsidian.content.field.note_field import ObsidianNoteFieldFac
 from obsidian_sync.obsidian.content.field.template_field import ObsidianTemplateFieldFactory, ObsidianTemplateField
 from obsidian_sync.obsidian.content.properties import ObsidianTemplateProperties, ObsidianNoteProperties, \
     ObsidianProperties
-from obsidian_sync.obsidian.attachments_manager import ObsidianAttachmentsManager
+from obsidian_sync.obsidian.content.reference import ObsidianReferenceFactory
 
 
 @dataclass
@@ -77,19 +75,19 @@ class ObsidianTemplateContent(ObsidianContent):
         return super().__eq__(other)
 
     @classmethod
-    def from_content(cls, content: TemplateContent) -> "ObsidianTemplateContent":
+    def from_content(
+        cls, content: TemplateContent, field_factory: ObsidianTemplateFieldFactory
+    ) -> "ObsidianTemplateContent":
         properties = ObsidianTemplateProperties.from_properties(properties=content.properties)
-        fields = ObsidianTemplateFieldFactory().from_fields(
-            fields=content.fields,
-        )
+        fields = field_factory.from_fields(fields=content.fields)
         return cls(properties=properties, fields=fields)
 
     @classmethod
-    def from_obsidian_file_text(cls, file_text: str, addon_config: AddonConfig) -> "ObsidianTemplateContent":
+    def from_obsidian_file_text(
+        cls, file_text: str, field_factory: ObsidianTemplateFieldFactory
+    ) -> "ObsidianTemplateContent":
         properties = cls._properties_from_obsidian_file_text(file_text=file_text)
-        fields = ObsidianTemplateFieldFactory().from_obsidian_file_text(
-            file_text=file_text, addon_config=addon_config
-        )
+        fields = field_factory.from_obsidian_file_text(file_text=file_text)
         content = cls(fields=fields, properties=properties)
         return content
 
@@ -110,15 +108,11 @@ class ObsidianNoteContent(ObsidianContent):
     def from_content(
         cls,
         content: NoteContent,
-        obsidian_attachments_manager: ObsidianAttachmentsManager,
+        obsidian_field_factory: ObsidianNoteFieldFactory,
         note_path: Path,
     ) -> "ObsidianNoteContent":
         properties = ObsidianNoteProperties.from_properties(properties=content.properties)
-        fields = ObsidianNoteFieldFactory().from_fields(
-            fields=content.fields,
-            obsidian_attachments_manager=obsidian_attachments_manager,
-            note_path=note_path,
-        )
+        fields = obsidian_field_factory.from_fields(fields=content.fields, note_path=note_path)
         return cls(properties=properties, fields=fields)
 
     @classmethod
@@ -126,15 +120,12 @@ class ObsidianNoteContent(ObsidianContent):
         cls,
         file_text: str,
         note_path: Path,
-        obsidian_attachments_manager: ObsidianAttachmentsManager,
-        addon_config: AddonConfig,
+        obsidian_field_factory: ObsidianNoteFieldFactory,
     ) -> "ObsidianNoteContent":
         properties = cls._properties_from_obsidian_file_text(file_text=file_text)
-        fields = ObsidianNoteFieldFactory().from_obsidian_file_text(
+        fields = obsidian_field_factory.from_obsidian_file_text(
             file_text=file_text,
             note_path=note_path,
-            obsidian_attachments_manager=obsidian_attachments_manager,
-            addon_config=addon_config,
         )
         content = cls(fields=fields, properties=properties)
         return content

@@ -47,6 +47,17 @@ and a final line
     assert markdown_text == expected_markdown
 
 
+def test_convert_obsidian_url_markdown_to_html():
+    markup_translator = MarkupTranslator()
+
+    markdown_text = "[Obsidian URL](obsidian://open?vault=Test%20Vault&file=Test%20File)"
+    expected_html = """<p><a href="obsidian://open?vault=Test%20Vault&amp;file=Test%20File">Obsidian URL</a></p>"""
+
+    html = markup_translator.translate_markdown_to_html(markdown=markdown_text)
+
+    assert html == expected_html
+
+
 def test_sanitizing_html_with_latex_in_line_math_statement():
     markup_translator = MarkupTranslator()
 

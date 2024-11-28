@@ -1,9 +1,39 @@
+# -*- coding: utf-8 -*-
+# Obsidian Sync Add-on for Anki
+#
+# Copyright (C)  2024 Petrov P.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version, with the additions
+# listed at the end of the license file that accompanied this program
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# NOTE: This program is subject to certain additional terms pursuant to
+# Section 7 of the GNU Affero General Public License.  You should have
+# received a copy of these additional terms immediately following the
+# terms and conditions of the GNU Affero General Public License that
+# accompanied this program.
+#
+# If not, please request a copy through one of the means of contact
+# listed here: <mailto:petioptrv@icloud.com>.
+#
+# Any modifications to this file must keep this entire header intact.
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List
 
-from obsidian_sync.anki.app.media_manager import AnkiMediaManager
-from obsidian_sync.base_types.content import Field, Content, Properties, NoteProperties, LinkedAttachment, NoteContent, \
-    NoteField, TemplateField
+from obsidian_sync.anki.app.media_manager import AnkiReferencesManager
+from obsidian_sync.base_types.content import Field, Content, Properties, NoteProperties, Reference, NoteContent, \
+    NoteField, TemplateField, MediaReference, ObsidianURLReference
 from obsidian_sync.markup_translator import MarkupTranslator
 
 
@@ -37,11 +67,11 @@ class AnkiNoteContent(AnkiContent):
     def from_content(
         cls,
         content: NoteContent,
-        anki_media_manager: AnkiMediaManager,
+        references_factory: "AnkiReferencesFactory",
     ) -> "AnkiNoteContent":
         properties = AnkiNoteProperties.from_properties(properties=content.properties)
         fields = AnkiNoteField.from_fields(
-            fields=content.fields, anki_media_manager=anki_media_manager
+            fields=content.fields, references_factory=references_factory
         )
         return cls(properties=properties, fields=fields)
 
@@ -108,7 +138,7 @@ class AnkiTemplateField(TemplateField, AnkiField):
 
 @dataclass
 class AnkiNoteField(NoteField, AnkiField):
-    attachments: List["AnkiLinkedAttachment"]
+    references: List["AnkiReference"]
 
     def __eq__(self, other: object) -> bool:
         return super().__eq__(other)
@@ -117,11 +147,11 @@ class AnkiNoteField(NoteField, AnkiField):
     def from_fields(
         cls,
         fields: List[NoteField],
-        anki_media_manager: AnkiMediaManager,
+        references_factory: "AnkiReferencesFactory",
     ) -> List["AnkiNoteField"]:
         fields = [
             AnkiNoteField.from_field(
-                field=field, anki_media_manager=anki_media_manager
+                field=field, references_factory=references_factory
             )
             for field in fields
         ]
@@ -131,51 +161,106 @@ class AnkiNoteField(NoteField, AnkiField):
     def from_field(
         cls,
         field: NoteField,
-        anki_media_manager: AnkiMediaManager,
+        references_factory: "AnkiReferencesFactory",
     ) -> "AnkiNoteField":
         html_text = field.to_html()
+        anki_references = []
 
-        anki_attachments = []
-        for attachment in field.attachments:
-            anki_attachment = AnkiLinkedAttachment.from_attachment(
-                attachment=attachment, anki_media_manager=anki_media_manager
+        for reference in field.references:
+            anki_reference = references_factory.from_reference(
+                reference=reference, references_manager=references_factory.references_manager
             )
-            anki_attachments.append(anki_attachment)
             html_text = html_text.replace(
-                attachment.to_field_text(), anki_attachment.to_field_text()
+                reference.to_field_text(), anki_reference.to_field_text()
             )
+            anki_references.append(anki_reference)
 
         return cls(
             name=field.name,
             text=html_text,
-            attachments=anki_attachments,
+            references=anki_references,
         )
 
     def to_anki_field_text(self) -> str:
         field_text = self.text
 
-        for attachment in self.attachments:
+        for reference in self.references:
             field_text = field_text.replace(
-                attachment.to_field_text(), attachment.to_anki_field_text()
+                reference.to_field_text(), reference.to_anki_field_text()
             )
 
         return field_text
 
 
+class AnkiReferencesFactory:
+    def __init__(self, anki_references_manager: AnkiReferencesManager):
+        self._references_manager = anki_references_manager
+
+    @property
+    def references_manager(self) -> AnkiReferencesManager:
+        return self._references_manager
+
+    def from_card_field_text(
+        self, model_id: int, card_field_text: str
+    ) -> List["AnkiReference"]:
+        references: List["AnkiReference"] = [
+            AnkiMediaReference(path=file_path)
+            for file_path in self._references_manager.get_media_file_paths_from_card_field_text(
+                model_id=model_id, field_text=card_field_text
+            )
+        ]
+        references.extend(
+            ObsidianURLReferenceInAnki(url=obsidian_url)
+            for obsidian_url in self._references_manager.get_obsidian_urls_from_card_field_text(
+                field_text=card_field_text
+            )
+        )
+        return references
+
+    def from_reference(self, reference: Reference, references_manager: AnkiReferencesManager) -> "AnkiReference":
+        if isinstance(reference, MediaReference):
+            anki_reference = (
+                AnkiMediaReference.from_reference(reference=reference, references_manager=references_manager)
+            )
+        elif isinstance(reference, ObsidianURLReference):
+            anki_reference = ObsidianURLReferenceInAnki.from_reference(reference=reference)
+        else:
+            raise NotImplementedError
+
+        return anki_reference
+
+
 @dataclass
-class AnkiLinkedAttachment(LinkedAttachment):
+class AnkiReference(Reference, ABC):
+    @abstractmethod
+    def to_anki_field_text(self) -> str:
+        ...
+
+
+@dataclass
+class AnkiMediaReference(AnkiReference, MediaReference):
     def __eq__(self, other: object) -> bool:
         return super().__eq__(other)
 
     @classmethod
-    def from_attachment(
-        cls, attachment: LinkedAttachment, anki_media_manager: AnkiMediaManager
-    ) -> "AnkiLinkedAttachment":
-        anki_attachment = anki_media_manager.ensure_attachment_is_in_anki(attachment=attachment)
-        return cls(path=anki_attachment)
+    def from_reference(
+        cls, reference: MediaReference, references_manager: AnkiReferencesManager
+    ) -> "AnkiMediaReference":
+        anki_media_path = references_manager.ensure_media_is_in_anki(reference=reference)
+        return cls(path=anki_media_path)
 
     def to_anki_field_text(self) -> str:
         return self.path.name
 
-    def to_field_text(self) -> str:
-        return str(self.path)
+
+@dataclass
+class ObsidianURLReferenceInAnki(AnkiReference, ObsidianURLReference):
+    def __eq__(self, other: object) -> bool:
+        return super().__eq__(other)
+
+    @classmethod
+    def from_reference(cls, reference: ObsidianURLReference) -> "ObsidianURLReferenceInAnki":
+        return cls(url=reference.url)
+
+    def to_anki_field_text(self) -> str:
+        return self.url

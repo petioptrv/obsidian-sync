@@ -16,7 +16,11 @@ from obsidian_sync.constants import OBSIDIAN_SETTINGS_FOLDER, OBSIDIAN_APP_SETTI
     SRS_ATTACHMENTS_FOLDER, CONF_ADD_OBSIDIAN_URL_IN_ANKI
 from obsidian_sync.markup_translator import MarkupTranslator
 from obsidian_sync.obsidian.config import ObsidianConfig
+from obsidian_sync.obsidian.content.field.note_field import ObsidianNoteFieldFactory
+from obsidian_sync.obsidian.content.field.template_field import ObsidianTemplateFieldFactory
+from obsidian_sync.obsidian.content.reference import ObsidianReferenceFactory
 from obsidian_sync.obsidian.notes_manager import ObsidianNotesManager
+from obsidian_sync.obsidian.reference_manager import ObsidianReferencesManager
 from obsidian_sync.obsidian.templates_manager import ObsidianTemplatesManager
 from obsidian_sync.obsidian.vault import ObsidianVault
 from obsidian_sync.synchronizers.notes_synchronizer import NotesSynchronizer
@@ -245,37 +249,22 @@ def anki_setup_and_teardown(
 # ================== OBSIDIAN ==========================================================
 
 
-@pytest.fixture()
-def obsidian_config(
-    obsidian_settings_folder: Path,
-    obsidian_templates_folder: Path,
-    addon_config: AddonConfig,
-) -> ObsidianConfig:
-    settings = {
-        OBSIDIAN_TEMPLATES_OPTION_KEY: True,
-        OBSIDIAN_TRASH_OPTION_KEY: OBSIDIAN_PERMA_DELETE_TRASH_OPTION_VALUE,
-        OBSIDIAN_USE_MARKDOWN_LINKS_OPTION_KEY: True,
-    }
-    with open(file=obsidian_settings_folder / OBSIDIAN_APP_SETTINGS_FILE, mode="w") as f:
-        json.dump(settings, f)
-
-    template_settings = {
-        TEMPLATES_FOLDER_JSON_FIELD_NAME: obsidian_templates_folder.name,
-    }
-    with open(file=obsidian_settings_folder / OBSIDIAN_TEMPLATES_SETTINGS_FILE, mode="w") as f:
-        json.dump(template_settings, f)
-
+@pytest.fixture(scope="session")
+def obsidian_config(addon_config: AddonConfig) -> ObsidianConfig:
     return ObsidianConfig(addon_config=addon_config)
 
 
-@pytest.fixture()
-def obsidian_vault(
-    addon_config, obsidian_config
-) -> ObsidianVault:
+@pytest.fixture(scope="session")
+def obsidian_vault(addon_config, obsidian_config) -> ObsidianVault:
     return ObsidianVault(
         addon_config=addon_config,
         obsidian_config=obsidian_config,
     )
+
+
+@pytest.fixture(scope="session")
+def obsidian_template_field_factory(addon_config: AddonConfig) -> ObsidianTemplateFieldFactory:
+    return ObsidianTemplateFieldFactory(addon_config=addon_config)
 
 
 @pytest.fixture()
@@ -291,6 +280,23 @@ def obsidian_templates_manager(
         obsidian_vault=obsidian_vault,
         addon_config=addon_config,
     )
+
+
+@pytest.fixture(scope="session")
+def obsidian_references_manager(addon_config: AddonConfig, obsidian_config: ObsidianConfig) -> ObsidianReferencesManager:
+    return ObsidianReferencesManager(addon_config=addon_config, obsidian_config=obsidian_config)
+
+
+@pytest.fixture(scope="session")
+def obsidian_reference_factory(obsidian_references_manager: ObsidianReferencesManager) -> ObsidianReferenceFactory:
+    return ObsidianReferenceFactory(obsidian_references_manager=obsidian_references_manager)
+
+
+@pytest.fixture(scope="session")
+def obsidian_note_field_factory(
+    addon_config: AddonConfig, obsidian_reference_factory: ObsidianReferenceFactory
+) -> ObsidianNoteFieldFactory:
+    return ObsidianNoteFieldFactory(addon_config=addon_config, references_factory=obsidian_reference_factory)
 
 
 @pytest.fixture()
@@ -314,6 +320,7 @@ def obsidian_setup_and_teardown(
     obsidian_templates_folder: Path,
     srs_attachments_in_obsidian_folder: Path,
     obsidian_config: ObsidianConfig,
+    obsidian_settings_folder: Path,
 ):
     if srs_folder_in_obsidian.exists():
         shutil.rmtree(srs_folder_in_obsidian)
@@ -321,6 +328,20 @@ def obsidian_setup_and_teardown(
         shutil.rmtree(obsidian_templates_folder)
     if srs_attachments_in_obsidian_folder.exists():
         shutil.rmtree(srs_attachments_in_obsidian_folder)
+
+    settings = {
+        OBSIDIAN_TEMPLATES_OPTION_KEY: True,
+        OBSIDIAN_TRASH_OPTION_KEY: OBSIDIAN_PERMA_DELETE_TRASH_OPTION_VALUE,
+        OBSIDIAN_USE_MARKDOWN_LINKS_OPTION_KEY: True,
+    }
+    with open(file=obsidian_settings_folder / OBSIDIAN_APP_SETTINGS_FILE, mode="w") as f:
+        json.dump(settings, f)
+
+    template_settings = {
+        TEMPLATES_FOLDER_JSON_FIELD_NAME: obsidian_templates_folder.name,
+    }
+    with open(file=obsidian_settings_folder / OBSIDIAN_TEMPLATES_SETTINGS_FILE, mode="w") as f:
+        json.dump(template_settings, f)
 
     yield
 

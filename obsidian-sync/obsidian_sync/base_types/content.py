@@ -142,27 +142,55 @@ class TemplateField(Field, ABC):
 
 @dataclass
 class NoteField(Field, ABC):
-    attachments: List["LinkedAttachment"]
+    references: List["Reference"]
 
     def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, NoteField)
             and super().__eq__(other)
-            and len(self.attachments) == len(other.attachments)
-            and all(sa == oa for sa, oa in zip(self.attachments, other.attachments))
+            and len(self.references) == len(other.references)
+            and all(sa == oa for sa, oa in zip(self.references, other.references))
         )
 
 
 @dataclass
-class LinkedAttachment(ABC):
-    path: Path
-
-    def __eq__(self, other):
+class Reference(ABC):
+    def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, type(self))
-            and self.path == other.path
+            and self.to_field_text() == other.to_field_text()
         )
 
     @abstractmethod
     def to_field_text(self) -> str:
         ...
+
+
+@dataclass
+class MediaReference(Reference, ABC):
+    path: Path
+
+    def __eq__(self, other: object) -> bool:
+        return (
+            isinstance(other, type(self))
+            and super().__eq__(other)
+            and self.path == other.path
+        )
+
+    def to_field_text(self) -> str:
+        return str(self.path)
+
+
+@dataclass
+class ObsidianURLReference(Reference, ABC):
+    url: str
+
+    def __eq__(self, other: object) -> bool:
+        return (
+            isinstance(other, type(self))
+            and super().__eq__(other)
+            and self.url == other.url
+        )
+
+    def to_field_text(self) -> str:
+        return self.url

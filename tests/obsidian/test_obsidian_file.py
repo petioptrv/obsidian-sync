@@ -13,15 +13,17 @@ from obsidian_sync.constants import SRS_NOTE_FIELD_IDENTIFIER_COMMENT, MARKDOWN_
     DATE_SYNCED_PROPERTY_NAME, DEFAULT_NOTE_ID_FOR_NEW_NOTES, SUSPENDED_PROPERTY_NAME, \
     DEFAULT_NOTE_SUSPENDED_STATE_FOR_NEW_NOTES, MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME, \
     DEFAULT_NOTE_MAXIMUM_CARD_DIFFICULTY_FOR_NEW_NOTES, DATETIME_FORMAT
+from obsidian_sync.obsidian.content.field.note_field import ObsidianNoteFieldFactory
+from obsidian_sync.obsidian.content.field.template_field import ObsidianTemplateFieldFactory
 from obsidian_sync.obsidian.content.properties import ObsidianTemplateProperties, ObsidianNoteProperties
+from obsidian_sync.obsidian.content.reference import ObsidianMediaReference
 from obsidian_sync.obsidian.file import ObsidianNoteFile, ObsidianTemplateFile
-from obsidian_sync.obsidian.vault import ObsidianVault
 
 
 def test_parse_template(
     tmp_path: Path,
-    obsidian_vault: ObsidianVault,
     addon_config: AddonConfig,
+    obsidian_template_field_factory: ObsidianTemplateFieldFactory,
 ):
     file_content = f"""---
 {MODEL_ID_PROPERTY_NAME}: 1
@@ -48,7 +50,7 @@ def test_parse_template(
     file_path.write_text(file_content)
 
     file = ObsidianTemplateFile(
-        path=file_path, attachment_manager=obsidian_vault.attachments_manager, addon_config=addon_config
+        path=file_path, addon_config=addon_config, field_factory=obsidian_template_field_factory
     )
 
     assert isinstance(file.properties, ObsidianTemplateProperties)
@@ -64,8 +66,8 @@ def test_parse_template(
 
 def test_parse_note_properties(
     tmp_path: Path,
-    obsidian_vault: ObsidianVault,
     addon_config: AddonConfig,
+    obsidian_note_field_factory: ObsidianNoteFieldFactory,
 ):
     file_content = f"""---
 {MODEL_ID_PROPERTY_NAME}: 1
@@ -85,7 +87,7 @@ def test_parse_note_properties(
     file_path.write_text(file_content)
 
     file = ObsidianNoteFile(
-        path=file_path, attachment_manager=obsidian_vault.attachments_manager, addon_config=addon_config
+        path=file_path, addon_config=addon_config, field_factory=obsidian_note_field_factory
     )
 
     assert isinstance(file.properties, ObsidianNoteProperties)
@@ -97,11 +99,11 @@ def test_parse_note_properties(
 
 def test_parse_note_fields(
     some_test_image: PILImage,
-    obsidian_vault: ObsidianVault,
     obsidian_vault_folder: Path,
     srs_folder_in_obsidian: Path,
     srs_attachments_in_obsidian_folder: Path,
     addon_config: AddonConfig,
+    obsidian_note_field_factory: ObsidianNoteFieldFactory,
 ):
     srs_attachments_in_obsidian_folder.mkdir(parents=True)
     image_file = srs_attachments_in_obsidian_folder / "img.jpg"
@@ -133,15 +135,19 @@ Some back [image link]({urllib.parse.quote(string=str(image_file.relative_to(obs
     file_path.write_text(file_content)
 
     file = ObsidianNoteFile(
-        path=file_path, attachment_manager=obsidian_vault.attachments_manager, addon_config=addon_config
+        path=file_path, addon_config=addon_config, field_factory=obsidian_note_field_factory
     )
 
     assert len(file.fields) == 2
 
     assert file.fields[0].name == "Front"
     assert file.fields[0].text == "Some front"
-    assert len(file.fields[0].attachments) == 0
+    assert len(file.fields[0].references) == 0
 
     assert file.fields[1].name == "Back"
     assert file.fields[1].text == f"Some back [image link]({image_file})"
-    assert file.fields[1].attachments[0].path == image_file
+
+    media_reference = file.fields[1].references[0]
+
+    assert isinstance(media_reference, ObsidianMediaReference)
+    assert media_reference.path == image_file

@@ -27,26 +27,19 @@
 # listed here: <mailto:petioptrv@icloud.com>.
 #
 # Any modifications to this file must keep this entire header intact.
-
-from dataclasses import dataclass
-
-from obsidian_sync.anki.content import AnkiNoteContent
-from obsidian_sync.base_types.note import Note
+import urllib.parse
+from pathlib import Path
 
 
-@dataclass
-class AnkiNote(Note):  # todo: remove the use of AnkiNote in favour of directly using AnkiNoteContent
-    # can get cloze numbers with `note.cloze_numbers_in_fields()`
-
-    content: AnkiNoteContent
-
-    def __eq__(self, other: object) -> bool:
-        return super().__eq__(other)
-
-    @property
-    def id(self) -> int:
-        return self.content.properties.note_id
-
-    @property
-    def model_id(self) -> int:
-        return self.content.properties.model_id
+def obsidian_url_for_note_path(vault_path: Path, note_path: Path) -> str:
+    vault_name = urllib.parse.quote(string=vault_path.name)
+    note_path_string_relative_to_vault = urllib.parse.quote(
+        string=str(note_path.relative_to(vault_path))
+    )
+    # obsidian_url = (
+    #     f"obsidian://open?vault={vault_name}&amp;file={note_path_string_relative_to_vault}"
+    # )
+    obsidian_url = (
+        f"obsidian://open?vault={vault_name}&file={note_path_string_relative_to_vault}"
+    )
+    return obsidian_url

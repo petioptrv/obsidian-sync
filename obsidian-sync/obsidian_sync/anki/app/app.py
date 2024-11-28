@@ -37,18 +37,21 @@ import aqt
 from anki.consts import QUEUE_TYPE_SUSPENDED
 
 from obsidian_sync.anki.content import AnkiTemplateContent, \
-    AnkiTemplateProperties, AnkiNoteProperties, AnkiLinkedAttachment, AnkiNoteContent, AnkiNoteField, AnkiTemplateField
+    AnkiTemplateProperties, AnkiNoteProperties, AnkiNoteContent, AnkiNoteField, AnkiTemplateField, \
+    AnkiReferencesFactory
 from obsidian_sync.anki.note import AnkiNote
 from obsidian_sync.anki.template import AnkiTemplate
-from obsidian_sync.anki.app.media_manager import AnkiMediaManager
+from obsidian_sync.anki.app.media_manager import AnkiReferencesManager
 from obsidian_sync.base_types.note import Note
 from obsidian_sync.constants import ADD_ON_NAME, DEFAULT_NOTE_ID_FOR_NEW_NOTES
-from obsidian_sync.file_utils import check_is_attachment_file
 
 
 class AnkiApp:
     def __init__(self):
-        self._media_manager = AnkiMediaManager()
+        self._media_manager = AnkiReferencesManager()
+        self._references_factory = AnkiReferencesFactory(
+            anki_references_manager=self._media_manager,
+        )
 
     @property
     def config(self):
@@ -87,19 +90,24 @@ class AnkiApp:
         template = AnkiTemplate(content=content)
         return template
 
-    def add_field_to_anki_template(self, template: AnkiTemplate, field_name: str) -> AnkiTemplate:
+    def add_field_to_anki_template(
+        self, template: AnkiTemplate, field_name: str, display_on_cards_back_templates: bool
+    ) -> AnkiTemplate:
         col = aqt.mw.col
         models = col.models
 
         new_field = models.new_field(name=field_name)
         model = models.get(id=template.model_id)
-        models.add_field(notetype=model, field=new_field)
-        models.update_dict(notetype=model)
 
-        for note_id in models.nids(model):  # Update existing notes
-            anki_system_note = col.getNote(note_id)
-            anki_system_note.fields.append("")  # Initialize the new field
-            col.update_note(note=anki_system_note)
+        models.add_field(notetype=model, field=new_field)
+
+        if display_on_cards_back_templates:
+            for system_template in model["tmpls"]:
+                back_template = system_template["afmt"]
+                back_template += self._get_back_template_field_entry_string(field_name=field_name)
+                system_template["afmt"] = back_template
+
+        models.update_dict(notetype=model)
 
         updated_template = self.get_anki_template(model_id=template.model_id)
         return updated_template
@@ -110,6 +118,12 @@ class AnkiApp:
 
         model = models.get(id=template.model_id)
 
+        for system_template in model["tmpls"]:
+            back_template = system_template["afmt"]
+            back_template_field_entry_string = self._get_back_template_field_entry_string(field_name=field_name)
+            if back_template_field_entry_string in back_template:
+                system_template["afmt"] = back_template.replace(back_template_field_entry_string, "")
+
         for field in model["flds"]:
             if field["name"] == field_name:
                 models.remove_field(notetype=model, field=field)
@@ -117,23 +131,12 @@ class AnkiApp:
 
         models.update_dict(notetype=model)
 
-        for note_id in models.nids(model):  # update existing notes
-            anki_system_note = col.getNote(note_id)
-            anki_system_note.fields = [
-                field
-                for field in anki_system_note.fields
-                if field.name != field_name
-            ]
-
-            col.update_note(note=anki_system_note)
-
         updated_template = self.get_anki_template(model_id=template.model_id)
         return updated_template
 
     def create_new_note_in_anki_from_note(self, note: Note, deck_name: str) -> AnkiNote:
         assert note.content.properties.note_id == DEFAULT_NOTE_ID_FOR_NEW_NOTES
 
-        # deck_name = self.config.anki_deck_name_for_obsidian_imports
         anki_note = self.create_new_empty_note_in_anki(model_id=note.content.properties.model_id, deck_name=deck_name)
         note.content.properties.note_id = anki_note.id
 
@@ -162,7 +165,7 @@ class AnkiApp:
         anki_system_note = col.get_note(id=note.content.properties.note_id)
         content_from_note = AnkiNoteContent.from_content(
             content=note.content,
-            anki_media_manager=self._media_manager,
+            references_factory=self._references_factory,
         )
 
         anki_system_note.tags = content_from_note.properties.tags
@@ -223,18 +226,20 @@ class AnkiApp:
 
         note_refactored = False
         for field_name, field_text in note.items():
-            attachments = []
+            references = self._references_factory.from_card_field_text(
+                model_id=model_id, card_field_text=field_text
+            )
             adapted_field_text = field_text
-            for file_path in self._media_manager.get_media_file_paths(model_id=model_id, field_text=field_text):
-                if check_is_attachment_file(path=file_path):
-                    adapted_field_text = adapted_field_text.replace(file_path.name, str(file_path))
-                    attachments.append(AnkiLinkedAttachment(path=file_path))
+            for reference in references:
+                adapted_field_text = adapted_field_text.replace(
+                    reference.to_anki_field_text(), reference.to_field_text()
+                )
 
             fields.append(
                 AnkiNoteField(
                     name=field_name,
                     text=adapted_field_text,
-                    attachments=attachments,
+                    references=references,
                 )
             )
 
@@ -316,3 +321,7 @@ class AnkiApp:
             window_name = None   # For other windows we don't care about
 
         return window_name
+
+    @staticmethod
+    def _get_back_template_field_entry_string(field_name: str) -> str:
+        return f"\n\n<hr id=\"{field_name}\">\n\n{{{{{field_name}}}}}"

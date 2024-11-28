@@ -105,7 +105,9 @@ class TemplatesSynchronizer:
                     for field in anki_template.content.fields
                 ):
                     anki_templates[anki_template.model_id] = self._anki_app.add_field_to_anki_template(
-                        template=anki_template, field_name=OBSIDIAN_LINK_URL_FIELD_NAME
+                        template=anki_template,
+                        field_name=OBSIDIAN_LINK_URL_FIELD_NAME,
+                        display_on_cards_back_templates=True,
                     )
         else:
             for anki_template in list(anki_templates.values()):

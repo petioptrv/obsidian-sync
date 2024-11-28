@@ -66,6 +66,10 @@ class ObsidianNote(Note):
     def properties(self) -> ObsidianNoteProperties:
         return self._file.properties
 
+    @property
+    def obsidian_url(self) -> str:
+        return self._file.obsidian_url
+
     def is_new(self) -> bool:
         return self._file is None or self.id == DEFAULT_NOTE_ID_FOR_NEW_NOTES
 

@@ -84,6 +84,28 @@ def test_create_new_anki_template_in_obsidian(
     assert template_file.read_text() == expected_text
 
 
+def test_dont_sync_anki_templates_to_obsidian_if_the_obsidian_template_extension_is_not_enabled(
+    anki_setup_and_teardown,
+    obsidian_setup_and_teardown,
+    anki_test_app: AnkiTestApp,
+    obsidian_templates_manager: ObsidianTemplatesManager,
+    obsidian_templates_folder: Path,
+    templates_synchronizer: TemplatesSynchronizer,
+):
+    raise NotImplementedError
+
+
+def test_create_a_new_anki_template_in_obsidian_after_resolving_a_template_name_collision_with_an_existing_user_template(
+    anki_setup_and_teardown,
+    obsidian_setup_and_teardown,
+    anki_test_app: AnkiTestApp,
+    obsidian_templates_manager: ObsidianTemplatesManager,
+    obsidian_templates_folder: Path,
+    templates_synchronizer: TemplatesSynchronizer,
+):
+    raise NotImplementedError
+
+
 def test_add_obsidian_url_field_to_anki_templates_on_sync(
     anki_setup_and_teardown,
     obsidian_setup_and_teardown,

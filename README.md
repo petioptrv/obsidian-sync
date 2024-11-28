@@ -18,19 +18,29 @@ create new notes in Obsidian using the [templates core plugin](https://help.obsi
 
 If a given note has been modified in both apps, the most recent version is kept.
 
+The add-on treats spaced repetition system (SRS) notes (i.e. Anki notes) as first-class
+citizens and creates one Obsidian note per SRS note in Anki. That said SRS notes can
+coexist with regular notes in Obsidian, so it's possible to have one regular Obsidian
+note on a given topic, populated with sections from SRS notes that contain parts of the
+theory relating to the concept. As long as the regular note is note created from an
+SRS note template, then the add-on will not try to sync it to Anki.
+
 ### Supported Features
 
 - All default Anki note types.
+- Option to add Obsidian URL field to the Back Template of every Anki card to allow opening the Obsidian note (works on mobile too).
+- Links to other notes in Obsidian files are translated to Obsidian URLs for Anki notes.
 - The set of embedded media (image, audio, video) files officially supported by Obsidian.
   - See [this page](https://help.obsidian.md/Files+and+folders/Accepted+file+formats) for the file formats supported by Obsidian.
   - See the [limitations section](#media) for details on how media files are handled.
-  - The files are copied from one platform to the other so that the changes are reflected on mobile as well.
+  - The files are duplicated on both platforms so that they are accessible on mobile as well.
 - LaTex, both in-line and blocks.
 - Code, both in-line and blocks.
-- Syncing "suspended" status on a per-note basis.
+- Syncing Anki "suspended" status on a per-note basis.
   - If all cards associated with the note are suspended in Anki, this property will be checked in Obsidian, otherwise it will be unchecked.
-  - If a note is "suspended" (i.e. all its cards are suspended in Anki) and the property is unchecked in Obsidian, this will cause the associated Anki cards to be unsuspended.
+  - If a note is "suspended" (i.e. all its cards are suspended in Anki) and the property is unchecked in Obsidian, this will cause all associated Anki cards to be unsuspended.
   - If a note is not "suspended" (i.e. at least one of its cards is not suspended in Anki) and the property is checked in Obsidian, this will cause the associated Anki cards to be suspended.
+- SRS notes can coexist with regular Obsidian notes in the Obsidian vault.
 
 ## Config
 
@@ -59,8 +69,8 @@ and your [Obsidian vault](https://help.obsidian.md/Getting+started/Back+up+your+
 
 #### Media
 
-Currently, all attachments imported from Anki to Obsidian are copied to a dedicated folder called `srs-media` placed
-under the designated folder used for Anki cards (see [the configs section](#config) to learn about setting the
+Currently, all attachment files imported from Anki to Obsidian are copied to a dedicated folder called `srs-attachments`
+placed under the designated folder used for Anki cards (see [the configs section](#config) to learn about setting the
 designated folder).
 
 #### Note Models and Templates

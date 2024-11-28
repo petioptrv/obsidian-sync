@@ -31,7 +31,7 @@ from pathlib import Path
 
 from obsidian_sync.file_utils import move_file_to_system_trash
 from obsidian_sync.addon_config import AddonConfig
-from obsidian_sync.obsidian.attachments_manager import ObsidianAttachmentsManager
+from obsidian_sync.obsidian.reference_manager import ObsidianReferencesManager
 from obsidian_sync.constants import OBSIDIAN_SYSTEM_TRASH_OPTION_VALUE, OBSIDIAN_LOCAL_TRASH_OPTION_VALUE, \
     OBSIDIAN_LOCAL_TRASH_FOLDER, OBSIDIAN_PERMA_DELETE_TRASH_OPTION_VALUE
 from obsidian_sync.obsidian.config import ObsidianConfig
@@ -46,12 +46,12 @@ class ObsidianVault:
     ):
         self._addon_config = addon_config
         self._obsidian_config = obsidian_config
-        self._attachments_manager = ObsidianAttachmentsManager(
+        self._attachments_manager = ObsidianReferencesManager(
             addon_config=addon_config, obsidian_config=obsidian_config
         )
 
     @property
-    def attachments_manager(self) -> ObsidianAttachmentsManager:
+    def attachments_manager(self) -> ObsidianReferencesManager:
         return self._attachments_manager
 
     def get_path_relative_to_vault(self, absolute_path: Path) -> Path:

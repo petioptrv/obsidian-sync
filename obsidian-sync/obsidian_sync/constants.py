@@ -51,7 +51,7 @@ AUDIO_FILE_SUFFIXES = [  # https://help.obsidian.md/Files+and+folders/Accepted+f
 VIDEO_FILE_SUFFIXES = [  # https://help.obsidian.md/Files+and+folders/Accepted+file+formats
     ".mkv", ".mov", ".mp4", ".ogv", ".webm"
 ]
-ATTACHMENT_FILE_SUFFIXES = IMAGE_FILE_SUFFIXES + AUDIO_FILE_SUFFIXES + VIDEO_FILE_SUFFIXES
+MEDIA_FILE_SUFFIXES = IMAGE_FILE_SUFFIXES + AUDIO_FILE_SUFFIXES + VIDEO_FILE_SUFFIXES
 
 ADD_ON_DIR = Path(__file__).parent.parent
 USER_FILES_PATH = ADD_ON_DIR / "user_files"  # persists across add-on updates
@@ -70,14 +70,13 @@ CONF_ADD_OBSIDIAN_URL_IN_ANKI = "add-obsidian-url-in-anki"
 # ANKI
 
 DECK_NAME_SEPARATOR = "::"
-OBSIDIAN_IMPORTS_DECK_NAME = "Obsidian Imports"
 
 # OBSIDIAN
 
 MAX_OBSIDIAN_NOTE_FILE_NAME_LENGTH = 200
 
 MARKDOWN_FILE_SUFFIX = ".md"
-SRS_ATTACHMENTS_FOLDER = "srs-media"
+SRS_ATTACHMENTS_FOLDER = "srs-attachments"
 
 OBSIDIAN_SETTINGS_FOLDER = ".obsidian"
 OBSIDIAN_TEMPLATES_SETTINGS_FILE = "templates.json"

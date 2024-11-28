@@ -1,3 +1,33 @@
+# -*- coding: utf-8 -*-
+# Obsidian Sync Add-on for Anki
+#
+# Copyright (C)  2024 Petrov P.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version, with the additions
+# listed at the end of the license file that accompanied this program
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# NOTE: This program is subject to certain additional terms pursuant to
+# Section 7 of the GNU Affero General Public License.  You should have
+# received a copy of these additional terms immediately following the
+# terms and conditions of the GNU Affero General Public License that
+# accompanied this program.
+#
+# If not, please request a copy through one of the means of contact
+# listed here: <mailto:petioptrv@icloud.com>.
+#
+# Any modifications to this file must keep this entire header intact.
+
 import logging
 from typing import Dict, Generator
 
@@ -8,6 +38,7 @@ from obsidian_sync.constants import MARKDOWN_FILE_SUFFIX
 from obsidian_sync.file_utils import check_is_srs_file
 from obsidian_sync.obsidian.config import ObsidianConfig
 from obsidian_sync.obsidian.content.content import ObsidianTemplateContent
+from obsidian_sync.obsidian.content.field.template_field import ObsidianTemplateFieldFactory
 from obsidian_sync.obsidian.file import ObsidianTemplateFile
 from obsidian_sync.obsidian.template import ObsidianTemplate
 from obsidian_sync.obsidian.vault import ObsidianVault
@@ -26,6 +57,9 @@ class ObsidianTemplatesManager:
         self._obsidian_config = obsidian_config
         self._obsidian_vault = obsidian_vault
         self._addon_config = addon_config
+        self._field_factory = ObsidianTemplateFieldFactory(
+            addon_config=addon_config,
+        )
 
     def create_obsidian_template_from_template(self, reference_template: Template) -> ObsidianTemplate:
         obsidian_template = ObsidianTemplate()
@@ -53,7 +87,7 @@ class ObsidianTemplatesManager:
                 self._obsidian_vault.delete_file(file=file)
 
         content_from_template = ObsidianTemplateContent.from_content(
-            content=reference_template.content,
+            content=reference_template.content, field_factory=self._field_factory
         )
         if file.content != content_from_template:
             file.content = content_from_template
@@ -105,8 +139,8 @@ class ObsidianTemplatesManager:
         )
         file = ObsidianTemplateFile(
             path=template_path,
-            attachment_manager=self._obsidian_vault.attachments_manager,
             addon_config=self._addon_config,
+            field_factory=self._field_factory,
         )
         return file
 
@@ -118,7 +152,7 @@ class ObsidianTemplatesManager:
             if check_is_srs_file(path=file_path):
                 obsidian_file = ObsidianTemplateFile(
                     path=file_path,
-                    attachment_manager=self._obsidian_vault.attachments_manager,
                     addon_config=self._addon_config,
+                    field_factory=self._field_factory,
                 )
                 yield obsidian_file
