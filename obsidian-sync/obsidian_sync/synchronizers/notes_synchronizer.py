@@ -34,7 +34,7 @@ from typing import Dict, List
 from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.anki.app.anki_app import AnkiApp
 from obsidian_sync.anki.anki_note import AnkiNote
-from obsidian_sync.constants import ADD_ON_NAME
+from obsidian_sync.constants import ADD_ON_NAME, OBSIDIAN_LINK_URL_FIELD_NAME
 from obsidian_sync.markup_translator import MarkupTranslator
 from obsidian_sync.obsidian.config import ObsidianConfig
 from obsidian_sync.obsidian.obsidian_note import ObsidianNote
@@ -132,12 +132,16 @@ class NotesSynchronizer:
             self._obsidian_notes_manager.update_obsidian_note_with_note(
                 obsidian_note=obsidian_note, reference_note=anki_note
             )
-        if (
-            self._addon_config.add_obsidian_url_in_anki
-            and anki_note.content.fields[-1] != obsidian_note.content.fields[-1]
-        ):
-            obsidian_note = self._sanitize_obsidian_note(obsidian_note=obsidian_note)
-            self._anki_app.update_anki_note_with_note(note=obsidian_note)
+        if self._addon_config.add_obsidian_url_in_anki:
+            anki_note_obsidian_url_field = next(
+                f for f in anki_note.content.fields if f.name == OBSIDIAN_LINK_URL_FIELD_NAME
+            )
+            obsidian_note_obsidian_url_field = next(
+                f for f in obsidian_note.content.fields if f.name == OBSIDIAN_LINK_URL_FIELD_NAME
+            )
+            if anki_note_obsidian_url_field.text != obsidian_note_obsidian_url_field.text:
+                obsidian_note = self._sanitize_obsidian_note(obsidian_note=obsidian_note)
+                self._anki_app.update_anki_note_with_note(note=obsidian_note)
 
     def _sanitize_anki_notes(self, anki_notes: Dict[int, AnkiNote]) -> Dict[int, AnkiNote]:
         for note_id in list(anki_notes.keys()):
