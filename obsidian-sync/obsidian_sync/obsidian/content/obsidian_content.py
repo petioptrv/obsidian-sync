@@ -40,7 +40,6 @@ from obsidian_sync.obsidian.content.field.obsidian_note_field import ObsidianNot
 from obsidian_sync.obsidian.content.field.obsidian_template_field import ObsidianTemplateFieldFactory, ObsidianTemplateField
 from obsidian_sync.obsidian.content.obsidian_properties import ObsidianTemplateProperties, ObsidianNoteProperties, \
     ObsidianProperties
-from obsidian_sync.obsidian.content.obsidian_reference import ObsidianReferenceFactory
 
 
 @dataclass

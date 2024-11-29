@@ -8,7 +8,6 @@ from obsidian_sync.anki.app.anki_app import AnkiApp
 from obsidian_sync.anki.anki_note import AnkiNote
 from obsidian_sync.base_types.note import Note
 from obsidian_sync.constants import DEFAULT_NOTE_ID_FOR_NEW_NOTES, ADD_ON_NAME
-from obsidian_sync.markup_translator import MarkupTranslator
 
 
 class AnkiTestApp(AnkiApp):

@@ -29,22 +29,24 @@
 # Any modifications to this file must keep this entire header intact.
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Tuple, Callable
+from typing import Dict, List, Tuple, Callable, Optional
 
 from PyQt6.QtGui import QAction, QKeySequence
 from PyQt6.QtWidgets import QFileDialog, QApplication
 import aqt
 from anki.consts import QUEUE_TYPE_SUSPENDED
+from anki.notes import Note as AnkiSystemNote
 
+from obsidian_sync.addon_metadata import AddonMetadata
 from obsidian_sync.anki.anki_content import AnkiTemplateContent, \
     AnkiTemplateProperties, AnkiNoteProperties, AnkiNoteContent, AnkiNoteField, AnkiTemplateField, \
     AnkiReferencesFactory
 from obsidian_sync.anki.anki_note import AnkiNote
+from obsidian_sync.anki.anki_note_changes import AnkiNoteChanges
 from obsidian_sync.anki.anki_template import AnkiTemplate
 from obsidian_sync.anki.app.anki_media_manager import AnkiReferencesManager
 from obsidian_sync.base_types.note import Note
 from obsidian_sync.constants import ADD_ON_NAME, DEFAULT_NOTE_ID_FOR_NEW_NOTES
-from obsidian_sync.obsidian.content import field
 
 
 class AnkiApp:
@@ -53,6 +55,7 @@ class AnkiApp:
         self._references_factory = AnkiReferencesFactory(
             anki_references_manager=self._media_manager,
         )
+        self._metadata: Optional[AddonMetadata] = None
 
     @property
     def config(self):
@@ -65,6 +68,9 @@ class AnkiApp:
     @property
     def addon_config_editor_will_update_json(self) -> List:
         return aqt.gui_hooks.addon_config_editor_will_update_json
+
+    def set_metadata(self, metadata: AddonMetadata):
+        self._metadata = metadata
 
     def get_all_anki_templates(self) -> Dict[int, AnkiTemplate]:
         templates = {}
@@ -206,10 +212,40 @@ class AnkiApp:
 
         return notes
 
+    def get_note_changes(self) -> AnkiNoteChanges:
+        col = aqt.mw.col
+        new_notes = []
+        updated_notes = {}
+        deleted_note_ids = set()
+        anki_notes_synced_to_obsidian = self._metadata.anki_notes_synced_to_obsidian
+        last_sync_timestamp = self._metadata.last_sync_timestamp
+        note_ids_in_anki = col.find_notes("")
+
+        for note_id in note_ids_in_anki:
+            anki_system_note = col.get_note(note_id)
+            modified_timestamp = self._get_anki_system_note_modified_timestamp(note=anki_system_note)
+            if modified_timestamp > last_sync_timestamp:
+                anki_note = self.get_note_by_id(note_id=note_id)
+                if note_id not in anki_notes_synced_to_obsidian:
+                    new_notes.append(anki_note)
+                else:
+                    anki_notes_synced_to_obsidian.remove(note_id)
+                    updated_notes[note_id] = anki_note
+
+        anki_notes_synced_to_obsidian -= set(updated_notes.keys())
+
+        for note_id in anki_notes_synced_to_obsidian:
+            if note_id not in note_ids_in_anki:
+                deleted_note_ids.add(note_id)
+
+        return AnkiNoteChanges(
+            new_notes=new_notes, updated_notes=updated_notes, deleted_note_ids=deleted_note_ids
+        )
+
     def get_note_by_id(self, note_id: int) -> AnkiNote:
         col = aqt.mw.col
-        note = col.get_note(note_id)
-        cards = note.cards()
+        anki_system_note = col.get_note(note_id)
+        cards = anki_system_note.cards()
 
         maximum_card_difficulty = max(
             card.memory_state.difficulty
@@ -219,19 +255,21 @@ class AnkiApp:
         suspended = all(card.queue == QUEUE_TYPE_SUSPENDED for card in cards)
 
         properties = AnkiNoteProperties(
-            model_id=note.mid,
-            model_name=note.note_type()["name"],
-            note_id=note.id,
-            tags=note.tags,
+            model_id=anki_system_note.mid,
+            model_name=anki_system_note.note_type()["name"],
+            note_id=anki_system_note.id,
+            tags=anki_system_note.tags,
             suspended=suspended,
             maximum_card_difficulty=maximum_card_difficulty,
-            date_modified_in_anki=datetime.fromtimestamp(note.mod or note.id / 1000),
+            date_modified_in_anki=(
+                datetime.fromtimestamp(self._get_anki_system_note_modified_timestamp(note=anki_system_note))
+            ),
         )
         fields = []
-        model_id = note.mid
+        model_id = anki_system_note.mid
 
         note_refactored = False
-        for field_name, field_text in note.items():
+        for field_name, field_text in anki_system_note.items():
             references = self._references_factory.from_card_field_text(
                 model_id=model_id, card_field_text=field_text
             )
@@ -250,16 +288,19 @@ class AnkiApp:
             )
 
         if note_refactored:
-            col.update_note(note=note)
+            col.update_note(note=anki_system_note)
 
         content = AnkiNoteContent(properties=properties, fields=fields)
         note = AnkiNote(content=content)
 
         return note
 
+    def delete_note_in_anki(self, note: AnkiNote):
+        self.delete_note_by_id(note_id=note.id)
+
     @staticmethod
-    def delete_note_in_anki(note: AnkiNote):
-        aqt.mw.col.remove_notes(note_ids=[note.content.properties.note_id])
+    def delete_note_by_id(note_id: int):
+        aqt.mw.col.remove_notes(note_ids=[note_id])
 
     @staticmethod
     def show_info(text: str, title: str):
@@ -331,3 +372,7 @@ class AnkiApp:
     @staticmethod
     def _get_back_template_field_entry_string(field_name: str) -> str:
         return f"\n\n<hr id=\"{field_name}\">\n\n{{{{{field_name}}}}}"
+
+    @staticmethod
+    def _get_anki_system_note_modified_timestamp(note: AnkiSystemNote) -> int:
+        return note.mod or note.id / 1000

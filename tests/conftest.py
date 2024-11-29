@@ -1,5 +1,6 @@
 import json
 import shutil
+import time
 from pathlib import Path
 from typing import Dict
 
@@ -8,6 +9,7 @@ from PIL import Image as PILImage
 import aqt
 
 from obsidian_sync.addon_config import AddonConfig
+from obsidian_sync.addon_metadata import AddonMetadata
 from obsidian_sync.anki.app.anki_app import AnkiApp
 from obsidian_sync.constants import OBSIDIAN_SETTINGS_FOLDER, OBSIDIAN_APP_SETTINGS_FILE, OBSIDIAN_TRASH_OPTION_KEY, \
     OBSIDIAN_PERMA_DELETE_TRASH_OPTION_VALUE, OBSIDIAN_TEMPLATES_SETTINGS_FILE, OBSIDIAN_TEMPLATES_OPTION_KEY, \
@@ -25,7 +27,7 @@ from obsidian_sync.obsidian.obsidian_templates_manager import ObsidianTemplatesM
 from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 from obsidian_sync.synchronizers.notes_synchronizer import NotesSynchronizer
 from obsidian_sync.synchronizers.templates_synchronizer import TemplatesSynchronizer
-from obsidian_sync import addon_metadata
+from obsidian_sync import addon_metadata as addon_metadata_module
 from tests.anki_test_app import AnkiTestApp
 
 
@@ -199,8 +201,10 @@ def aqt_run(
 
 
 @pytest.fixture(scope="session")
-def anki_test_app(aqt_run: aqt.AnkiApp) -> AnkiTestApp:
-    return AnkiTestApp()
+def anki_test_app(aqt_run: aqt.AnkiApp, addon_metadata: addon_metadata_module.AddonMetadata) -> AnkiTestApp:
+    test_app = AnkiTestApp()
+    test_app.set_metadata(metadata=addon_metadata)
+    return test_app
 
 
 @pytest.fixture(scope="session")
@@ -223,10 +227,11 @@ def anki_setup_and_teardown(
     anki_addon_meta_file: Path,
     anki_addon_meta_default_data: Dict,
     anki_test_app: AnkiTestApp,
+    addon_metadata: addon_metadata_module.AddonMetadata,
 ):
     anki_test_app.setup_performed = True
 
-    addon_metadata.ADD_ON_METADATA_PATH = tmp_path / addon_metadata.ADD_ON_METADATA_PATH.name
+    addon_metadata_module.ADD_ON_METADATA_PATH = tmp_path / addon_metadata_module.ADD_ON_METADATA_PATH.name
     shutil.rmtree(anki_logs_folder)
     anki_logs_folder.mkdir()
     anki_addon_manifest_file.write_text(data=json.dumps(obj=anki_addon_manifest_default_data))
@@ -234,19 +239,35 @@ def anki_setup_and_teardown(
 
     models_backup = anki_test_app.get_all_models()
 
+    for note_id in addon_metadata.anki_notes_synced_to_obsidian:
+        addon_metadata.remove_synced_note(note_id=note_id, note_path=None)
+
     yield
 
     anki_test_app.remove_all_notes()
     anki_test_app.remove_all_attachments()
     anki_test_app.remove_all_note_models()
     anki_test_app.add_backed_up_note_models(models=models_backup)
-    if addon_metadata.ADD_ON_METADATA_PATH.exists():
-        addon_metadata.ADD_ON_METADATA_PATH.unlink()
+    if addon_metadata_module.ADD_ON_METADATA_PATH.exists():
+        addon_metadata_module.ADD_ON_METADATA_PATH.unlink()
 
     anki_test_app.setup_performed = False
 
 
 # ================== OBSIDIAN ==========================================================
+
+
+@pytest.fixture(scope="session")
+def addon_metadata() -> addon_metadata_module.AddonMetadata:
+    def commit_sync(self):
+        self._last_sync_timestamp = int(time.time())
+        self._save()
+
+    addon_metadata_module.AddonMetadata.commit_sync = commit_sync
+    metadata = addon_metadata_module.AddonMetadata()
+    metadata._sync_started = True
+
+    return metadata
 
 
 @pytest.fixture(scope="session")
@@ -305,12 +326,14 @@ def obsidian_notes_manager(
     addon_config: AddonConfig,
     obsidian_config: ObsidianConfig,
     obsidian_vault: ObsidianVault,
+    addon_metadata: AddonMetadata,
 ) -> ObsidianNotesManager:
     return ObsidianNotesManager(
         anki_app=anki_app,
         addon_config=addon_config,
         obsidian_config=obsidian_config,
         obsidian_vault=obsidian_vault,
+        metadata=addon_metadata,
     )
 
 
@@ -321,7 +344,11 @@ def obsidian_setup_and_teardown(
     srs_attachments_in_obsidian_folder: Path,
     obsidian_config: ObsidianConfig,
     obsidian_settings_folder: Path,
+    addon_metadata: addon_metadata_module.AddonMetadata,
 ):
+    for note_id in addon_metadata.anki_notes_synced_to_obsidian:
+        addon_metadata.remove_synced_note(note_id=note_id, note_path=None)
+
     if srs_folder_in_obsidian.exists():
         shutil.rmtree(srs_folder_in_obsidian)
     if obsidian_templates_folder.exists():

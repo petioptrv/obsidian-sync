@@ -1,63 +1,23 @@
 import time
 import urllib.parse
 from pathlib import Path
-from typing import List
 
 import pytest
 from PIL import Image as PILImage
 
 from obsidian_sync.addon_config import AddonConfig
-from obsidian_sync.constants import SRS_NOTE_IDENTIFIER_COMMENT, \
-    SRS_NOTE_FIELD_IDENTIFIER_COMMENT, SRS_HEADER_TITLE_LEVEL, \
-    DEFAULT_NOTE_ID_FOR_NEW_NOTES, CONF_ADD_OBSIDIAN_URL_IN_ANKI, OBSIDIAN_LINK_URL_FIELD_NAME
+from obsidian_sync.addon_metadata import AddonMetadata
+from obsidian_sync.constants import DEFAULT_NOTE_ID_FOR_NEW_NOTES, CONF_ADD_OBSIDIAN_URL_IN_ANKI, OBSIDIAN_LINK_URL_FIELD_NAME
 from obsidian_sync.markup_translator import MarkupTranslator
 from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
 from obsidian_sync.obsidian.content.field.obsidian_note_field import ObsidianNoteFieldFactory
-from obsidian_sync.obsidian.content.obsidian_properties import ObsidianNoteProperties
 from obsidian_sync.obsidian.obsidian_file import ObsidianNoteFile
 from obsidian_sync.obsidian.obsidian_notes_manager import ObsidianNotesManager
 from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 from obsidian_sync.synchronizers.notes_synchronizer import NotesSynchronizer
 from obsidian_sync.synchronizers.templates_synchronizer import TemplatesSynchronizer
 from tests.anki_test_app import AnkiTestApp
-
-
-def build_basic_obsidian_note(
-    anki_test_app: AnkiTestApp,
-    front_text: str,
-    back_text: str,
-    file_path: Path,
-    tags: List[str] = None,
-):
-    model_name = "Basic"
-    model_id = anki_test_app.get_model_id(model_name=model_name)
-    note_text = f"""{
-    ObsidianNoteProperties(
-        model_id=model_id,
-        model_name="Basic",
-        note_id=DEFAULT_NOTE_ID_FOR_NEW_NOTES,
-        tags=tags or [],
-        suspended=False,
-        maximum_card_difficulty=0,
-        date_modified_in_anki=None,
-        date_synced=None,
-    ).to_obsidian_file_text()
-}
-{SRS_NOTE_IDENTIFIER_COMMENT}
-{SRS_NOTE_FIELD_IDENTIFIER_COMMENT}
-{SRS_HEADER_TITLE_LEVEL} Front
-
-{front_text}
-
-{SRS_NOTE_FIELD_IDENTIFIER_COMMENT}
-{SRS_HEADER_TITLE_LEVEL} Back
-
-{back_text}
-
-"""
-
-    file_path.parent.mkdir(parents=True, exist_ok=True)
-    file_path.write_text(data=note_text)
+from tests.utils import build_basic_obsidian_note
 
 
 def test_sync_new_obsidian_note_to_anki(
@@ -80,8 +40,8 @@ def test_sync_new_obsidian_note_to_anki(
     )
     obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
 
-    assert len(obsidian_notes_result.existing_obsidian_notes) == 0
-    assert len(obsidian_notes_result.new_obsidian_notes) == 1
+    assert len(obsidian_notes_result.existing_notes) == 0
+    assert len(obsidian_notes_result.new_notes) == 1
     assert len(anki_test_app.get_all_notes()) == 0
 
     notes_synchronizer.synchronize_notes()
@@ -90,7 +50,7 @@ def test_sync_new_obsidian_note_to_anki(
 
     anki_note = list(anki_test_app.get_all_notes().values())[0]
     obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
-    obsidian_note = obsidian_notes_result.existing_obsidian_notes[anki_note.id]
+    obsidian_note = obsidian_notes_result.existing_notes[anki_note.id]
 
     vault_url_string = urllib.parse.quote(string=obsidian_vault_folder.name)
     note_path_string_relative_to_vault = urllib.parse.quote(
@@ -115,6 +75,7 @@ def test_obsidian_note_associated_with_anki_counterpart_on_obsidian_file_name_ch
     notes_synchronizer: NotesSynchronizer,
     obsidian_notes_manager: ObsidianNotesManager,
     obsidian_vault_folder: Path,
+    addon_metadata: AddonMetadata,
 ):
     original_obsidian_note_file_name = srs_folder_in_obsidian / "test.md"
     updated_obsidian_note_file_name = srs_folder_in_obsidian / "updated test.md"
@@ -134,9 +95,10 @@ def test_obsidian_note_associated_with_anki_counterpart_on_obsidian_file_name_ch
 
     assert len(anki_test_app.get_all_notes()) == 1
 
-    anki_note = list(anki_test_app.get_all_notes().values())[0]
-    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
-    obsidian_note = obsidian_notes_result.existing_obsidian_notes[anki_note.id]
+    with addon_metadata:
+        anki_note = list(anki_test_app.get_all_notes().values())[0]
+        obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_note = obsidian_notes_result.existing_notes[anki_note.id]
 
     vault_url_string = urllib.parse.quote(string=obsidian_vault_folder.name)
     updated_note_path_string_relative_to_vault = urllib.parse.quote(
@@ -178,15 +140,15 @@ def test_ignore_non_srs_notes_in_obsidian(
 
     obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
 
-    assert len(obsidian_notes_result.existing_obsidian_notes) == 0
-    assert len(obsidian_notes_result.new_obsidian_notes) == 1
+    assert len(obsidian_notes_result.existing_notes) == 0
+    assert len(obsidian_notes_result.new_notes) == 1
     assert non_srs_note_path.exists()
 
     notes_synchronizer.synchronize_notes()
     obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
 
-    assert len(obsidian_notes_result.existing_obsidian_notes) == 1
-    assert len(obsidian_notes_result.new_obsidian_notes) == 0
+    assert len(obsidian_notes_result.existing_notes) == 1
+    assert len(obsidian_notes_result.new_notes) == 0
     assert non_srs_note_path.exists()
 
 
@@ -380,6 +342,7 @@ def test_sync_two_new_obsidian_notes_to_anki(
     markup_translator: MarkupTranslator,
     notes_synchronizer: NotesSynchronizer,
     obsidian_notes_manager: ObsidianNotesManager,
+    addon_metadata: AddonMetadata,
 ):
     build_basic_obsidian_note(
         anki_test_app=anki_test_app,
@@ -393,63 +356,24 @@ def test_sync_two_new_obsidian_notes_to_anki(
         back_text="Another back",
         file_path=srs_folder_in_obsidian / "another_test.md",
     )
-    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+    with addon_metadata:
+        obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
 
-    assert len(obsidian_notes_result.existing_obsidian_notes) == 0
-    assert len(obsidian_notes_result.new_obsidian_notes) == 2
+    assert len(obsidian_notes_result.existing_notes) == 0
+    assert len(obsidian_notes_result.new_notes) == 2
     assert len(anki_test_app.get_all_notes()) == 0
 
     notes_synchronizer.synchronize_notes()
 
-    anki_notes = anki_test_app.get_all_notes()
-    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+    with addon_metadata:
+        anki_notes = anki_test_app.get_all_notes()
+        obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
 
     assert len(anki_notes) == 2
-    assert len(obsidian_notes_result.existing_obsidian_notes) == 2
+    assert len(obsidian_notes_result.existing_notes) == 2
 
     for note_id, note in anki_notes.items():
-        assert note_id in obsidian_notes_result.existing_obsidian_notes
-
-
-def test_sync_two_new_obsidian_notes_to_anki(
-    anki_setup_and_teardown,
-    obsidian_setup_and_teardown,
-    anki_test_app: AnkiTestApp,
-    srs_folder_in_obsidian: Path,
-    addon_config: AddonConfig,
-    obsidian_config: ObsidianConfig,
-    markup_translator: MarkupTranslator,
-    notes_synchronizer: NotesSynchronizer,
-    obsidian_notes_manager: ObsidianNotesManager,
-):
-    build_basic_obsidian_note(
-        anki_test_app=anki_test_app,
-        front_text="Some front",
-        back_text="Some back",
-        file_path=srs_folder_in_obsidian / "some_test.md",
-    )
-    build_basic_obsidian_note(
-        anki_test_app=anki_test_app,
-        front_text="Another front",
-        back_text="Another back",
-        file_path=srs_folder_in_obsidian / "another_test.md",
-    )
-    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
-
-    assert len(obsidian_notes_result.existing_obsidian_notes) == 0
-    assert len(obsidian_notes_result.new_obsidian_notes) == 2
-    assert len(anki_test_app.get_all_notes()) == 0
-
-    notes_synchronizer.synchronize_notes()
-
-    anki_notes = anki_test_app.get_all_notes()
-    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
-
-    assert len(anki_notes) == 2
-    assert len(obsidian_notes_result.existing_obsidian_notes) == 2
-
-    for note_id, note in anki_notes.items():
-        assert note_id in obsidian_notes_result.existing_obsidian_notes
+        assert note_id in obsidian_notes_result.existing_notes
 
 
 def test_sync_new_obsidian_note_with_attachment_to_anki(
@@ -786,6 +710,7 @@ def test_sync_existing_obsidian_note_with_updated_tag_property_to_anki(
     notes_synchronizer: NotesSynchronizer,
     obsidian_notes_manager: ObsidianNotesManager,
     obsidian_vault: ObsidianVault,
+    addon_metadata: AddonMetadata,
 ):
     test_tag = "test"
     obsidian_file_path = srs_folder_in_obsidian / "test.md"
@@ -800,8 +725,9 @@ def test_sync_existing_obsidian_note_with_updated_tag_property_to_anki(
 
     time.sleep(1)
 
-    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
-    obsidian_note = list(obsidian_notes_result.existing_obsidian_notes.values())[0]
+    with addon_metadata:
+        obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+        obsidian_note = list(obsidian_notes_result.existing_notes.values())[0]
     obsidian_note.properties.tags.append(test_tag)
     obsidian_vault.save_file(file=obsidian_note.file)
 
@@ -820,6 +746,7 @@ def test_sync_existing_obsidian_note_with_updated_suspended_property_to_anki(
     notes_synchronizer: NotesSynchronizer,
     obsidian_notes_manager: ObsidianNotesManager,
     obsidian_vault: ObsidianVault,
+    addon_metadata: AddonMetadata,
 ):
     obsidian_file_path = srs_folder_in_obsidian / "test.md"
     build_basic_obsidian_note(
@@ -833,8 +760,9 @@ def test_sync_existing_obsidian_note_with_updated_suspended_property_to_anki(
 
     time.sleep(1)
 
-    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
-    obsidian_note = list(obsidian_notes_result.existing_obsidian_notes.values())[0]
+    with addon_metadata:
+        obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_note = list(obsidian_notes_result.existing_notes.values())[0]
     obsidian_note.properties.suspended = True
     obsidian_vault.save_file(file=obsidian_note.file)
 
