@@ -32,6 +32,7 @@ import re
 from textwrap import fill
 
 from markdown_extensions.fenced_code import FencedCodeExtension
+from markdown_extensions.wikilinks import WikiLinkExtension
 from markdownify import ATX, MarkdownConverter as HTMLToMarkdownConverter
 from markdown import Markdown as MarkdownToHTMLConverter
 from markdown.postprocessors import Postprocessor as MarkdownToHTMLPostprocessor
@@ -44,8 +45,9 @@ class MarkupTranslator:
             convert_as_inline=True,
         )
         fenced_code = FencedCodeExtension()
+        wikilinks = WikiLinkExtension()
         self._markdown_to_html_converter = MarkdownToHTMLConverter(
-            extensions=[fenced_code], output_format="html"
+            extensions=[fenced_code, wikilinks], output_format="html"
         )
         self._markdown_to_html_converter.postprocessors.register(
             item=ExtendedMarkdownToHTMLMathPostprocessor(md=self._markdown_to_html_converter),

@@ -68,7 +68,6 @@ def test_sanitizing_html_with_latex_in_line_math_statement():
 
 
 def test_sanitizing_html_with_latex_block_math_statement():
-
     markup_translator = MarkupTranslator()
 
     original_html_text = r"<p>Some in-line math \[x = 1\]</p>"
@@ -76,3 +75,15 @@ def test_sanitizing_html_with_latex_block_math_statement():
 
     assert sanitized_html_text == original_html_text
 
+
+def test_convert_wikilinks_reference_to_html():
+    markup_translator = MarkupTranslator()
+
+    obsidian_url_with_section = "obsidian://open?vault=Test%20Vault&file=Test%20File%23Heading"
+    alt_text = "alt text"
+    markdown_text = f"Some [[{obsidian_url_with_section}|{alt_text}]] to convert"
+    expected_html = f"""<p>Some <a href="{obsidian_url_with_section}" class="wikilink">{alt_text}</a> to convert</p>"""
+
+    html = markup_translator.translate_markdown_to_html(markdown=markdown_text)
+
+    assert html == expected_html
