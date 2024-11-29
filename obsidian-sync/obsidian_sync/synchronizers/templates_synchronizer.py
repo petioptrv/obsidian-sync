@@ -35,10 +35,10 @@ from typing import Dict
 
 from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.anki.anki_template import AnkiTemplate
-from obsidian_sync.obsidian.config import ObsidianConfig
+from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
 from obsidian_sync.obsidian.obsidian_template import ObsidianTemplate
 from obsidian_sync.anki.app.anki_app import AnkiApp
-from obsidian_sync.obsidian.templates_manager import ObsidianTemplatesManager
+from obsidian_sync.obsidian.obsidian_templates_manager import ObsidianTemplatesManager
 from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 from obsidian_sync.utils import format_add_on_message
 from obsidian_sync.constants import ADD_ON_NAME, OBSIDIAN_LINK_URL_FIELD_NAME

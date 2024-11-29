@@ -90,6 +90,9 @@ class ObsidianConfig:
             self._addon_config.obsidian_vault_path / OBSIDIAN_SETTINGS_FOLDER / OBSIDIAN_TEMPLATES_SETTINGS_FILE
         )
 
+        if not templates_json_path.exists():
+            templates_json_path.write_text(json.dumps({"folder": "templates"}))
+
         with open(templates_json_path, "r") as f:
             templates_settings_json = json.load(f)
 

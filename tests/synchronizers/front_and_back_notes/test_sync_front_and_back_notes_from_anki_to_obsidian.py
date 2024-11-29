@@ -17,7 +17,7 @@ from obsidian_sync.constants import MARKDOWN_FILE_SUFFIX, SRS_NOTE_IDENTIFIER_CO
 from obsidian_sync.file_utils import check_files_are_identical
 from obsidian_sync.markup_translator import MarkupTranslator
 from obsidian_sync.obsidian.content.obsidian_reference import ObsidianMediaReference
-from obsidian_sync.obsidian.notes_manager import ObsidianNotesManager
+from obsidian_sync.obsidian.obsidian_notes_manager import ObsidianNotesManager
 from obsidian_sync.synchronizers.notes_synchronizer import NotesSynchronizer
 from tests.anki_test_app import AnkiTestApp
 

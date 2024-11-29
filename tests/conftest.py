@@ -15,13 +15,13 @@ from obsidian_sync.constants import OBSIDIAN_SETTINGS_FOLDER, OBSIDIAN_APP_SETTI
     CONF_SRS_FOLDER_IN_OBSIDIAN, CONF_SYNC_WITH_OBSIDIAN_ON_ANKI_WEB_SYNC, CONF_ANKI_DECK_NAME_FOR_OBSIDIAN_IMPORTS, \
     SRS_ATTACHMENTS_FOLDER, CONF_ADD_OBSIDIAN_URL_IN_ANKI
 from obsidian_sync.markup_translator import MarkupTranslator
-from obsidian_sync.obsidian.config import ObsidianConfig
+from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
 from obsidian_sync.obsidian.content.field.obsidian_note_field import ObsidianNoteFieldFactory
 from obsidian_sync.obsidian.content.field.obsidian_template_field import ObsidianTemplateFieldFactory
 from obsidian_sync.obsidian.content.obsidian_reference import ObsidianReferenceFactory
-from obsidian_sync.obsidian.notes_manager import ObsidianNotesManager
+from obsidian_sync.obsidian.obsidian_notes_manager import ObsidianNotesManager
 from obsidian_sync.obsidian.reference_manager import ObsidianReferencesManager
-from obsidian_sync.obsidian.templates_manager import ObsidianTemplatesManager
+from obsidian_sync.obsidian.obsidian_templates_manager import ObsidianTemplatesManager
 from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 from obsidian_sync.synchronizers.notes_synchronizer import NotesSynchronizer
 from obsidian_sync.synchronizers.templates_synchronizer import TemplatesSynchronizer

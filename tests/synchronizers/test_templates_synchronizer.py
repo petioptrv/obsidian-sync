@@ -9,8 +9,8 @@ from obsidian_sync.constants import MARKDOWN_FILE_SUFFIX, \
     CONF_ADD_OBSIDIAN_URL_IN_ANKI, OBSIDIAN_LINK_URL_FIELD_NAME, DEFAULT_NOTE_ID_FOR_NEW_NOTES, \
     DEFAULT_NOTE_SUSPENDED_STATE_FOR_NEW_NOTES, DEFAULT_NOTE_MAXIMUM_CARD_DIFFICULTY_FOR_NEW_NOTES, \
     MODEL_ID_PROPERTY_NAME, SUSPENDED_PROPERTY_NAME, MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME
-from obsidian_sync.obsidian.config import ObsidianConfig
-from obsidian_sync.obsidian.templates_manager import ObsidianTemplatesManager
+from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
+from obsidian_sync.obsidian.obsidian_templates_manager import ObsidianTemplatesManager
 from obsidian_sync.synchronizers.templates_synchronizer import TemplatesSynchronizer
 from tests.anki_test_app import AnkiTestApp
 from tests.constants import DEFAULT_ANKI_TEMPLATES_COUNT

@@ -31,7 +31,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List
 
-from obsidian_sync.anki.app.media_manager import AnkiReferencesManager
+from obsidian_sync.anki.app.anki_media_manager import AnkiReferencesManager
 from obsidian_sync.base_types.content import Field, Content, Properties, NoteProperties, Reference, NoteContent, \
     NoteField, TemplateField, MediaReference, ObsidianURLReference
 from obsidian_sync.markup_translator import MarkupTranslator

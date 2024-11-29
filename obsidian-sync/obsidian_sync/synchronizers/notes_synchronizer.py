@@ -36,9 +36,9 @@ from obsidian_sync.anki.app.anki_app import AnkiApp
 from obsidian_sync.anki.anki_note import AnkiNote
 from obsidian_sync.constants import ADD_ON_NAME, OBSIDIAN_LINK_URL_FIELD_NAME
 from obsidian_sync.markup_translator import MarkupTranslator
-from obsidian_sync.obsidian.config import ObsidianConfig
+from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
 from obsidian_sync.obsidian.obsidian_note import ObsidianNote
-from obsidian_sync.obsidian.notes_manager import ObsidianNotesManager
+from obsidian_sync.obsidian.obsidian_notes_manager import ObsidianNotesManager
 from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 from obsidian_sync.utils import format_add_on_message
 

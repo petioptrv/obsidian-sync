@@ -33,7 +33,7 @@ from typing import List, Optional
 from obsidian_sync.obsidian.content.obsidian_content import ObsidianTemplateContent
 from obsidian_sync.obsidian.content.field.obsidian_field import ObsidianField
 from obsidian_sync.obsidian.content.obsidian_properties import ObsidianTemplateProperties
-from obsidian_sync.obsidian.file import ObsidianTemplateFile
+from obsidian_sync.obsidian.obsidian_file import ObsidianTemplateFile
 from obsidian_sync.base_types.template import Template
 
 

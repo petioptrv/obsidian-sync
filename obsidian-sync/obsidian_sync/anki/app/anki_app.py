@@ -41,7 +41,7 @@ from obsidian_sync.anki.anki_content import AnkiTemplateContent, \
     AnkiReferencesFactory
 from obsidian_sync.anki.anki_note import AnkiNote
 from obsidian_sync.anki.anki_template import AnkiTemplate
-from obsidian_sync.anki.app.media_manager import AnkiReferencesManager
+from obsidian_sync.anki.app.anki_media_manager import AnkiReferencesManager
 from obsidian_sync.base_types.note import Note
 from obsidian_sync.constants import ADD_ON_NAME, DEFAULT_NOTE_ID_FOR_NEW_NOTES
 from obsidian_sync.obsidian.content import field

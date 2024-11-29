@@ -10,11 +10,11 @@ from obsidian_sync.constants import SRS_NOTE_IDENTIFIER_COMMENT, \
     SRS_NOTE_FIELD_IDENTIFIER_COMMENT, SRS_HEADER_TITLE_LEVEL, \
     DEFAULT_NOTE_ID_FOR_NEW_NOTES, CONF_ADD_OBSIDIAN_URL_IN_ANKI, OBSIDIAN_LINK_URL_FIELD_NAME
 from obsidian_sync.markup_translator import MarkupTranslator
-from obsidian_sync.obsidian.config import ObsidianConfig
+from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
 from obsidian_sync.obsidian.content.field.obsidian_note_field import ObsidianNoteFieldFactory
 from obsidian_sync.obsidian.content.obsidian_properties import ObsidianNoteProperties
-from obsidian_sync.obsidian.file import ObsidianNoteFile
-from obsidian_sync.obsidian.notes_manager import ObsidianNotesManager
+from obsidian_sync.obsidian.obsidian_file import ObsidianNoteFile
+from obsidian_sync.obsidian.obsidian_notes_manager import ObsidianNotesManager
 from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 from obsidian_sync.synchronizers.notes_synchronizer import NotesSynchronizer
 from obsidian_sync.synchronizers.templates_synchronizer import TemplatesSynchronizer

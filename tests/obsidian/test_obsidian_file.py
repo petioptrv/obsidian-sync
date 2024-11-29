@@ -17,7 +17,7 @@ from obsidian_sync.obsidian.content.field.obsidian_note_field import ObsidianNot
 from obsidian_sync.obsidian.content.field.obsidian_template_field import ObsidianTemplateFieldFactory
 from obsidian_sync.obsidian.content.obsidian_properties import ObsidianTemplateProperties, ObsidianNoteProperties
 from obsidian_sync.obsidian.content.obsidian_reference import ObsidianMediaReference
-from obsidian_sync.obsidian.file import ObsidianNoteFile, ObsidianTemplateFile
+from obsidian_sync.obsidian.obsidian_file import ObsidianNoteFile, ObsidianTemplateFile
 
 
 def test_parse_template(

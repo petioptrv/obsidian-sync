@@ -39,7 +39,7 @@ from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.base_types.content import MediaReference, ObsidianURLReference
 from obsidian_sync.constants import MEDIA_FILE_SUFFIXES, MARKDOWN_FILE_SUFFIX
 from obsidian_sync.file_utils import check_files_are_identical
-from obsidian_sync.obsidian.config import ObsidianConfig
+from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
 from obsidian_sync.obsidian.utils import obsidian_url_for_note_path
 
 
