@@ -3,6 +3,7 @@ import urllib.parse
 from pathlib import Path
 from typing import List
 
+import pytest
 from PIL import Image as PILImage
 
 from obsidian_sync.addon_config import AddonConfig
@@ -654,6 +655,32 @@ def test_sync_new_obsidian_note_with_links_to_other_notes_to_anki_substituting_w
             and anki_notes[1].content.fields[0].text == expected_front_field_html
         )
     )
+
+
+@pytest.mark.skip
+def test_sync_new_obsidian_note_with_link_to_heading_in_same_note_to_anki_substituting_with_obsidian_url(
+    anki_setup_and_teardown,
+    obsidian_setup_and_teardown,
+    anki_test_app: AnkiTestApp,
+    srs_folder_in_obsidian: Path,
+    obsidian_vault_folder: Path,
+    obsidian_notes_manager: ObsidianNotesManager,
+    notes_synchronizer: NotesSynchronizer,
+):
+    raise NotImplementedError
+
+
+@pytest.mark.skip
+def test_sync_new_obsidian_note_with_link_to_block_in_same_note_to_anki_substituting_with_obsidian_url(
+    anki_setup_and_teardown,
+    obsidian_setup_and_teardown,
+    anki_test_app: AnkiTestApp,
+    srs_folder_in_obsidian: Path,
+    obsidian_vault_folder: Path,
+    obsidian_notes_manager: ObsidianNotesManager,
+    notes_synchronizer: NotesSynchronizer,
+):
+    raise NotImplementedError
 
 
 def test_obsidian_note_in_anki_remains_the_same_on_subsequent_sync(

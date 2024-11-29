@@ -40,11 +40,10 @@ from obsidian_sync.utils import format_add_on_message
 class AnkiAddon:
     """Anki add-on composition root.
 
-    todo: debug why Obsidian URL field is not displayed on my personal collection (it's still added...)
     todo: Implement the metadata-based approach
         - Ensure that an already synced Obsidian file that has been moved or renamed is handled properly
 
-    todo: explore using wikilinks (the markdown converters have support for it)
+    todo: explore using wikilinks (the markdown converters have support for it—test case already written)
     todo: add initialization walkthrough for first-time users to setup the configs interactively
     todo: Explore adding an option to include links in Obsidian that open the note in Anki using AnkiConnect
     """

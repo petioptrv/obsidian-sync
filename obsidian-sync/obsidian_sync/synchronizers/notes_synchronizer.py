@@ -139,7 +139,7 @@ class NotesSynchronizer:
             obsidian_note_obsidian_url_field = next(
                 f for f in obsidian_note.content.fields if f.name == OBSIDIAN_LINK_URL_FIELD_NAME
             )
-            if anki_note_obsidian_url_field.text != obsidian_note_obsidian_url_field.text:
+            if anki_note_obsidian_url_field.to_markdown() != obsidian_note_obsidian_url_field.to_markdown():
                 obsidian_note = self._sanitize_obsidian_note(obsidian_note=obsidian_note)
                 self._anki_app.update_anki_note_with_note(note=obsidian_note)
 

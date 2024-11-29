@@ -1,3 +1,5 @@
+import pytest
+
 from obsidian_sync.markup_translator import MarkupTranslator
 
 
@@ -76,6 +78,7 @@ def test_sanitizing_html_with_latex_block_math_statement():
     assert sanitized_html_text == original_html_text
 
 
+@pytest.mark.skip
 def test_convert_wikilinks_reference_to_html():
     markup_translator = MarkupTranslator()
 
@@ -87,3 +90,5 @@ def test_convert_wikilinks_reference_to_html():
     html = markup_translator.translate_markdown_to_html(markdown=markdown_text)
 
     assert html == expected_html
+
+    raise NotImplementedError

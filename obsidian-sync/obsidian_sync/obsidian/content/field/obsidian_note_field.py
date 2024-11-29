@@ -28,8 +28,9 @@
 #
 # Any modifications to this file must keep this entire header intact.
 
+import urllib.parse
 from abc import ABC
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 
@@ -37,7 +38,8 @@ from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.base_types.content import NoteField
 from obsidian_sync.constants import OBSIDIAN_LINK_URL_FIELD_NAME
 from obsidian_sync.markup_translator import MarkupTranslator
-from obsidian_sync.obsidian.content.obsidian_reference import ObsidianMediaReference, ObsidianReferenceFactory, ObsidianReference
+from obsidian_sync.obsidian.content.obsidian_reference import ObsidianReferenceFactory, \
+    ObsidianReference
 from obsidian_sync.obsidian.content.field.obsidian_field import ObsidianFieldFactory, ObsidianField
 from obsidian_sync.obsidian.utils import obsidian_url_for_note_path
 
@@ -87,6 +89,7 @@ class ObsidianNoteFieldFactory(ObsidianFieldFactory):
                 ObsidianLinkURLNoteField.from_file_path(
                     note_path=note_path,
                     addon_config=self._addon_config,
+                    obsidian_reference_factory=self._references_factory,
                 )
             )
 
@@ -162,8 +165,6 @@ class ObsidianNoteField(ObsidianNoteFieldBase):
 
 @dataclass
 class ObsidianLinkURLNoteField(ObsidianNoteFieldBase):
-    references: List["ObsidianMediaReference"] = field(default_factory=list)
-
     def __eq__(self, other: object) -> bool:
         return super().__eq__(other)
 
@@ -172,14 +173,24 @@ class ObsidianLinkURLNoteField(ObsidianNoteFieldBase):
         cls,
         note_path: Path,
         addon_config: AddonConfig,
+        obsidian_reference_factory: ObsidianReferenceFactory,
     ) -> "ObsidianLinkURLNoteField":
         markup_translator = MarkupTranslator()
         obsidian_url = obsidian_url_for_note_path(
             vault_path=addon_config.obsidian_vault_path, note_path=note_path
         )
+        note_path_relative_to_vault = note_path.relative_to(addon_config.obsidian_vault_path)
+        obsidian_field_text = markup_translator.to_markdown_link(
+            text=OBSIDIAN_LINK_URL_FIELD_NAME, url=urllib.parse.quote(str(note_path_relative_to_vault))
+        )
+        field_text = markup_translator.to_markdown_link(text=OBSIDIAN_LINK_URL_FIELD_NAME, url=obsidian_url)
+        field_text = markup_translator.sanitize_markdown(markdown=field_text)
         field_ = ObsidianLinkURLNoteField(
             name=OBSIDIAN_LINK_URL_FIELD_NAME,
-            text=markup_translator.to_markdown_link(text=OBSIDIAN_LINK_URL_FIELD_NAME, url=obsidian_url),
+            text=field_text,
+            references=obsidian_reference_factory.from_obsidian_field_text(
+                field_text=obsidian_field_text, note_path=note_path
+            ),
         )
         return field_
 

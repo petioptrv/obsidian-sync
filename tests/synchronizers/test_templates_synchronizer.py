@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.constants import MARKDOWN_FILE_SUFFIX, \
     MODEL_NAME_PROPERTY_NAME, NOTE_ID_PROPERTY_NAME, TAGS_PROPERTY_NAME, \
@@ -84,6 +86,7 @@ def test_create_new_anki_template_in_obsidian(
     assert template_file.read_text() == expected_text
 
 
+@pytest.mark.skip
 def test_dont_sync_anki_templates_to_obsidian_if_the_obsidian_template_extension_is_not_enabled(
     anki_setup_and_teardown,
     obsidian_setup_and_teardown,
@@ -95,6 +98,7 @@ def test_dont_sync_anki_templates_to_obsidian_if_the_obsidian_template_extension
     raise NotImplementedError
 
 
+@pytest.mark.skip
 def test_create_a_new_anki_template_in_obsidian_after_resolving_a_template_name_collision_with_an_existing_user_template(
     anki_setup_and_teardown,
     obsidian_setup_and_teardown,
