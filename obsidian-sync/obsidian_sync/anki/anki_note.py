@@ -30,7 +30,7 @@
 
 from dataclasses import dataclass
 
-from obsidian_sync.anki.content import AnkiNoteContent
+from obsidian_sync.anki.anki_content import AnkiNoteContent
 from obsidian_sync.base_types.note import Note
 
 

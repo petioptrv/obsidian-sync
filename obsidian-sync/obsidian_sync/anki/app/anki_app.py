@@ -36,14 +36,15 @@ from PyQt6.QtWidgets import QFileDialog, QApplication
 import aqt
 from anki.consts import QUEUE_TYPE_SUSPENDED
 
-from obsidian_sync.anki.content import AnkiTemplateContent, \
+from obsidian_sync.anki.anki_content import AnkiTemplateContent, \
     AnkiTemplateProperties, AnkiNoteProperties, AnkiNoteContent, AnkiNoteField, AnkiTemplateField, \
     AnkiReferencesFactory
-from obsidian_sync.anki.note import AnkiNote
-from obsidian_sync.anki.template import AnkiTemplate
+from obsidian_sync.anki.anki_note import AnkiNote
+from obsidian_sync.anki.anki_template import AnkiTemplate
 from obsidian_sync.anki.app.media_manager import AnkiReferencesManager
 from obsidian_sync.base_types.note import Note
 from obsidian_sync.constants import ADD_ON_NAME, DEFAULT_NOTE_ID_FOR_NEW_NOTES
+from obsidian_sync.obsidian.content import field
 
 
 class AnkiApp:
@@ -183,9 +184,14 @@ class AnkiApp:
                 )
                 col.update_card(card=card)
 
-        anki_system_note.fields = [
-            field.to_anki_field_text()
+        note_fields = {
+            field.name: field
             for field in content_from_note.fields
+        }
+        model = col.models.get(id=content_from_note.properties.model_id)
+        anki_system_note.fields = [
+            note_fields[fld["name"]].to_anki_field_text()
+            for fld in model["flds"]
         ]
 
         col.update_note(note=anki_system_note)

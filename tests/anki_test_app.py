@@ -4,8 +4,8 @@ from typing import List, Dict, Any
 import aqt
 from anki.models import NotetypeDict
 
-from obsidian_sync.anki.app.app import AnkiApp
-from obsidian_sync.anki.note import AnkiNote
+from obsidian_sync.anki.app.anki_app import AnkiApp
+from obsidian_sync.anki.anki_note import AnkiNote
 from obsidian_sync.base_types.note import Note
 from obsidian_sync.constants import DEFAULT_NOTE_ID_FOR_NEW_NOTES, ADD_ON_NAME
 from obsidian_sync.markup_translator import MarkupTranslator
@@ -87,6 +87,18 @@ class AnkiTestApp(AnkiApp):
         note_type = col.models.by_name(name=model_name)
         col.models.rename_field(notetype=note_type, field=note_type["flds"][field_order], new_name=new_name)
         col.models.update_dict(notetype=note_type)
+
+    def move_model_field(
+        self, model_name: str, field_name: str, new_field_index: int
+    ):
+        assert self.setup_performed
+
+        col = aqt.mw.col
+        model = col.models.by_name(name=model_name)
+        fields = model["flds"]
+        field = next(field for field in fields if field["name"] == field_name)
+        col.models.reposition_field(notetype=model, field=field, idx=new_field_index)
+        col.models.update_dict(notetype=model)
 
     def remove_all_notes(self):
         assert self.setup_performed  # use the anki_setup_and_teardown fixture

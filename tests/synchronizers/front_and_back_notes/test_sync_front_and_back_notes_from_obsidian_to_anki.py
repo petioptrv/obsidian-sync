@@ -11,11 +11,11 @@ from obsidian_sync.constants import SRS_NOTE_IDENTIFIER_COMMENT, \
     DEFAULT_NOTE_ID_FOR_NEW_NOTES, CONF_ADD_OBSIDIAN_URL_IN_ANKI, OBSIDIAN_LINK_URL_FIELD_NAME
 from obsidian_sync.markup_translator import MarkupTranslator
 from obsidian_sync.obsidian.config import ObsidianConfig
-from obsidian_sync.obsidian.content.field.note_field import ObsidianNoteFieldFactory
-from obsidian_sync.obsidian.content.properties import ObsidianNoteProperties
+from obsidian_sync.obsidian.content.field.obsidian_note_field import ObsidianNoteFieldFactory
+from obsidian_sync.obsidian.content.obsidian_properties import ObsidianNoteProperties
 from obsidian_sync.obsidian.file import ObsidianNoteFile
 from obsidian_sync.obsidian.notes_manager import ObsidianNotesManager
-from obsidian_sync.obsidian.vault import ObsidianVault
+from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 from obsidian_sync.synchronizers.notes_synchronizer import NotesSynchronizer
 from obsidian_sync.synchronizers.templates_synchronizer import TemplatesSynchronizer
 from tests.anki_test_app import AnkiTestApp
@@ -260,6 +260,63 @@ def test_sync_moved_existing_obsidian_note_obsidian_url_to_anki(
         f"obsidian://open?vault={vault_name}&amp;file={new_note_path_string_relative_to_vault}"
     )
 
+    assert obsidian_id_field.name == OBSIDIAN_LINK_URL_FIELD_NAME
+    assert obsidian_id_field.text == f"<p><a href=\"{expected_obsidian_url}\">{OBSIDIAN_LINK_URL_FIELD_NAME}</a></p>"
+
+
+def test_sync_new_obsidian_note_with_obsidian_url_to_anki_after_user_moves_obsidian_url_field_in_anki_model(
+    anki_setup_and_teardown,
+    obsidian_setup_and_teardown,
+    anki_test_app: AnkiTestApp,
+    srs_folder_in_obsidian: Path,
+    templates_synchronizer: TemplatesSynchronizer,
+    notes_synchronizer: NotesSynchronizer,
+    obsidian_vault_folder: Path,
+):
+    anki_test_app.set_config_value(config_name=CONF_ADD_OBSIDIAN_URL_IN_ANKI, value=True)
+
+    templates_synchronizer.synchronize_templates()
+    new_front_field_index = 2
+    new_back_field_index = 0
+    new_obsidian_url_model_field_index = 1
+    anki_test_app.move_model_field(
+        model_name="Basic", field_name="Front", new_field_index=new_front_field_index
+    )
+    anki_test_app.move_model_field(
+        model_name="Basic", field_name="Back", new_field_index=new_back_field_index
+    )
+    anki_test_app.move_model_field(
+        model_name="Basic", field_name=OBSIDIAN_LINK_URL_FIELD_NAME, new_field_index=new_obsidian_url_model_field_index
+    )
+    templates_synchronizer.synchronize_templates()
+
+    note_file_path = srs_folder_in_obsidian / "test note.md"
+    build_basic_obsidian_note(
+        anki_test_app=anki_test_app,
+        front_text="Some front",
+        back_text="Some back",
+        file_path=note_file_path,
+    )
+
+    notes_synchronizer.synchronize_notes()
+
+    anki_note = list(anki_test_app.get_all_notes().values())[0]
+
+    assert len(anki_note.content.fields) == 3
+
+    vault_url_string = urllib.parse.quote(string=obsidian_vault_folder.name)
+    front_field = anki_note.content.fields[new_front_field_index]
+    back_field = anki_note.content.fields[new_back_field_index]
+    obsidian_id_field = anki_note.content.fields[new_obsidian_url_model_field_index]
+    note_path_string_relative_to_vault = urllib.parse.quote(
+        string=str(note_file_path.relative_to(obsidian_vault_folder))
+    )
+    expected_obsidian_url = f"obsidian://open?vault={vault_url_string}&amp;file={note_path_string_relative_to_vault}"
+
+    assert front_field.name == "Front"
+    assert front_field.text == "<p>Some front</p>"
+    assert back_field.name == "Back"
+    assert back_field.text == "<p>Some back</p>"
     assert obsidian_id_field.name == OBSIDIAN_LINK_URL_FIELD_NAME
     assert obsidian_id_field.text == f"<p><a href=\"{expected_obsidian_url}\">{OBSIDIAN_LINK_URL_FIELD_NAME}</a></p>"
 

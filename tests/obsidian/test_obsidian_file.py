@@ -13,10 +13,10 @@ from obsidian_sync.constants import SRS_NOTE_FIELD_IDENTIFIER_COMMENT, MARKDOWN_
     DATE_SYNCED_PROPERTY_NAME, DEFAULT_NOTE_ID_FOR_NEW_NOTES, SUSPENDED_PROPERTY_NAME, \
     DEFAULT_NOTE_SUSPENDED_STATE_FOR_NEW_NOTES, MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME, \
     DEFAULT_NOTE_MAXIMUM_CARD_DIFFICULTY_FOR_NEW_NOTES, DATETIME_FORMAT
-from obsidian_sync.obsidian.content.field.note_field import ObsidianNoteFieldFactory
-from obsidian_sync.obsidian.content.field.template_field import ObsidianTemplateFieldFactory
-from obsidian_sync.obsidian.content.properties import ObsidianTemplateProperties, ObsidianNoteProperties
-from obsidian_sync.obsidian.content.reference import ObsidianMediaReference
+from obsidian_sync.obsidian.content.field.obsidian_note_field import ObsidianNoteFieldFactory
+from obsidian_sync.obsidian.content.field.obsidian_template_field import ObsidianTemplateFieldFactory
+from obsidian_sync.obsidian.content.obsidian_properties import ObsidianTemplateProperties, ObsidianNoteProperties
+from obsidian_sync.obsidian.content.obsidian_reference import ObsidianMediaReference
 from obsidian_sync.obsidian.file import ObsidianNoteFile, ObsidianTemplateFile
 
 

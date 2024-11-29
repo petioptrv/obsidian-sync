@@ -32,7 +32,7 @@ from pathlib import Path
 from typing import Set, Dict
 
 from obsidian_sync.constants import ADD_ON_METADATA_PATH
-from obsidian_sync.obsidian.note import ObsidianNote
+from obsidian_sync.obsidian.obsidian_note import ObsidianNote
 
 
 class AddonMetadata:

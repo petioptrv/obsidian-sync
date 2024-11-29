@@ -32,14 +32,14 @@ import logging
 from typing import Dict, List
 
 from obsidian_sync.addon_config import AddonConfig
-from obsidian_sync.anki.app.app import AnkiApp
-from obsidian_sync.anki.note import AnkiNote
+from obsidian_sync.anki.app.anki_app import AnkiApp
+from obsidian_sync.anki.anki_note import AnkiNote
 from obsidian_sync.constants import ADD_ON_NAME
 from obsidian_sync.markup_translator import MarkupTranslator
 from obsidian_sync.obsidian.config import ObsidianConfig
-from obsidian_sync.obsidian.note import ObsidianNote
+from obsidian_sync.obsidian.obsidian_note import ObsidianNote
 from obsidian_sync.obsidian.notes_manager import ObsidianNotesManager
-from obsidian_sync.obsidian.vault import ObsidianVault
+from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 from obsidian_sync.utils import format_add_on_message
 
 
@@ -67,6 +67,7 @@ class NotesSynchronizer:
             anki_notes = self._anki_app.get_all_notes()
             self._obsidian_notes_manager.start_sync()
             obsidian_notes_result = self._obsidian_notes_manager.get_all_obsidian_notes()
+
             obsidian_notes_result.new_obsidian_notes = self._sanitize_new_obsidian_notes(
                 new_obsidian_notes=obsidian_notes_result.new_obsidian_notes
             )

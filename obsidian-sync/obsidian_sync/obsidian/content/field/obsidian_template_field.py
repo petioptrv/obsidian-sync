@@ -33,7 +33,7 @@ from typing import List
 
 from obsidian_sync.base_types.content import TemplateField
 from obsidian_sync.constants import OBSIDIAN_LINK_URL_FIELD_NAME
-from obsidian_sync.obsidian.content.field.field import ObsidianFieldFactory, ObsidianField
+from obsidian_sync.obsidian.content.field.obsidian_field import ObsidianFieldFactory, ObsidianField
 
 
 class ObsidianTemplateFieldFactory(ObsidianFieldFactory):

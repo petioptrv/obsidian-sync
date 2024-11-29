@@ -128,6 +128,39 @@ def test_add_obsidian_url_field_to_anki_templates_on_sync(
         assert obsidian_template.content.fields[-1].name == OBSIDIAN_LINK_URL_FIELD_NAME
 
 
+def test_handle_user_repositioning_the_obsidian_url_field_in_anki_model(
+    anki_setup_and_teardown,
+    obsidian_setup_and_teardown,
+    addon_config: AddonConfig,
+    templates_synchronizer: TemplatesSynchronizer,
+    anki_test_app: AnkiTestApp,
+    obsidian_templates_manager: ObsidianTemplatesManager,
+):
+    anki_test_app.set_config_value(config_name=CONF_ADD_OBSIDIAN_URL_IN_ANKI, value=True)
+
+    templates_synchronizer.synchronize_templates()
+    new_obsidian_url_model_field_index = 1
+    anki_test_app.move_model_field(
+        model_name="Basic", field_name=OBSIDIAN_LINK_URL_FIELD_NAME, new_field_index=new_obsidian_url_model_field_index
+    )
+    templates_synchronizer.synchronize_templates()
+
+    anki_templates = anki_test_app.get_all_anki_templates()
+    obsidian_templates = obsidian_templates_manager.get_all_obsidian_templates()
+    model_id, anki_template = next(
+        (mid, at)
+        for mid, at in anki_templates.items()
+        if at.model_name == "Basic"
+    )
+
+    obsidian_template = obsidian_templates[model_id]
+    assert len(anki_template.content.fields) == len(obsidian_template.content.fields)
+    assert anki_template.content.fields[0].name == obsidian_template.content.fields[0].name  # Front
+    assert anki_template.content.fields[1].name == OBSIDIAN_LINK_URL_FIELD_NAME
+    assert anki_template.content.fields[1].name == obsidian_template.content.fields[2].name  # Obsidian URL
+    assert anki_template.content.fields[2].name == obsidian_template.content.fields[1].name  # Back
+
+
 def test_remove_obsidian_url_field_from_anki_templates_on_sync(
     anki_setup_and_teardown,
     obsidian_setup_and_teardown,

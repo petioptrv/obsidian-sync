@@ -32,16 +32,16 @@ import logging
 from typing import Dict, Generator
 
 from obsidian_sync.addon_config import AddonConfig
-from obsidian_sync.anki.app.app import AnkiApp
+from obsidian_sync.anki.app.anki_app import AnkiApp
 from obsidian_sync.base_types.template import Template
 from obsidian_sync.constants import MARKDOWN_FILE_SUFFIX
 from obsidian_sync.file_utils import check_is_srs_file
 from obsidian_sync.obsidian.config import ObsidianConfig
-from obsidian_sync.obsidian.content.content import ObsidianTemplateContent
-from obsidian_sync.obsidian.content.field.template_field import ObsidianTemplateFieldFactory
+from obsidian_sync.obsidian.content.obsidian_content import ObsidianTemplateContent
+from obsidian_sync.obsidian.content.field.obsidian_template_field import ObsidianTemplateFieldFactory
 from obsidian_sync.obsidian.file import ObsidianTemplateFile
-from obsidian_sync.obsidian.template import ObsidianTemplate
-from obsidian_sync.obsidian.vault import ObsidianVault
+from obsidian_sync.obsidian.obsidian_template import ObsidianTemplate
+from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 from obsidian_sync.utils import format_add_on_message
 
 

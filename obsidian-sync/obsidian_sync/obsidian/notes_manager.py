@@ -36,17 +36,17 @@ from typing import Generator, Dict, List, Set
 
 from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.addon_metadata import AddonMetadata
-from obsidian_sync.anki.app.app import AnkiApp
+from obsidian_sync.anki.app.anki_app import AnkiApp
 from obsidian_sync.base_types.note import Note
 from obsidian_sync.constants import MAX_OBSIDIAN_NOTE_FILE_NAME_LENGTH, DEFAULT_NOTE_ID_FOR_NEW_NOTES
 from obsidian_sync.file_utils import clean_string_for_file_name, check_is_srs_file
 from obsidian_sync.obsidian.config import ObsidianConfig
-from obsidian_sync.obsidian.content.content import ObsidianNoteContent
-from obsidian_sync.obsidian.content.field.note_field import ObsidianNoteFieldFactory
-from obsidian_sync.obsidian.content.reference import ObsidianReferenceFactory
+from obsidian_sync.obsidian.content.obsidian_content import ObsidianNoteContent
+from obsidian_sync.obsidian.content.field.obsidian_note_field import ObsidianNoteFieldFactory
+from obsidian_sync.obsidian.content.obsidian_reference import ObsidianReferenceFactory
 from obsidian_sync.obsidian.file import ObsidianNoteFile
-from obsidian_sync.obsidian.note import ObsidianNote
-from obsidian_sync.obsidian.vault import ObsidianVault
+from obsidian_sync.obsidian.obsidian_note import ObsidianNote
+from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 from obsidian_sync.utils import format_add_on_message
 
 

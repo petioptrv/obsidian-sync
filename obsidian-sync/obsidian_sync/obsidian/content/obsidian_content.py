@@ -35,12 +35,12 @@ from typing import List
 from obsidian_sync.constants import SRS_NOTE_IDENTIFIER_COMMENT
 from obsidian_sync.base_types.content import Content, NoteContent, \
     TemplateContent
-from obsidian_sync.obsidian.content.field.field import ObsidianField
-from obsidian_sync.obsidian.content.field.note_field import ObsidianNoteFieldFactory, ObsidianNoteField
-from obsidian_sync.obsidian.content.field.template_field import ObsidianTemplateFieldFactory, ObsidianTemplateField
-from obsidian_sync.obsidian.content.properties import ObsidianTemplateProperties, ObsidianNoteProperties, \
+from obsidian_sync.obsidian.content.field.obsidian_field import ObsidianField
+from obsidian_sync.obsidian.content.field.obsidian_note_field import ObsidianNoteFieldFactory, ObsidianNoteField
+from obsidian_sync.obsidian.content.field.obsidian_template_field import ObsidianTemplateFieldFactory, ObsidianTemplateField
+from obsidian_sync.obsidian.content.obsidian_properties import ObsidianTemplateProperties, ObsidianNoteProperties, \
     ObsidianProperties
-from obsidian_sync.obsidian.content.reference import ObsidianReferenceFactory
+from obsidian_sync.obsidian.content.obsidian_reference import ObsidianReferenceFactory
 
 
 @dataclass

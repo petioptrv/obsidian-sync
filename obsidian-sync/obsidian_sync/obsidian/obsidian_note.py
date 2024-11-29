@@ -32,8 +32,8 @@ from typing import Optional
 
 from obsidian_sync.base_types.note import Note
 from obsidian_sync.constants import DEFAULT_NOTE_ID_FOR_NEW_NOTES
-from obsidian_sync.obsidian.content.content import ObsidianNoteContent
-from obsidian_sync.obsidian.content.properties import ObsidianNoteProperties
+from obsidian_sync.obsidian.content.obsidian_content import ObsidianNoteContent
+from obsidian_sync.obsidian.content.obsidian_properties import ObsidianNoteProperties
 from obsidian_sync.obsidian.file import ObsidianNoteFile
 
 

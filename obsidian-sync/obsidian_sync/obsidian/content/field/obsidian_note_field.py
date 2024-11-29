@@ -37,8 +37,8 @@ from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.base_types.content import NoteField
 from obsidian_sync.constants import OBSIDIAN_LINK_URL_FIELD_NAME
 from obsidian_sync.markup_translator import MarkupTranslator
-from obsidian_sync.obsidian.content.reference import ObsidianMediaReference, ObsidianReferenceFactory, ObsidianReference
-from obsidian_sync.obsidian.content.field.field import ObsidianFieldFactory, ObsidianField
+from obsidian_sync.obsidian.content.obsidian_reference import ObsidianMediaReference, ObsidianReferenceFactory, ObsidianReference
+from obsidian_sync.obsidian.content.field.obsidian_field import ObsidianFieldFactory, ObsidianField
 from obsidian_sync.obsidian.utils import obsidian_url_for_note_path
 
 

@@ -6,9 +6,9 @@ from typing import List
 from PIL import Image as PILImage
 
 from obsidian_sync.addon_config import AddonConfig
-from obsidian_sync.anki.content import AnkiNoteContent, AnkiNoteProperties, AnkiNoteField, AnkiMediaReference, \
+from obsidian_sync.anki.anki_content import AnkiNoteContent, AnkiNoteProperties, AnkiNoteField, AnkiMediaReference, \
     AnkiReference
-from obsidian_sync.anki.note import AnkiNote
+from obsidian_sync.anki.anki_note import AnkiNote
 from obsidian_sync.constants import MARKDOWN_FILE_SUFFIX, SRS_NOTE_IDENTIFIER_COMMENT, DATETIME_FORMAT, \
     MODEL_ID_PROPERTY_NAME, MODEL_NAME_PROPERTY_NAME, NOTE_ID_PROPERTY_NAME, TAGS_PROPERTY_NAME, \
     DATE_MODIFIED_PROPERTY_NAME, DATE_SYNCED_PROPERTY_NAME, SRS_NOTE_FIELD_IDENTIFIER_COMMENT, SRS_HEADER_TITLE_LEVEL, \
@@ -16,7 +16,7 @@ from obsidian_sync.constants import MARKDOWN_FILE_SUFFIX, SRS_NOTE_IDENTIFIER_CO
     CONF_ADD_OBSIDIAN_URL_IN_ANKI, OBSIDIAN_LINK_URL_FIELD_NAME
 from obsidian_sync.file_utils import check_files_are_identical
 from obsidian_sync.markup_translator import MarkupTranslator
-from obsidian_sync.obsidian.content.reference import ObsidianMediaReference
+from obsidian_sync.obsidian.content.obsidian_reference import ObsidianMediaReference
 from obsidian_sync.obsidian.notes_manager import ObsidianNotesManager
 from obsidian_sync.synchronizers.notes_synchronizer import NotesSynchronizer
 from tests.anki_test_app import AnkiTestApp

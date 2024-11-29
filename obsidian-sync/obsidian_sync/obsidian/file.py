@@ -32,11 +32,11 @@ from pathlib import Path
 from typing import List, Optional
 
 from obsidian_sync.addon_config import AddonConfig
-from obsidian_sync.obsidian.content.field.note_field import ObsidianNoteFieldFactory, ObsidianNoteField
-from obsidian_sync.obsidian.content.field.template_field import ObsidianTemplateFieldFactory, ObsidianTemplateField
-from obsidian_sync.obsidian.content.content import ObsidianContent, ObsidianNoteContent, ObsidianTemplateContent
+from obsidian_sync.obsidian.content.field.obsidian_note_field import ObsidianNoteFieldFactory, ObsidianNoteField
+from obsidian_sync.obsidian.content.field.obsidian_template_field import ObsidianTemplateFieldFactory, ObsidianTemplateField
+from obsidian_sync.obsidian.content.obsidian_content import ObsidianContent, ObsidianNoteContent, ObsidianTemplateContent
 from obsidian_sync.file_utils import check_is_markdown_file
-from obsidian_sync.obsidian.content.properties import ObsidianProperties, ObsidianTemplateProperties, \
+from obsidian_sync.obsidian.content.obsidian_properties import ObsidianProperties, ObsidianTemplateProperties, \
     ObsidianNoteProperties
 from obsidian_sync.obsidian.utils import obsidian_url_for_note_path
 
