@@ -106,6 +106,54 @@ def test_sync_new_obsidian_note_to_anki(
     assert obsidian_note.obsidian_url == expected_obsidian_url
 
 
+def test_obsidian_note_associated_with_anki_counterpart_on_obsidian_file_name_change(
+    anki_setup_and_teardown,
+    obsidian_setup_and_teardown,
+    anki_test_app: AnkiTestApp,
+    srs_folder_in_obsidian: Path,
+    notes_synchronizer: NotesSynchronizer,
+    obsidian_notes_manager: ObsidianNotesManager,
+    obsidian_vault_folder: Path,
+):
+    original_obsidian_note_file_name = srs_folder_in_obsidian / "test.md"
+    updated_obsidian_note_file_name = srs_folder_in_obsidian / "updated test.md"
+    build_basic_obsidian_note(
+        anki_test_app=anki_test_app,
+        front_text="Some front",
+        back_text="Some back",
+        file_path=original_obsidian_note_file_name,
+    )
+
+    notes_synchronizer.synchronize_notes()
+
+    time.sleep(1)
+    original_obsidian_note_file_name.rename(updated_obsidian_note_file_name)
+
+    notes_synchronizer.synchronize_notes()
+
+    assert len(anki_test_app.get_all_notes()) == 1
+
+    anki_note = list(anki_test_app.get_all_notes().values())[0]
+    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_note = obsidian_notes_result.existing_obsidian_notes[anki_note.id]
+
+    vault_url_string = urllib.parse.quote(string=obsidian_vault_folder.name)
+    updated_note_path_string_relative_to_vault = urllib.parse.quote(
+        string=str(updated_obsidian_note_file_name.relative_to(obsidian_vault_folder))
+    )
+    expected_obsidian_url = (
+        f"obsidian://open?vault={vault_url_string}&file={updated_note_path_string_relative_to_vault}"
+    )
+
+    assert anki_note.id != DEFAULT_NOTE_ID_FOR_NEW_NOTES
+    assert anki_note.content.fields[0].text == "<p>Some front</p>"
+    assert anki_note.content.fields[1].text == "<p>Some back</p>"
+    assert obsidian_note.id == anki_note.id
+    assert obsidian_note.content.properties.date_modified_in_anki == anki_note.content.properties.date_modified_in_anki
+    assert obsidian_note.content.properties.date_synced >= anki_note.content.properties.date_modified_in_anki
+    assert obsidian_note.obsidian_url == expected_obsidian_url
+
+
 def test_ignore_non_srs_notes_in_obsidian(
     anki_setup_and_teardown,
     obsidian_setup_and_teardown,
