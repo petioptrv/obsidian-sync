@@ -40,8 +40,13 @@ from obsidian_sync.utils import format_add_on_message
 class AnkiAddon:
     """Anki add-on composition root.
 
-    todo: Implement the metadata-based approach
-        - Ensure that an already synced Obsidian file that has been moved or renamed is handled properly
+    todo: figure out why Obsidian URL does not sync on first try with my full Anki deck
+        - I think it's a question of syncing
+    todo: Explore using only last sync ts as metadata
+        - Then, using low-level greps, check for all note IDs in both systems, and all note IDs of notes modified
+          since last sync. In addition, whichever note IDs are in one system, but not in the other, but the note was
+          created before last sync, then the note was deleted. Also, if a note was deleted in one system but edited
+          in the other, keep the note
 
     todo: explore using wikilinks (the markdown converters have support for it—test case already written)
     todo: add initialization walkthrough for first-time users to setup the configs interactively

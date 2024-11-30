@@ -28,8 +28,8 @@ SRS note template, then the add-on will not try to sync it to Anki.
 ### Supported Features
 
 - All default Anki note types.
-- Option to add Obsidian URL field to the Back Template of every Anki card to allow opening the Obsidian note (works on mobile too).
-- Links to other notes in Obsidian files are translated to Obsidian URLs for Anki notes.
+- Option to add [Obsidian URI](https://help.obsidian.md/Extending+Obsidian/Obsidian+URI) field to the Back Template of every Anki card to allow opening the Obsidian note (works on mobile too).
+- Links to other notes in Obsidian files are translated to [Obsidian URIs](https://help.obsidian.md/Extending+Obsidian/Obsidian+URI) when synced to Anki.
 - The set of embedded media (image, audio, video) files officially supported by Obsidian.
   - See [this page](https://help.obsidian.md/Files+and+folders/Accepted+file+formats) for the file formats supported by Obsidian.
   - See the [limitations section](#media) for details on how media files are handled.
@@ -50,7 +50,7 @@ SRS note template, then the add-on will not try to sync it to Anki.
 | `srs-folder-in-obsidian`              | Set a specific folder path relative to the Obsidian vault to use for SRS notes.                                                                                                                                                 |
 | `sync-with-obsidian-on-anki-web-sync` | If enabled, Anki will sync with Obsidian before every sync with Anki web.                                                                                                                                                       |
 | `anki-deck-name-for-obsidian-imports` | The name of the Anki deck in which the cards of notes imported from Obsidian will default to.                                                                                                                                   |
-| `add-obsidian-url-in-anki`            | Adds an extra field to all note models in Anki that will contain the [Obsidian URL](https://help.obsidian.md/Extending+Obsidian/Obsidian+URI) associate with the note to allow quickly jumping to the note in the Obsidian app. |
+| `add-obsidian-url-in-anki`            | Adds an extra field to all note models in Anki that will contain the [Obsidian URI](https://help.obsidian.md/Extending+Obsidian/Obsidian+URI) associate with the note to allow quickly jumping to the note in the Obsidian app. |
 
 ## Shortcuts
 
@@ -58,7 +58,7 @@ SRS note template, then the add-on will not try to sync it to Anki.
 |----------|--------------------|
 | `Ctrl + Y` | Sync with Obsidian |
 
-## Required Obsidian Vault Settings / Limitations
+## Limitations
 
 #### !!!! Reformatting Warning !!!!
 
@@ -78,12 +78,11 @@ designated folder).
 Anki note models are synced uni-directionally with Anki being the ground truth. This means that any modifications to the
 models must happen in Anki and then be synced to the Obsidian templates.
 
-#### Required Obsidian Settings
+#### WikiLinks
 
-The vault used for syncing with Anki must be configured with the following settings.
-
-- The [templates core plugin](https://help.obsidian.md/Plugins/Templates) must be enabled.
-- Must use [Markdown-style links](https://help.obsidian.md/Linking+notes+and+files/Internal+links#Supported+formats+for+internal+links).
+The addon will convert markdown links of the form `[alt text](path/to/obsidian note.md)` to HTML links with
+[Obsidian URIs](https://help.obsidian.md/Extending+Obsidian/Obsidian+URI). However, [WikiLinks](https://help.obsidian.md/Linking+notes+and+files/Internal+links)
+are not currently supported. The add-on will simply ignore them and sync them as-is.
 
 ## To-Do
 

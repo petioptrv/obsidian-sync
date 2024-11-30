@@ -147,9 +147,7 @@ class AnkiApp:
         anki_note = self.create_new_empty_note_in_anki(model_id=note.content.properties.model_id, deck_name=deck_name)
         note.content.properties.note_id = anki_note.id
 
-        self.update_anki_note_with_note(note=note)
-
-        anki_note = self.get_note_by_id(anki_note.id)
+        anki_note = self.update_anki_note_with_note(note=note)
 
         return anki_note
 
@@ -166,7 +164,7 @@ class AnkiApp:
 
         return anki_note
 
-    def update_anki_note_with_note(self, note: Note):
+    def update_anki_note_with_note(self, note: Note) -> AnkiNote:
         col = aqt.mw.col
 
         anki_system_note = col.get_note(id=note.content.properties.note_id)
@@ -201,6 +199,8 @@ class AnkiApp:
         ]
 
         col.update_note(note=anki_system_note)
+
+        return self.get_note_by_id(note_id=anki_system_note.id)
 
     def get_all_notes(self) -> Dict[int, AnkiNote]:
         col = aqt.mw.col

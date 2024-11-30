@@ -55,6 +55,7 @@ class AddonMetadata:
         self._anki_notes_synced_to_obsidian_id_set = set()
         self._anki_notes_synced_to_obsidian_dict: Dict[int, str] = {}
         self._reversed_anki_notes_synced_to_obsidian_dict: Dict[str, int] = {}
+        self._obsidian_urls_are_synced = False
         self._sync_started = False
 
     def __enter__(self) -> "AddonMetadata":
@@ -73,6 +74,16 @@ class AddonMetadata:
     def anki_notes_synced_to_obsidian(self) -> Set[int]:
         assert self._sync_started
         return set(self._anki_notes_synced_to_obsidian_id_set)
+
+    @property
+    def obsidian_urls_are_synced(self) -> bool:
+        assert self._sync_started
+        return self._obsidian_urls_are_synced
+
+    @obsidian_urls_are_synced.setter
+    def obsidian_urls_are_synced(self, value) -> None:
+        assert self._sync_started
+        self._obsidian_urls_are_synced = value
 
     def start_sync(self):
         self._load()
@@ -128,6 +139,7 @@ class AddonMetadata:
                 path_string: note_id for note_id, path_string in self._anki_notes_synced_to_obsidian_dict.items()
             }
             self._anki_notes_synced_to_obsidian_id_set = set(self._anki_notes_synced_to_obsidian_dict.keys())
+            self._obsidian_urls_are_synced = metadata_json.get("obsidian_urls_are_synced", False)
 
     def _save(self):
         file_path = self._get_file_path()
@@ -135,6 +147,7 @@ class AddonMetadata:
             dict_ = {
                 "last_sync_timestamp": self._last_sync_timestamp,
                 "anki_notes_synced_to_obsidian": self._anki_notes_synced_to_obsidian_dict,
+                "obsidian_urls_are_synced": self._obsidian_urls_are_synced,
             }
             json.dump(obj=dict_, fp=f)
 

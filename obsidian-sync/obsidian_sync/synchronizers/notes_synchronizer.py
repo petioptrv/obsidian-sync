@@ -73,8 +73,11 @@ class NotesSynchronizer:
         self._metadata.start_sync()
         try:
             anki_note_changes = self._anki_app.get_note_changes()
+            updated_and_new_notes_only = True
+            if self._addon_config.add_obsidian_url_in_anki and not self._check_obsidian_urls_are_synced_to_anki():
+                updated_and_new_notes_only = False  # Obsidian URI need to be synced
             obsidian_note_changes = self._obsidian_notes_manager.get_all_obsidian_notes(
-                updated_and_new_notes_only=True
+                updated_and_new_notes_only=updated_and_new_notes_only
             )
 
             self._add_new_anki_notes(anki_note_changes=anki_note_changes)
@@ -93,14 +96,17 @@ class NotesSynchronizer:
                 title=ADD_ON_NAME,
             )
 
+        self._metadata.obsidian_urls_are_synced = self._addon_config.add_obsidian_url_in_anki
         self._metadata.commit_sync()
 
     def _add_new_anki_notes(self, anki_note_changes: AnkiNoteChanges):
         for anki_note in anki_note_changes.new_notes:
             anki_note = self._sanitize_anki_note(anki_note=anki_note)
-            self._obsidian_notes_manager.create_new_obsidian_note_from_note(
+            obsidian_note = self._obsidian_notes_manager.create_new_obsidian_note_from_note(
                 reference_note=anki_note
             )
+            if self._addon_config.add_obsidian_url_in_anki:
+                self._update_anki_note_with_obsidian_notes(obsidian_note=obsidian_note)
 
     def _add_new_obsidian_notes(self, obsidian_note_changes: ObsidianNotesResult):
         for obsidian_note in obsidian_note_changes.new_notes:
@@ -142,7 +148,8 @@ class NotesSynchronizer:
 
         changes_in_obsidian_only = changes_in_obsidian - changes_in_both_systems
         for note_id in changes_in_obsidian_only:
-            self._anki_app.update_anki_note_with_note(note=obsidian_note_changes.existing_notes[note_id])
+            obsidian_note = obsidian_note_changes.existing_notes[note_id]
+            self._update_anki_note_with_obsidian_notes(obsidian_note=obsidian_note)
 
     def _fix_corrupted_obsidian_notes(self, obsidian_note_changes: ObsidianNotesResult):
         for note_id in obsidian_note_changes.corrupted_notes:
@@ -164,11 +171,9 @@ class NotesSynchronizer:
                     obsidian_note=obsidian_note, reference_note=anki_note
                 )
             else:
-                obsidian_note = self._sanitize_obsidian_note(obsidian_note=obsidian_note)
-                self._anki_app.update_anki_note_with_note(note=obsidian_note)
+                self._update_anki_note_with_obsidian_notes(obsidian_note=obsidian_note)
         elif obsidian_note_file_date_modified > last_sync + 1:  # this also covers Obsidian properties updates
-            obsidian_note = self._sanitize_obsidian_note(obsidian_note=obsidian_note)
-            self._anki_app.update_anki_note_with_note(note=obsidian_note)
+            self._update_anki_note_with_obsidian_notes(obsidian_note=obsidian_note)
         elif anki_note.content.properties != obsidian_note.content.properties:  # for props like max difficulty
             anki_note = self._sanitize_anki_note(anki_note=anki_note)
             self._obsidian_notes_manager.update_obsidian_note_with_note(
@@ -182,8 +187,14 @@ class NotesSynchronizer:
                 f for f in obsidian_note.content.fields if f.name == OBSIDIAN_LINK_URL_FIELD_NAME
             )
             if anki_note_obsidian_url_field.to_markdown() != obsidian_note_obsidian_url_field.to_markdown():
-                obsidian_note = self._sanitize_obsidian_note(obsidian_note=obsidian_note)
-                self._anki_app.update_anki_note_with_note(note=obsidian_note)
+                self._update_anki_note_with_obsidian_notes(obsidian_note=obsidian_note)
+
+    def _update_anki_note_with_obsidian_notes(self, obsidian_note: ObsidianNote):
+        obsidian_note = self._sanitize_obsidian_note(obsidian_note=obsidian_note)
+        anki_note = self._anki_app.update_anki_note_with_note(note=obsidian_note)
+        self._obsidian_notes_manager.update_obsidian_note_with_note(  # update timestamps
+            obsidian_note=obsidian_note, reference_note=anki_note
+        )
 
     def _sanitize_anki_notes(self, anki_notes: Dict[int, AnkiNote]) -> Dict[int, AnkiNote]:
         for note_id in list(anki_notes.keys()):
@@ -203,8 +214,7 @@ class NotesSynchronizer:
                 refactored = True
 
         if refactored:
-            self._anki_app.update_anki_note_with_note(note=anki_note)
-            anki_note = self._anki_app.get_note_by_id(note_id=anki_note.id)
+            anki_note = self._anki_app.update_anki_note_with_note(note=anki_note)
 
         return anki_note
 
@@ -223,3 +233,20 @@ class NotesSynchronizer:
             )
 
         return obsidian_note
+
+    def _check_obsidian_urls_are_synced_to_anki(self) -> bool:
+        urls_are_synced = False
+        synced_notes = self._metadata.anki_notes_synced_to_obsidian
+        notes_checked = 0
+
+        while not urls_are_synced and len(synced_notes) > 0 and notes_checked != 10:
+            note_id = synced_notes.pop()
+            anki_note = self._anki_app.get_note_by_id(note_id=note_id)
+            obsidian_uri_field = next(
+                field
+                for field in anki_note.content.fields
+                if field.name == OBSIDIAN_LINK_URL_FIELD_NAME
+            )
+            urls_are_synced = len(obsidian_uri_field.references[0].to_field_text()) != 0
+
+        return urls_are_synced
