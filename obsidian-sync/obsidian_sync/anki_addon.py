@@ -27,7 +27,7 @@
 # listed here: <mailto:petioptrv@icloud.com>.
 #
 # Any modifications to this file must keep this entire header intact.
-
+from obsidian_sync.addon_metadata import AddonMetadata
 from obsidian_sync.anki.app.anki_app import AnkiApp
 from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.constants import ADD_ON_NAME
@@ -49,12 +49,14 @@ class AnkiAddon:
           in the other, keep the note
 
     todo: explore using wikilinks (the markdown converters have support for it—test case already written)
+    todo: remove sleeping in tests by mocking time.time()
     todo: add initialization walkthrough for first-time users to setup the configs interactively
     todo: Explore adding an option to include links in Obsidian that open the note in Anki using AnkiConnect
     """
 
     def __init__(self):
-        self._anki_app = AnkiApp()
+        self._metadata = AddonMetadata()
+        self._anki_app = AnkiApp(metadata=self._metadata)
         self._addon_config = AddonConfig(anki_app=self._anki_app)
         self._obsidian_config = ObsidianConfig(addon_config=self._addon_config)
         self._templates_synchronizer = TemplatesSynchronizer(
@@ -66,6 +68,7 @@ class AnkiAddon:
             anki_app=self._anki_app,
             addon_config=self._addon_config,
             obsidian_config=self._obsidian_config,
+            metadata=self._metadata,
         )
 
         self._add_menu_items()

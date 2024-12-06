@@ -89,8 +89,6 @@ class TemplateProperties(Properties):
 class NoteProperties(Properties):
     note_id: int
     tags: List[str]
-    suspended: bool
-    maximum_card_difficulty: float
     date_modified_in_anki: Optional[datetime]
 
     def __eq__(self, other: object) -> bool:
@@ -99,8 +97,6 @@ class NoteProperties(Properties):
             and super().__eq__(other)
             and self.note_id == other.note_id
             and self.tags == other.tags
-            and self.suspended == other.suspended
-            and self.maximum_card_difficulty == other.maximum_card_difficulty
             and self.date_modified_in_anki == other.date_modified_in_anki
         )
 

@@ -37,21 +37,13 @@ from typing import Optional, List
 import yaml
 from obsidian_sync.base_types.content import NoteProperties, TemplateProperties
 from obsidian_sync.constants import DATETIME_FORMAT, MODEL_ID_PROPERTY_NAME, MODEL_NAME_PROPERTY_NAME, \
-    NOTE_ID_PROPERTY_NAME, TAGS_PROPERTY_NAME, DATE_MODIFIED_PROPERTY_NAME, DATE_SYNCED_PROPERTY_NAME, \
-    SUSPENDED_PROPERTY_NAME, MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME, DEFAULT_NOTE_MAXIMUM_CARD_DIFFICULTY_FOR_NEW_NOTES, \
-    DEFAULT_NOTE_ID_FOR_NEW_NOTES, DEFAULT_NOTE_SUSPENDED_STATE_FOR_NEW_NOTES
+    NOTE_ID_PROPERTY_NAME, TAGS_PROPERTY_NAME, DEFAULT_NOTE_ID_FOR_NEW_NOTES, DATE_MODIFIED_PROPERTY_NAME
 
 
 @dataclass
 class ObsidianProperties(NoteProperties):
-    date_synced: Optional[datetime]
-
     def __eq__(self, other: object) -> bool:
-        return (
-            isinstance(other, type(self))
-            and super().__eq__(other)
-            and self.date_synced == other.date_synced
-        )
+        return super().__eq__(other)
 
     @classmethod
     def from_obsidian_file_text(cls, file_text: str) -> "ObsidianProperties":
@@ -80,10 +72,7 @@ class ObsidianProperties(NoteProperties):
 class ObsidianTemplateProperties(ObsidianProperties):
     note_id: int = dataclass_field(default=DEFAULT_NOTE_ID_FOR_NEW_NOTES)
     tags: List[str] = dataclass_field(default_factory=list)
-    suspended: bool = dataclass_field(default=DEFAULT_NOTE_SUSPENDED_STATE_FOR_NEW_NOTES)
-    maximum_card_difficulty: float = dataclass_field(default=DEFAULT_NOTE_MAXIMUM_CARD_DIFFICULTY_FOR_NEW_NOTES)
     date_modified_in_anki: Optional[datetime] = dataclass_field(default=None)
-    date_synced: Optional[datetime] = dataclass_field(default=None)
 
     def __eq__(self, other: object) -> bool:
         return super().__eq__(other)
@@ -101,20 +90,12 @@ class ObsidianTemplateProperties(ObsidianProperties):
             if self.date_modified_in_anki is not None
             else self.date_modified_in_anki
         )
-        date_synced = (
-            self.date_synced.strftime(DATETIME_FORMAT)
-            if self.date_synced is not None
-            else self.date_synced
-        )
         properties_dict = {
             MODEL_ID_PROPERTY_NAME: self.model_id,
             MODEL_NAME_PROPERTY_NAME: self.model_name,
             NOTE_ID_PROPERTY_NAME: self.note_id,
             TAGS_PROPERTY_NAME: self.tags,
-            SUSPENDED_PROPERTY_NAME: self.suspended,
-            MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME: self.maximum_card_difficulty,
             DATE_MODIFIED_PROPERTY_NAME: date_modified_in_anki,
-            DATE_SYNCED_PROPERTY_NAME: date_synced,
         }
         return (
             f"---\n"
@@ -129,10 +110,6 @@ class ObsidianTemplateProperties(ObsidianProperties):
             model_name=properties_dict[MODEL_NAME_PROPERTY_NAME],
             note_id=properties_dict[NOTE_ID_PROPERTY_NAME],
             tags=properties_dict[TAGS_PROPERTY_NAME],
-            suspended=properties_dict[SUSPENDED_PROPERTY_NAME],
-            maximum_card_difficulty=properties_dict[MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME],
-            date_modified_in_anki=properties_dict[DATE_MODIFIED_PROPERTY_NAME],
-            date_synced=properties_dict[DATE_SYNCED_PROPERTY_NAME],
         )
         return properties
 
@@ -142,23 +119,18 @@ class ObsidianNoteProperties(ObsidianProperties):
     note_id: int
     tags: List[str]
     date_modified_in_anki: Optional[datetime]
-    date_synced: Optional[datetime]
 
     def __eq__(self, other: object) -> bool:
         return super().__eq__(other)
 
     @classmethod
     def from_properties(cls, properties: NoteProperties):
-        date_synced = datetime.now() if not isinstance(properties, ObsidianNoteProperties) else properties.date_synced
         return cls(
             model_id=properties.model_id,
             model_name=properties.model_name,
             note_id=properties.note_id,
             tags=properties.tags,
-            suspended=properties.suspended,
-            maximum_card_difficulty=properties.maximum_card_difficulty,
             date_modified_in_anki=properties.date_modified_in_anki,
-            date_synced=date_synced,
         )
 
     def to_obsidian_file_text(self) -> str:
@@ -167,20 +139,12 @@ class ObsidianNoteProperties(ObsidianProperties):
             if self.date_modified_in_anki is not None
             else self.date_modified_in_anki
         )
-        date_synced = (
-            self.date_synced.strftime(DATETIME_FORMAT)
-            if self.date_synced is not None
-            else self.date_synced
-        )
         properties_dict = {
             MODEL_ID_PROPERTY_NAME: self.model_id,
             MODEL_NAME_PROPERTY_NAME: self.model_name,
             NOTE_ID_PROPERTY_NAME: self.note_id,
             TAGS_PROPERTY_NAME: self.tags,
-            SUSPENDED_PROPERTY_NAME: self.suspended,
-            MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME: self.maximum_card_difficulty,
             DATE_MODIFIED_PROPERTY_NAME: date_modified_in_anki,
-            DATE_SYNCED_PROPERTY_NAME: date_synced,
         }
         return (
             f"---\n"
@@ -196,20 +160,11 @@ class ObsidianNoteProperties(ObsidianProperties):
             if isinstance(date_modified_in_anki_value, str)
             else date_modified_in_anki_value
         )
-        date_synced_value = properties_dict[DATE_SYNCED_PROPERTY_NAME]
-        date_synced = (
-            datetime.strptime(date_synced_value, DATETIME_FORMAT)
-            if isinstance(date_synced_value, str)
-            else date_synced_value
-        )
         properties = cls(
             note_id=int(properties_dict[NOTE_ID_PROPERTY_NAME]),
             model_name=properties_dict[MODEL_NAME_PROPERTY_NAME],
             model_id=int(properties_dict[MODEL_ID_PROPERTY_NAME]),
             tags=properties_dict[TAGS_PROPERTY_NAME],
-            suspended=properties_dict[SUSPENDED_PROPERTY_NAME],
-            maximum_card_difficulty=properties_dict[MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME],
             date_modified_in_anki=date_modified_in_anki,
-            date_synced=date_synced,
         )
         return properties

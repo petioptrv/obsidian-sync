@@ -6,11 +6,9 @@ import pytest
 from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.constants import MARKDOWN_FILE_SUFFIX, \
     MODEL_NAME_PROPERTY_NAME, NOTE_ID_PROPERTY_NAME, TAGS_PROPERTY_NAME, \
-    DATE_MODIFIED_PROPERTY_NAME, DATE_SYNCED_PROPERTY_NAME, \
     SRS_NOTE_IDENTIFIER_COMMENT, SRS_NOTE_FIELD_IDENTIFIER_COMMENT, SRS_HEADER_TITLE_LEVEL, \
     CONF_ADD_OBSIDIAN_URL_IN_ANKI, OBSIDIAN_LINK_URL_FIELD_NAME, DEFAULT_NOTE_ID_FOR_NEW_NOTES, \
-    DEFAULT_NOTE_SUSPENDED_STATE_FOR_NEW_NOTES, DEFAULT_NOTE_MAXIMUM_CARD_DIFFICULTY_FOR_NEW_NOTES, \
-    MODEL_ID_PROPERTY_NAME, SUSPENDED_PROPERTY_NAME, MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME
+    MODEL_ID_PROPERTY_NAME, DATE_MODIFIED_PROPERTY_NAME
 from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
 from obsidian_sync.obsidian.obsidian_templates_manager import ObsidianTemplatesManager
 from obsidian_sync.synchronizers.templates_synchronizer import TemplatesSynchronizer
@@ -48,10 +46,6 @@ def test_create_new_anki_template_in_obsidian(
     assert obsidian_template.properties.model_name == anki_template.model_name
     assert obsidian_template.properties.note_id == DEFAULT_NOTE_ID_FOR_NEW_NOTES
     assert obsidian_template.properties.tags == []
-    assert obsidian_template.properties.suspended == DEFAULT_NOTE_SUSPENDED_STATE_FOR_NEW_NOTES
-    assert obsidian_template.properties.maximum_card_difficulty == DEFAULT_NOTE_MAXIMUM_CARD_DIFFICULTY_FOR_NEW_NOTES
-    assert obsidian_template.properties.date_modified_in_anki is None
-    assert obsidian_template.properties.date_synced is None
 
     # fields
     assert len(obsidian_template.fields) == 2
@@ -63,10 +57,7 @@ def test_create_new_anki_template_in_obsidian(
 {MODEL_NAME_PROPERTY_NAME}: {anki_template.model_name}
 {NOTE_ID_PROPERTY_NAME}: {DEFAULT_NOTE_ID_FOR_NEW_NOTES}
 {TAGS_PROPERTY_NAME}: []
-{SUSPENDED_PROPERTY_NAME}: {json.dumps(DEFAULT_NOTE_SUSPENDED_STATE_FOR_NEW_NOTES)}
-{MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME}: {json.dumps(DEFAULT_NOTE_MAXIMUM_CARD_DIFFICULTY_FOR_NEW_NOTES)}
 {DATE_MODIFIED_PROPERTY_NAME}: {json.dumps(None)}
-{DATE_SYNCED_PROPERTY_NAME}: {json.dumps(None)}
 ---
 {SRS_NOTE_IDENTIFIER_COMMENT}
 {SRS_NOTE_FIELD_IDENTIFIER_COMMENT}
@@ -286,10 +277,6 @@ def test_overwrite_corrupted_template_with_srs_file_identifier_in_obsidian(
     # the corrupt file has the model ID field omitted
     corrupt_template_file_content = f"""---
 {MODEL_NAME_PROPERTY_NAME}: Basic
-{NOTE_ID_PROPERTY_NAME}: 0
-{TAGS_PROPERTY_NAME}: 
-{DATE_MODIFIED_PROPERTY_NAME}:
-{DATE_SYNCED_PROPERTY_NAME}: 
 ---
 {SRS_NOTE_IDENTIFIER_COMMENT}
 

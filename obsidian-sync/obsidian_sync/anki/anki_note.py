@@ -35,7 +35,7 @@ from obsidian_sync.base_types.note import Note
 
 
 @dataclass
-class AnkiNote(Note):  # todo: remove the use of AnkiNote in favour of directly using AnkiNoteContent
+class AnkiNote(Note):
     # can get cloze numbers with `note.cloze_numbers_in_fields()`
 
     content: AnkiNoteContent

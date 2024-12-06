@@ -31,17 +31,32 @@ import re
 from hashlib import sha256
 from pathlib import Path
 from string import ascii_letters, digits
+from typing import Optional
 
 from send2trash import send2trash
 
 from obsidian_sync.constants import MARKDOWN_FILE_SUFFIX, SRS_NOTE_IDENTIFIER_COMMENT, MEDIA_FILE_SUFFIXES, \
-    SMALL_FILE_SIZE_MB_CUT_OFF, MEDIUM_FILE_SIZE_MG_CUT_OFF
+    SMALL_FILE_SIZE_MB_CUT_OFF, MEDIUM_FILE_SIZE_MG_CUT_OFF, NOTE_ID_PROPERTY_NAME
 
 
-def check_is_srs_file(path: Path) -> bool:
+def check_is_srs_note_and_get_id(path: Path, text: Optional[str] = None) -> int:
+    note_id = -1
+    text = text or path.read_text(encoding="utf-8")
+
+    if check_is_srs_file(path=path, text=text):
+        note_id_matcher = fr"{NOTE_ID_PROPERTY_NAME}: ([\d]+)"
+        match = re.search(pattern=note_id_matcher, string=text)
+        if match:
+            note_id = int(match.group(1))
+
+    return int(note_id)
+
+
+def check_is_srs_file(path: Path, text: Optional[str] = None) -> bool:
+    text = text or path.read_text(encoding="utf-8")
     return (
         check_is_markdown_file(path=path)
-        and SRS_NOTE_IDENTIFIER_COMMENT in path.read_text(encoding="utf-8")
+        and SRS_NOTE_IDENTIFIER_COMMENT in text
     )
 
 

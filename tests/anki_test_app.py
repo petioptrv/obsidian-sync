@@ -4,6 +4,7 @@ from typing import List, Dict, Any
 import aqt
 from anki.models import NotetypeDict
 
+from obsidian_sync.addon_metadata import AddonMetadata
 from obsidian_sync.anki.app.anki_app import AnkiApp
 from obsidian_sync.anki.anki_note import AnkiNote
 from obsidian_sync.base_types.note import Note
@@ -12,8 +13,8 @@ from obsidian_sync.constants import DEFAULT_NOTE_ID_FOR_NEW_NOTES, ADD_ON_NAME
 
 class AnkiTestApp(AnkiApp):
     """Extends the AnkiApp, providing testing functionality"""
-    def __init__(self):
-        super().__init__()
+    def __init__(self, metadata: AddonMetadata):
+        super().__init__(metadata=metadata)
         self.setup_performed = False
 
     def set_config_value(self, config_name: str, value: Any):

@@ -26,8 +26,6 @@ def build_basic_anki_note(
                 model_name=model_name,
                 note_id=DEFAULT_NOTE_ID_FOR_NEW_NOTES,
                 tags=tags or [],
-                suspended=False,
-                maximum_card_difficulty=0,
                 date_modified_in_anki=None,
             ),
             fields=[
@@ -63,10 +61,7 @@ def build_basic_obsidian_note(
         model_name="Basic",
         note_id=mock_note_id,
         tags=tags or [],
-        suspended=False,
-        maximum_card_difficulty=0,
         date_modified_in_anki=None,
-        date_synced=None,
     ).to_obsidian_file_text()
 }
 {SRS_NOTE_IDENTIFIER_COMMENT}

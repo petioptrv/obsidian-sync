@@ -84,6 +84,10 @@ The addon will convert markdown links of the form `[alt text](path/to/obsidian n
 [Obsidian URIs](https://help.obsidian.md/Extending+Obsidian/Obsidian+URI). However, [WikiLinks](https://help.obsidian.md/Linking+notes+and+files/Internal+links)
 are not currently supported. The add-on will simply ignore them and sync them as-is.
 
+#### Obsidian URIs on Windows
+
+Moving or renaming a note in Obsidian on Windows without changing its content won't update the note's URI in Anki. 
+
 ## To-Do
 
 - [ ] Handle Wikilinks links

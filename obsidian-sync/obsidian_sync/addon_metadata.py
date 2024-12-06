@@ -52,10 +52,6 @@ class AddonMetadata:
     """
     def __init__(self):
         self._last_sync_timestamp: int = 0
-        self._anki_notes_synced_to_obsidian_id_set = set()
-        self._anki_notes_synced_to_obsidian_dict: Dict[int, str] = {}
-        self._reversed_anki_notes_synced_to_obsidian_dict: Dict[str, int] = {}
-        self._obsidian_urls_are_synced = False
         self._sync_started = False
 
     def __enter__(self) -> "AddonMetadata":
@@ -70,21 +66,6 @@ class AddonMetadata:
         assert self._sync_started
         return self._last_sync_timestamp
 
-    @property
-    def anki_notes_synced_to_obsidian(self) -> Set[int]:
-        assert self._sync_started
-        return set(self._anki_notes_synced_to_obsidian_id_set)
-
-    @property
-    def obsidian_urls_are_synced(self) -> bool:
-        assert self._sync_started
-        return self._obsidian_urls_are_synced
-
-    @obsidian_urls_are_synced.setter
-    def obsidian_urls_are_synced(self, value) -> None:
-        assert self._sync_started
-        self._obsidian_urls_are_synced = value
-
     def start_sync(self):
         self._load()
         self._sync_started = True
@@ -95,59 +76,18 @@ class AddonMetadata:
         self._save()
         self._sync_started = False
 
-    def add_synced_note(self, note_id: int, note_path: Path):
-        assert self._sync_started
-        path_string = str(note_path)
-        self._anki_notes_synced_to_obsidian_dict[note_id] = path_string
-        self._reversed_anki_notes_synced_to_obsidian_dict[path_string] = note_id
-        self._anki_notes_synced_to_obsidian_id_set.add(note_id)
-
-    def remove_synced_note(self, note_id: Optional[int], note_path: Optional[Path]):
-        assert self._sync_started
-        if note_id is not None:
-            self._remove_by_id(note_id=note_id)
-        elif note_path is not None:
-            for note_id, path_str in self._anki_notes_synced_to_obsidian_dict.items():
-                if Path(path_str) == note_path:
-                    self._remove_by_id(note_id=note_id)
-                    break
-
-    def get_path_from_note_id(self, note_id: int) -> Optional[Path]:
-        path_str = self._anki_notes_synced_to_obsidian_dict.get(note_id, None)
-        return Path(path_str) if path_str else None
-
-    def get_note_id_from_path(self, path: Path) -> Optional[int]:
-        return self._reversed_anki_notes_synced_to_obsidian_dict.get(str(path), None)
-
-    def _remove_by_id(self, note_id: int):
-        path_string = self._anki_notes_synced_to_obsidian_dict.pop(note_id, None)
-        self._reversed_anki_notes_synced_to_obsidian_dict.pop(path_string, None)
-        if note_id in self._anki_notes_synced_to_obsidian_id_set:
-            self._anki_notes_synced_to_obsidian_id_set.remove(note_id)
-
     def _load(self):
         file_path = self._get_file_path()
         if file_path.exists():
             string = file_path.read_text()
             metadata_json = json.loads(s=string)
             self._last_sync_timestamp = int(metadata_json.get("last_sync_timestamp", 0))
-            self._anki_notes_synced_to_obsidian_dict = {
-                int(note_id_str): path_string
-                for note_id_str, path_string in metadata_json.get("anki_notes_synced_to_obsidian", dict()).items()
-            }
-            self._reversed_anki_notes_synced_to_obsidian_dict = {
-                path_string: note_id for note_id, path_string in self._anki_notes_synced_to_obsidian_dict.items()
-            }
-            self._anki_notes_synced_to_obsidian_id_set = set(self._anki_notes_synced_to_obsidian_dict.keys())
-            self._obsidian_urls_are_synced = metadata_json.get("obsidian_urls_are_synced", False)
 
     def _save(self):
         file_path = self._get_file_path()
         with open(file_path, "w") as f:
             dict_ = {
                 "last_sync_timestamp": self._last_sync_timestamp,
-                "anki_notes_synced_to_obsidian": self._anki_notes_synced_to_obsidian_dict,
-                "obsidian_urls_are_synced": self._obsidian_urls_are_synced,
             }
             json.dump(obj=dict_, fp=f)
 

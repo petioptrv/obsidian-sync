@@ -42,7 +42,7 @@ from obsidian_sync.anki.anki_content import AnkiTemplateContent, \
     AnkiTemplateProperties, AnkiNoteProperties, AnkiNoteContent, AnkiNoteField, AnkiTemplateField, \
     AnkiReferencesFactory
 from obsidian_sync.anki.anki_note import AnkiNote
-from obsidian_sync.anki.anki_note_changes import AnkiNoteChanges
+from obsidian_sync.anki.anki_notes_result import AnkiNotesResult
 from obsidian_sync.anki.anki_template import AnkiTemplate
 from obsidian_sync.anki.app.anki_media_manager import AnkiReferencesManager
 from obsidian_sync.base_types.note import Note
@@ -50,12 +50,12 @@ from obsidian_sync.constants import ADD_ON_NAME, DEFAULT_NOTE_ID_FOR_NEW_NOTES
 
 
 class AnkiApp:
-    def __init__(self):
+    def __init__(self, metadata: AddonMetadata):
         self._media_manager = AnkiReferencesManager()
         self._references_factory = AnkiReferencesFactory(
             anki_references_manager=self._media_manager,
         )
-        self._metadata: Optional[AddonMetadata] = None
+        self._metadata = metadata
 
     @property
     def config(self):
@@ -147,7 +147,7 @@ class AnkiApp:
         anki_note = self.create_new_empty_note_in_anki(model_id=note.content.properties.model_id, deck_name=deck_name)
         note.content.properties.note_id = anki_note.id
 
-        anki_note = self.update_anki_note_with_note(note=note)
+        anki_note = self.update_anki_note_with_note(reference_note=note)
 
         return anki_note
 
@@ -164,29 +164,16 @@ class AnkiApp:
 
         return anki_note
 
-    def update_anki_note_with_note(self, note: Note) -> AnkiNote:
+    def update_anki_note_with_note(self, reference_note: Note) -> AnkiNote:
         col = aqt.mw.col
 
-        anki_system_note = col.get_note(id=note.content.properties.note_id)
+        anki_system_note = col.get_note(id=reference_note.content.properties.note_id)
         content_from_note = AnkiNoteContent.from_content(
-            content=note.content,
+            content=reference_note.content,
             references_factory=self._references_factory,
         )
 
         anki_system_note.tags = content_from_note.properties.tags
-
-        cards = anki_system_note.cards()
-        anki_system_note_suspended = all(card.queue == QUEUE_TYPE_SUSPENDED for card in cards)
-        has_been_suspended = not anki_system_note_suspended and content_from_note.properties.suspended
-        has_been_unsuspended = anki_system_note_suspended and not content_from_note.properties.suspended
-        if has_been_suspended or has_been_unsuspended:
-            for card in anki_system_note.cards():
-                card.queue = (
-                    QUEUE_TYPE_SUSPENDED
-                    if has_been_suspended
-                    else card.type
-                )
-                col.update_card(card=card)
 
         note_fields = {
             field.name: field
@@ -203,64 +190,49 @@ class AnkiApp:
         return self.get_note_by_id(note_id=anki_system_note.id)
 
     def get_all_notes(self) -> Dict[int, AnkiNote]:
+        categorized_notes = self.get_all_notes_categorized()
+        anki_notes = {
+            note.id: note for note in categorized_notes.new_notes
+        }
+        anki_notes.update(categorized_notes.updated_notes)
+        anki_notes.update(categorized_notes.unchanged_notes)
+        return anki_notes
+
+    def get_all_notes_categorized(self) -> AnkiNotesResult:
         col = aqt.mw.col
-        notes = {}
 
-        for nid in col.find_notes(""):
-            note = self.get_note_by_id(note_id=nid)
-            notes[note.id] = note
-
-        return notes
-
-    def get_note_changes(self) -> AnkiNoteChanges:
-        col = aqt.mw.col
         new_notes = []
         updated_notes = {}
-        deleted_note_ids = set()
-        anki_notes_synced_to_obsidian = self._metadata.anki_notes_synced_to_obsidian
+        unchanged_notes = {}
+
         last_sync_timestamp = self._metadata.last_sync_timestamp
         note_ids_in_anki = col.find_notes("")
 
         for note_id in note_ids_in_anki:
             anki_system_note = col.get_note(note_id)
-            modified_timestamp = self._get_anki_system_note_modified_timestamp(note=anki_system_note)
-            if modified_timestamp > last_sync_timestamp:
-                anki_note = self.get_note_by_id(note_id=note_id)
-                if note_id not in anki_notes_synced_to_obsidian:
-                    new_notes.append(anki_note)
+            anki_note = self.get_note_by_id(note_id=note_id)
+            if self._get_anki_system_note_creation_timestamp(note=anki_system_note) > last_sync_timestamp:
+                new_notes.append(anki_note)
+            else:
+                modified_timestamp = self._get_anki_system_note_modified_timestamp(note=anki_system_note)
+                if modified_timestamp > last_sync_timestamp:
+                    updated_notes[anki_note.id] = anki_note
                 else:
-                    anki_notes_synced_to_obsidian.remove(note_id)
-                    updated_notes[note_id] = anki_note
+                    unchanged_notes[anki_note.id] = anki_note
 
-        anki_notes_synced_to_obsidian -= set(updated_notes.keys())
-
-        for note_id in anki_notes_synced_to_obsidian:
-            if note_id not in note_ids_in_anki:
-                deleted_note_ids.add(note_id)
-
-        return AnkiNoteChanges(
-            new_notes=new_notes, updated_notes=updated_notes, deleted_note_ids=deleted_note_ids
+        return AnkiNotesResult(
+            new_notes=new_notes, updated_notes=updated_notes, unchanged_notes=unchanged_notes
         )
 
     def get_note_by_id(self, note_id: int) -> AnkiNote:
         col = aqt.mw.col
         anki_system_note = col.get_note(note_id)
-        cards = anki_system_note.cards()
-
-        maximum_card_difficulty = max(
-            card.memory_state.difficulty
-            if card.memory_state is not None else 0
-            for card in cards
-        )
-        suspended = all(card.queue == QUEUE_TYPE_SUSPENDED for card in cards)
 
         properties = AnkiNoteProperties(
             model_id=anki_system_note.mid,
             model_name=anki_system_note.note_type()["name"],
             note_id=anki_system_note.id,
             tags=anki_system_note.tags,
-            suspended=suspended,
-            maximum_card_difficulty=maximum_card_difficulty,
             date_modified_in_anki=(
                 datetime.fromtimestamp(self._get_anki_system_note_modified_timestamp(note=anki_system_note))
             ),
@@ -373,6 +345,9 @@ class AnkiApp:
     def _get_back_template_field_entry_string(field_name: str) -> str:
         return f"\n\n<hr id=\"{field_name}\">\n\n{{{{{field_name}}}}}"
 
+    def _get_anki_system_note_modified_timestamp(self, note: AnkiSystemNote) -> int:
+        return note.mod or self._get_anki_system_note_creation_timestamp(note=note)
+
     @staticmethod
-    def _get_anki_system_note_modified_timestamp(note: AnkiSystemNote) -> int:
-        return note.mod or note.id / 1000
+    def _get_anki_system_note_creation_timestamp(note: AnkiSystemNote) -> int:
+        return int(note.id / 1000)

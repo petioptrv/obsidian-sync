@@ -202,8 +202,7 @@ def aqt_run(
 
 @pytest.fixture(scope="session")
 def anki_test_app(aqt_run: aqt.AnkiApp, addon_metadata: addon_metadata_module.AddonMetadata) -> AnkiTestApp:
-    test_app = AnkiTestApp()
-    test_app.set_metadata(metadata=addon_metadata)
+    test_app = AnkiTestApp(metadata=addon_metadata)
     return test_app
 
 
@@ -239,8 +238,7 @@ def anki_setup_and_teardown(
 
     models_backup = anki_test_app.get_all_models()
 
-    for note_id in addon_metadata.anki_notes_synced_to_obsidian:
-        addon_metadata.remove_synced_note(note_id=note_id, note_path=None)
+    addon_metadata._last_sync_timestamp = 0
 
     yield
 
@@ -346,9 +344,6 @@ def obsidian_setup_and_teardown(
     obsidian_settings_folder: Path,
     addon_metadata: addon_metadata_module.AddonMetadata,
 ):
-    for note_id in addon_metadata.anki_notes_synced_to_obsidian:
-        addon_metadata.remove_synced_note(note_id=note_id, note_path=None)
-
     if srs_folder_in_obsidian.exists():
         shutil.rmtree(srs_folder_in_obsidian)
     if obsidian_templates_folder.exists():
@@ -370,6 +365,8 @@ def obsidian_setup_and_teardown(
     with open(file=obsidian_settings_folder / OBSIDIAN_TEMPLATES_SETTINGS_FILE, mode="w") as f:
         json.dump(template_settings, f)
 
+    addon_metadata._last_sync_timestamp = 0
+
     yield
 
 
@@ -389,10 +386,11 @@ def templates_synchronizer(
 
 @pytest.fixture()
 def notes_synchronizer(
-    anki_app, obsidian_config, addon_config
+    anki_app, obsidian_config, addon_config: AddonConfig, addon_metadata: addon_metadata_module.AddonMetadata
 ) -> NotesSynchronizer:
     return NotesSynchronizer(
         anki_app=anki_app,
         obsidian_config=obsidian_config,
         addon_config=addon_config,
+        metadata=addon_metadata,
     )

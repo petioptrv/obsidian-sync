@@ -42,16 +42,20 @@ class ObsidianNote(Note):
     def __init__(
         self,
         file: Optional[ObsidianNoteFile] = None,
+        note_id: Optional[int] = None,
     ):
         self._file: Optional[ObsidianNoteFile] = file
+        self._note_id: Optional[int] = note_id
 
     @property
     def id(self) -> int:
+        if self._note_id is None:
+            self._note_id = self.content.properties.note_id
         return self.content.properties.note_id
 
     @property
     def content(self) -> Optional[ObsidianNoteContent]:
-        content = self._file.content if self._file is not None else None
+        content = self._file.content if self._file is not None else None  # todo: check that this is not unnecessarily in practice
         return content
 
     @property

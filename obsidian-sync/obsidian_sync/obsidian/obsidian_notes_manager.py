@@ -27,18 +27,18 @@
 # listed here: <mailto:petioptrv@icloud.com>.
 #
 # Any modifications to this file must keep this entire header intact.
-import logging
 import os
 import uuid
 from pathlib import Path
-from typing import Generator, Dict, List, Set
+from typing import Dict, List, Set, Tuple
 
 from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.addon_metadata import AddonMetadata
 from obsidian_sync.anki.app.anki_app import AnkiApp
 from obsidian_sync.base_types.note import Note
 from obsidian_sync.constants import MAX_OBSIDIAN_NOTE_FILE_NAME_LENGTH, DEFAULT_NOTE_ID_FOR_NEW_NOTES
-from obsidian_sync.file_utils import clean_string_for_file_name, check_is_srs_file
+from obsidian_sync.file_utils import clean_string_for_file_name, check_is_srs_file, check_is_srs_note_and_get_id, \
+    check_is_markdown_file
 from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
 from obsidian_sync.obsidian.content.obsidian_content import ObsidianNoteContent
 from obsidian_sync.obsidian.content.field.obsidian_note_field import ObsidianNoteFieldFactory
@@ -76,7 +76,6 @@ class ObsidianNotesManager:
         obsidian_note = self._apply_reference_note_onto_obsidian_note(
             obsidian_note=obsidian_note, reference_note=reference_note, obsidian_note_is_new=True
         )
-        self._metadata.add_synced_note(note_id=obsidian_note.id, note_path=obsidian_note.file.path)
         return obsidian_note
 
     def update_obsidian_note_with_note(self, obsidian_note: ObsidianNote, reference_note: Note) -> ObsidianNote:
@@ -85,97 +84,50 @@ class ObsidianNotesManager:
         )
         return obsidian_note
 
-    def get_all_obsidian_notes(self, updated_and_new_notes_only: bool = False) -> ObsidianNotesResult:
-        previously_synced_notes_found = set()
-        existing_notes: Dict[int, ObsidianNote] = {}
+    def get_all_obsidian_notes(self) -> ObsidianNotesResult:
+        all_note_ids: Set[int] = set()
         new_notes: List[ObsidianNote] = []
-        corrupted_notes: Set[int] = set()
+        updated_notes: Dict[int, ObsidianNote] = {}
+        unchanged_notes: Dict[int, ObsidianNote] = {}
 
-        for note_file in self._get_srs_note_files_in_obsidian():
-            try:
-                note = ObsidianNote(file=note_file)
-            except Exception:
-                logging.exception(f"Failed to sync note {note_file.path}.")
+        last_sync_timestamp = self._metadata.last_sync_timestamp
+
+        for note_id, note_file in self._get_srs_note_files_in_obsidian():
+            note = ObsidianNote(file=note_file, note_id=note_id)
+            if note_id in all_note_ids:
+                other_note = updated_notes.get(note.id, None) or unchanged_notes.get(note.id)
                 self._anki_app.show_critical(
-                    text=format_add_on_message(f"Failed to sync note {note_file.path}."),
-                    title="Failed to sync note",
+                    text=format_add_on_message(
+                        f"Duplicate Anki notes found (note ID {note_id}) with paths"
+                        f"\n\n{other_note.file.path}"
+                        f"\n\nand"
+                        f"\n\n{note_file.path}"
+                        f"\n\nOnly synchronizing {note_file.path}."
+                    ),
+                    title="Duplicate Anki note templates",
                 )
+            if note_id == DEFAULT_NOTE_ID_FOR_NEW_NOTES:
+                new_notes.append(note)
             else:
-                note_id_based_on_file_path = self._metadata.get_note_id_from_path(path=note_file.path)
-                if note_id_based_on_file_path is not None:
-                    previously_synced_notes_found.add(note_id_based_on_file_path)
-                if updated_and_new_notes_only:
-                    if note_file.path.stat().st_mtime < self._metadata.last_sync_timestamp:
-                        continue
-                if note.is_corrupt():
-                    logging.error(f"Failed to load corrupted note file {note_file.path}.")
-                    if note_id_based_on_file_path is not None:
-                        corrupted_notes.add(note_id_based_on_file_path)
-                    self.delete_note(note=note)
+                file_stats = note.file.path.stat()
+                last_modified_timestamp = int(max(file_stats.st_ctime, file_stats.st_mtime))  # this does not detect file move on Windows: https://docs.python.org/3.9/library/os.html#os.stat_result.st_ctime
+                if last_modified_timestamp > last_sync_timestamp:
+                    updated_notes[note_id] = note
                 else:
-                    if note.id in existing_notes:
-                        self._anki_app.show_critical(
-                            text=format_add_on_message(
-                                f"Duplicate Anki notes found (note ID {note.properties.note_id}) with paths"
-                                f"\n\n{existing_notes[note.properties.note_id].file.path}"
-                                f"\n\nand"
-                                f"\n\n{note_file.path}"
-                                f"\n\nOnly synchronizing {note_file.path}."
-                            ),
-                            title="Duplicate Anki note templates",
-                        )
-                    elif note.id == DEFAULT_NOTE_ID_FOR_NEW_NOTES:
-                        new_notes.append(note)
-                    else:
-                        self._metadata.add_synced_note(note_id=note.id, note_path=note.file.path)
-                        existing_notes[note.id] = note
-                        previously_synced_notes_found.add(note.id)
+                    unchanged_notes[note_id] = note
+                all_note_ids.add(note_id)
 
-        deleted_note_ids = self._metadata.anki_notes_synced_to_obsidian.difference(
-            previously_synced_notes_found
-        )
-        return ObsidianNotesResult(
-            existing_notes=existing_notes,
-            new_notes=new_notes,
-            deleted_note_ids=deleted_note_ids,
-            corrupted_notes=corrupted_notes,
-        )
-
-    def get_note_by_id(self, note_id: int) -> ObsidianNote:
-        note_path = self._metadata.get_path_from_note_id(note_id=note_id)
-        assert note_path is not None
-        file = ObsidianNoteFile(path=note_path, addon_config=self._addon_config, field_factory=self._field_factory)
-        note = ObsidianNote(file=file)
-        return note
-
-    def delete_note_by_id(self, note_id: int):
-        note_path_string = self._metadata.get_path_from_note_id(note_id=note_id)
-        if note_path_string is not None and Path(note_path_string).exists():
-            note_path = Path(note_path_string)
-            self._obsidian_vault.delete_file(
-                file=ObsidianNoteFile(
-                    path=Path(note_path), addon_config=self._addon_config, field_factory=self._field_factory
-                ),
-            )
-            self._metadata.remove_synced_note(note_id=note_id, note_path=Path(note_path))
+        return ObsidianNotesResult(new_notes=new_notes, updated_notes=updated_notes, unchanged_notes=unchanged_notes)
 
     def delete_note(self, note: ObsidianNote):
-        note_id = None if note.is_corrupt() else note.id
-        note_path = None if note.file is None else note.file.path
-        self._metadata.remove_synced_note(note_id=note_id, note_path=note_path)
         self._obsidian_vault.delete_file(file=note.file)
+
+    def get_relative_note_path(self, note: ObsidianNote) -> Path:
+        return note.file.path.relative_to(self._addon_config.obsidian_vault_path)
 
     def _apply_reference_note_onto_obsidian_note(
         self, obsidian_note: ObsidianNote, reference_note: Note, obsidian_note_is_new: bool
     ) -> ObsidianNote:
-        if (
-            not obsidian_note.is_new()
-            and obsidian_note.id in self._metadata.anki_notes_synced_to_obsidian
-        ):
-            note_id = None if obsidian_note.is_corrupt() else obsidian_note.id
-            note_path = None if obsidian_note.file is None else obsidian_note.file.path
-            self._metadata.remove_synced_note(note_id=note_id, note_path=note_path)
-
         file = obsidian_note.file
         if file is None or file.is_corrupt():
             if file is not None:
@@ -201,9 +153,6 @@ class ObsidianNotesManager:
             self._obsidian_vault.save_file(file=file)
 
         obsidian_note.file = file
-
-        if not obsidian_note.is_corrupt() and not obsidian_note.is_new():
-            self._metadata.add_synced_note(note_id=obsidian_note.id, note_path=obsidian_note.file.path)
 
         return obsidian_note
 
@@ -243,25 +192,33 @@ class ObsidianNotesManager:
         file_name = f"{file_name}{file_extension}"
         return file_name
 
-    def _get_srs_note_files_in_obsidian(
-        self, must_exist: bool = False, with_modification_timestamp_past: int = 0
-    ) -> Generator[ObsidianNoteFile, None, None]:
+    def _get_srs_note_files_in_obsidian(self) -> List[Tuple[int, ObsidianNoteFile]]:
+        note_files = []
+
+        for file_path, file_text in self._get_srs_note_paths_and_text_in_obsidian():
+            note_id = check_is_srs_note_and_get_id(path=file_path, text=file_text)
+            if note_id != -1:
+                note_file = ObsidianNoteFile(
+                    path=file_path, addon_config=self._addon_config, field_factory=self._field_factory
+                )
+                note_file.raw_content = file_text
+                note_files.append((note_id, note_file))
+
+        return note_files
+
+    def _get_srs_note_paths_and_text_in_obsidian(self) -> List[Tuple[Path, str]]:
         templates_folder_path = self._obsidian_config.templates_folder
         trash_path = self._obsidian_config.trash_folder
+        paths_and_text = []
 
         for root, dirs, files in os.walk(self._addon_config.srs_folder):
-            if Path(root) in [templates_folder_path, trash_path]:
-                continue
-            for file in files:
-                file_path = Path(root) / file
-                if (
-                    check_is_srs_file(path=file_path)
-                    and (not must_exist or file_path.exists())
-                    and (not file_path.exists() or file_path.stat().st_mtime > with_modification_timestamp_past)
-                ):
-                    obsidian_file = ObsidianNoteFile(
-                        path=file_path,
-                        addon_config=self._addon_config,
-                        field_factory=self._field_factory,
-                    )
-                    yield obsidian_file
+            root_path = Path(root)
+            if root_path not in [templates_folder_path, trash_path]:
+                for file in files:
+                    file_path = root_path / file
+                    if check_is_markdown_file(path=file_path):
+                        file_text = file_path.read_text(encoding="utf-8")
+                        if check_is_srs_file(path=file_path, text=file_text):
+                            paths_and_text.append((file_path, file_text))
+
+        return paths_and_text

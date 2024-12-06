@@ -90,6 +90,10 @@ class ObsidianFile(ABC):
             self._raw_content = self.path.read_text(encoding="utf-8")
         return self._raw_content
 
+    @raw_content.setter
+    def raw_content(self, value: Optional[str]):
+        self._raw_content = value
+
     @property
     def properties(self) -> ObsidianProperties:
         return self.content.properties

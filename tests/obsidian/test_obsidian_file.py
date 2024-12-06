@@ -9,10 +9,8 @@ from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.constants import SRS_NOTE_FIELD_IDENTIFIER_COMMENT, MARKDOWN_FILE_SUFFIX, \
     SRS_NOTE_IDENTIFIER_COMMENT, \
     SRS_HEADER_TITLE_LEVEL, MODEL_ID_PROPERTY_NAME, \
-    MODEL_NAME_PROPERTY_NAME, NOTE_ID_PROPERTY_NAME, TAGS_PROPERTY_NAME, DATE_MODIFIED_PROPERTY_NAME, \
-    DATE_SYNCED_PROPERTY_NAME, DEFAULT_NOTE_ID_FOR_NEW_NOTES, SUSPENDED_PROPERTY_NAME, \
-    DEFAULT_NOTE_SUSPENDED_STATE_FOR_NEW_NOTES, MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME, \
-    DEFAULT_NOTE_MAXIMUM_CARD_DIFFICULTY_FOR_NEW_NOTES, DATETIME_FORMAT
+    MODEL_NAME_PROPERTY_NAME, NOTE_ID_PROPERTY_NAME, TAGS_PROPERTY_NAME, \
+    DEFAULT_NOTE_ID_FOR_NEW_NOTES, DATE_MODIFIED_PROPERTY_NAME, DATETIME_FORMAT
 from obsidian_sync.obsidian.content.field.obsidian_note_field import ObsidianNoteFieldFactory
 from obsidian_sync.obsidian.content.field.obsidian_template_field import ObsidianTemplateFieldFactory
 from obsidian_sync.obsidian.content.obsidian_properties import ObsidianTemplateProperties, ObsidianNoteProperties
@@ -30,10 +28,7 @@ def test_parse_template(
 {MODEL_NAME_PROPERTY_NAME}: Basic
 {NOTE_ID_PROPERTY_NAME}: {DEFAULT_NOTE_ID_FOR_NEW_NOTES}
 {TAGS_PROPERTY_NAME}: []
-{SUSPENDED_PROPERTY_NAME}: {json.dumps(DEFAULT_NOTE_SUSPENDED_STATE_FOR_NEW_NOTES)}
-{MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME}: {json.dumps(DEFAULT_NOTE_MAXIMUM_CARD_DIFFICULTY_FOR_NEW_NOTES)}
 {DATE_MODIFIED_PROPERTY_NAME}: {json.dumps(None)}
-{DATE_SYNCED_PROPERTY_NAME}: {json.dumps(None)}
 ---
 {SRS_NOTE_IDENTIFIER_COMMENT}
 
@@ -75,10 +70,7 @@ def test_parse_note_properties(
 {NOTE_ID_PROPERTY_NAME}: 2
 {TAGS_PROPERTY_NAME}:
   - one
-{SUSPENDED_PROPERTY_NAME}: false
-{MAXIMUM_CARD_DIFFICULTY_PROPERTY_NAME}: 0.4
 {DATE_MODIFIED_PROPERTY_NAME}: {datetime.now().strftime(DATETIME_FORMAT)}
-{DATE_SYNCED_PROPERTY_NAME}: {datetime.now().strftime(DATETIME_FORMAT)}
 ---
 {SRS_NOTE_IDENTIFIER_COMMENT}
 
@@ -93,8 +85,6 @@ def test_parse_note_properties(
     assert isinstance(file.properties, ObsidianNoteProperties)
     assert file.properties.note_id == 2
     assert file.properties.tags == ["one"]
-    assert file.properties.suspended is False
-    assert file.properties.maximum_card_difficulty == 0.4
 
 
 def test_parse_note_fields(
@@ -114,10 +104,7 @@ def test_parse_note_fields(
         model_name="Basic",
         note_id=2,
         tags=[],
-        suspended=False,
-        maximum_card_difficulty=0.5,
         date_modified_in_anki=datetime.now(),
-        date_synced=datetime.now(),
     ).to_obsidian_file_text()
 }
 {SRS_NOTE_IDENTIFIER_COMMENT}

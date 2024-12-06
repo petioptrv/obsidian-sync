@@ -28,13 +28,13 @@
 #
 # Any modifications to this file must keep this entire header intact.
 from dataclasses import dataclass
-from typing import List, Dict, Set
+from typing import List, Dict
 
 from obsidian_sync.anki.anki_note import AnkiNote
 
 
 @dataclass
-class AnkiNoteChanges:
+class AnkiNotesResult:
     new_notes: List[AnkiNote]
     updated_notes: Dict[int, AnkiNote]
-    deleted_note_ids: Set[int]
+    unchanged_notes: Dict[int, AnkiNote]
