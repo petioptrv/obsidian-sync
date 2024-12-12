@@ -38,7 +38,7 @@ def test_sync_new_obsidian_note_to_anki(
         back_text="Some back",
         file_path=srs_folder_in_obsidian / "test note.md",
     )
-    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_notes_result = obsidian_notes_manager.get_all_notes_categorized()
 
     assert len(obsidian_notes_result.unchanged_notes) == 0
     assert len(obsidian_notes_result.updated_notes) == 0
@@ -50,7 +50,7 @@ def test_sync_new_obsidian_note_to_anki(
     assert len(anki_test_app.get_all_notes()) == 1
 
     anki_note = list(anki_test_app.get_all_notes().values())[0]
-    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_notes_result = obsidian_notes_manager.get_all_notes_categorized()
     obsidian_note = obsidian_notes_result.unchanged_notes[anki_note.id]
 
     vault_url_string = urllib.parse.quote(string=obsidian_vault_folder.name)
@@ -95,7 +95,7 @@ def test_obsidian_note_associated_with_anki_counterpart_on_obsidian_file_name_ch
 
     with addon_metadata:
         all_anki_notes = anki_test_app.get_all_notes()
-        obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+        obsidian_notes_result = obsidian_notes_manager.get_all_notes_categorized()
 
     assert len(all_anki_notes) == 1
 
@@ -139,14 +139,14 @@ def test_ignore_non_srs_notes_in_obsidian(
     non_srs_note_path = srs_folder_in_obsidian / "non-srs.md"
     non_srs_note_path.write_text(data="Some note content")
 
-    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_notes_result = obsidian_notes_manager.get_all_notes_categorized()
 
     assert len(obsidian_notes_result.unchanged_notes) == 0
     assert len(obsidian_notes_result.new_notes) == 1
     assert non_srs_note_path.exists()
 
     notes_synchronizer.synchronize_notes()
-    obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+    obsidian_notes_result = obsidian_notes_manager.get_all_notes_categorized()
 
     assert len(obsidian_notes_result.unchanged_notes) == 1
     assert len(obsidian_notes_result.new_notes) == 0
@@ -210,6 +210,51 @@ def test_sync_unchanged_existing_obsidian_note_after_enabling_obsidian_url_to_an
     templates_synchronizer.synchronize_templates()
     notes_synchronizer.synchronize_notes()
 
+    anki_test_app.set_config_value(config_name=CONF_ADD_OBSIDIAN_URL_IN_ANKI, value=True)
+
+    templates_synchronizer.synchronize_templates()
+    notes_synchronizer.synchronize_notes()
+
+    anki_note = list(anki_test_app.get_all_notes().values())[0]
+
+    assert len(anki_note.content.fields) == 3
+
+    vault_url_string = urllib.parse.quote(string=obsidian_vault_folder.name)
+    obsidian_id_field = anki_note.content.fields[-1]
+    note_path_string_relative_to_vault = urllib.parse.quote(
+        string=str(note_file_path.relative_to(obsidian_vault_folder))
+    )
+    expected_obsidian_url = f"obsidian://open?vault={vault_url_string}&amp;file={note_path_string_relative_to_vault}"
+
+    assert obsidian_id_field.name == OBSIDIAN_LINK_URL_FIELD_NAME
+    assert obsidian_id_field.text == f"<p><a href=\"{expected_obsidian_url}\">{OBSIDIAN_LINK_URL_FIELD_NAME}</a></p>"
+
+
+def test_sync_updated_existing_obsidian_note_after_enabling_obsidian_url_to_anki(
+    anki_setup_and_teardown,
+    obsidian_setup_and_teardown,
+    anki_test_app: AnkiTestApp,
+    srs_folder_in_obsidian: Path,
+    templates_synchronizer: TemplatesSynchronizer,
+    notes_synchronizer: NotesSynchronizer,
+    obsidian_vault_folder: Path,
+):
+    note_file_path = srs_folder_in_obsidian / "test note.md"
+    build_basic_obsidian_note(
+        anki_test_app=anki_test_app,
+        front_text="Some front",
+        back_text="Some back",
+        file_path=note_file_path,
+    )
+
+    templates_synchronizer.synchronize_templates()
+    notes_synchronizer.synchronize_notes()
+
+    time.sleep(1)
+
+    note_text = note_file_path.read_text(encoding="utf-8")
+    note_text = note_text.replace("Some front", "Some updated front")
+    note_file_path.write_text(note_text, encoding="utf-8")
     anki_test_app.set_config_value(config_name=CONF_ADD_OBSIDIAN_URL_IN_ANKI, value=True)
 
     templates_synchronizer.synchronize_templates()
@@ -360,7 +405,7 @@ def test_sync_two_new_obsidian_notes_to_anki(
         file_path=srs_folder_in_obsidian / "another_test.md",
     )
     with addon_metadata:
-        obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+        obsidian_notes_result = obsidian_notes_manager.get_all_notes_categorized()
 
     assert len(obsidian_notes_result.unchanged_notes) == 0
     assert len(obsidian_notes_result.new_notes) == 2
@@ -370,7 +415,7 @@ def test_sync_two_new_obsidian_notes_to_anki(
 
     with addon_metadata:
         anki_notes = anki_test_app.get_all_notes()
-        obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+        obsidian_notes_result = obsidian_notes_manager.get_all_notes_categorized()
 
     assert len(anki_notes) == 2
     assert len(obsidian_notes_result.unchanged_notes) == 2
@@ -379,7 +424,7 @@ def test_sync_two_new_obsidian_notes_to_anki(
         assert note_id in obsidian_notes_result.unchanged_notes
 
 
-def test_sync_new_obsidian_note_with_attachment_to_anki(
+def test_sync_new_obsidian_note_with_local_image_reference_to_anki(
     anki_setup_and_teardown,
     obsidian_setup_and_teardown,
     srs_attachments_in_obsidian_folder: Path,
@@ -406,14 +451,48 @@ def test_sync_new_obsidian_note_with_attachment_to_anki(
     assert len(list(anki_test_app.media_manager.media_directory.iterdir())) == 1
 
     anki_note = list(anki_test_app.get_all_notes().values())[0]
-    attachment_file = Path(list(anki_test_app.media_manager.media_directory.iterdir())[0])
+    reference_file = Path(list(anki_test_app.media_manager.media_directory.iterdir())[0])
 
     assert len(anki_note.content.fields[1].references) == 1
-    assert anki_note.content.fields[1].references[0].path == attachment_file
-    assert anki_note.content.fields[1].text == f"<p>Some back with <img alt=\"image\" src=\"{attachment_file}\"></p>"
+    assert anki_note.content.fields[1].references[0].path == reference_file
+    assert anki_note.content.fields[1].text == f"<p>Some back with <img alt=\"image\" src=\"{reference_file}\"></p>"
 
 
-def test_sync_new_obsidian_note_with_web_attachment_to_anki(
+def test_sync_new_obsidian_note_with_local_image_reference_with_capitalized_extension_to_anki(
+    anki_setup_and_teardown,
+    obsidian_setup_and_teardown,
+    srs_attachments_in_obsidian_folder: Path,
+    some_test_image: PILImage,
+    anki_test_app: AnkiTestApp,
+    srs_folder_in_obsidian: Path,
+    notes_synchronizer: NotesSynchronizer,
+):
+    image_file_name = "some img.PNG"
+    srs_attachments_in_obsidian_folder.mkdir(parents=True)
+    image_file_path = srs_attachments_in_obsidian_folder / image_file_name
+    some_test_image.save(image_file_path)
+    build_basic_obsidian_note(
+        anki_test_app=anki_test_app,
+        front_text="Some front",
+        back_text=f"Some back with ![image]({urllib.parse.quote(string=image_file_name)})",
+        file_path=srs_folder_in_obsidian / "test.md",
+    )
+
+    assert len(list(anki_test_app.media_manager.media_directory.iterdir())) == 0
+
+    notes_synchronizer.synchronize_notes()
+
+    assert len(list(anki_test_app.media_manager.media_directory.iterdir())) == 1
+
+    anki_note = list(anki_test_app.get_all_notes().values())[0]
+    reference_file = Path(list(anki_test_app.media_manager.media_directory.iterdir())[0])
+
+    assert len(anki_note.content.fields[1].references) == 1
+    assert anki_note.content.fields[1].references[0].path == reference_file
+    assert anki_note.content.fields[1].text == f"<p>Some back with <img alt=\"image\" src=\"{reference_file}\"></p>"
+
+
+def test_sync_new_obsidian_note_with_web_reference_to_anki(
     anki_setup_and_teardown,
     obsidian_setup_and_teardown,
     anki_test_app: AnkiTestApp,
@@ -536,6 +615,37 @@ and a\n```\n{block_code}\n```"""
 
     assert f"<code>{in_line_code}</code>" in anki_note.content.fields[0].text
     assert f"<pre><code>{block_code}\n</code></pre>" in anki_note.content.fields[0].text
+
+
+def test_sync_new_obsidian_note_with_list_to_anki(
+    anki_setup_and_teardown,
+    obsidian_setup_and_teardown,
+    anki_test_app: AnkiTestApp,
+    srs_folder_in_obsidian: Path,
+    notes_synchronizer: NotesSynchronizer,
+):
+    front_field_markdown = """Elements are the following
+
+
+- **e1** first element,
+- **e2** second element"""
+    expected_front_field_html = """<p>Elements are the following</p>
+<ul>
+<li><strong>e1</strong> first element,</li>
+<li><strong>e2</strong> second element</li>
+</ul>"""
+    build_basic_obsidian_note(
+        anki_test_app=anki_test_app,
+        front_text=front_field_markdown,
+        back_text="Some back",
+        file_path=srs_folder_in_obsidian / "test.md",
+    )
+
+    notes_synchronizer.synchronize_notes()
+
+    anki_note = list(anki_test_app.get_all_notes().values())[0]
+
+    assert anki_note.content.fields[0].to_html() == expected_front_field_html
 
 
 def test_sync_new_obsidian_note_with_links_to_other_notes_to_anki_substituting_with_obsidian_urls(
@@ -727,7 +837,7 @@ def test_sync_existing_obsidian_note_with_updated_tag_property_to_anki(
     notes_synchronizer.synchronize_notes()
 
     with addon_metadata:
-        obsidian_notes_result = obsidian_notes_manager.get_all_obsidian_notes()
+        obsidian_notes_result = obsidian_notes_manager.get_all_notes_categorized()
         obsidian_note = list(obsidian_notes_result.unchanged_notes.values())[0]
 
     time.sleep(1)

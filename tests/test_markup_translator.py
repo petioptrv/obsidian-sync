@@ -7,7 +7,7 @@ def test_convert_html_with_latex_in_line_math_statement_to_markdown():
     markup_translator = MarkupTranslator()
 
     html_text = "<p>Some in-line math \\(x = 1\\)</p>"
-    expected_markdown_text = "\nSome in\\-line math $x = 1$\n"
+    expected_markdown_text = "\nSome in-line math $x = 1$\n"
     markdown_text = markup_translator.translate_html_to_markdown(html=html_text)
 
     assert markdown_text == expected_markdown_text
@@ -33,7 +33,7 @@ def test_convert_html_with_code_block_to_markdown():
 </code></pre>
 <p>and a final line</p>"""
     expected_markdown = f"""
-Some text with an in\\-line `{in_line_code}`\xa0
+Some text with an in-line `{in_line_code}`\xa0
 
 
 ```
@@ -76,6 +76,49 @@ def test_sanitizing_html_with_latex_block_math_statement():
     sanitized_html_text = markup_translator.sanitize_html(html=original_html_text)
 
     assert sanitized_html_text == original_html_text
+
+
+def test_sanitizing_html_with_url_as_the_displayed_text():
+    markup_translator = MarkupTranslator()
+
+    original_html_text = (
+        "<p>This is a link: "
+        "<a href=\"https://www.youtube.com/watch?v=KuXjwB4LzSA\">https://www.youtube.com/watch?v=KuXjwB4LzSA</a></p>"
+    )
+    sanitized_html_text = markup_translator.sanitize_html(html=original_html_text)
+
+    assert sanitized_html_text == original_html_text
+
+
+def test_escape_special_html_characters():
+    markup_translator = MarkupTranslator()
+
+    html_text = "<p>Some &lt;escaped&gt; HTML &amp; special characters</p>"
+    expected_markdown = "\nSome <escaped> HTML & special characters\n"
+    markdown_text = markup_translator.translate_html_to_markdown(html=html_text)
+
+    assert markdown_text == expected_markdown
+
+
+def test_nested_inline_code_blocks():
+    markup_translator = MarkupTranslator()
+
+    html_text = "<p>Code block with nested `<code>tags</code>`</p>"
+    expected_markdown = "\nCode block with nested ``tags``\n"
+    markdown_text = markup_translator.translate_html_to_markdown(html=html_text)
+
+    assert markdown_text == expected_markdown
+    assert markup_translator.translate_markdown_to_html(markdown=markdown_text) == html_text
+
+
+def test_misaligned_latex_escape():
+    markup_translator = MarkupTranslator()
+
+    html_text = "<p>Unmatched LaTeX \\(x = 1</p>"
+    expected_markdown = "\nUnmatched LaTeX \\(x = 1\n"
+    markdown_text = markup_translator.translate_html_to_markdown(html=html_text)
+
+    assert markdown_text == expected_markdown
 
 
 @pytest.mark.skip

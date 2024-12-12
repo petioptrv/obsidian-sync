@@ -68,6 +68,16 @@ class ObsidianNoteFieldFactory(ObsidianFieldFactory):
             )
             for field_ in fields
         ]
+
+        if self._addon_config.add_obsidian_url_in_anki:
+            obsidian_fields.append(
+                ObsidianLinkURLNoteField.from_file_path(
+                    note_path=note_path,
+                    addon_config=self._addon_config,
+                    obsidian_reference_factory=self._references_factory,
+                )
+            )
+
         return obsidian_fields
 
     def from_obsidian_file_text(self, file_text: str, note_path: Path) -> List["ObsidianNoteField"]:

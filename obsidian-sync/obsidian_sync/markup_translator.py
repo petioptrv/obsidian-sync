@@ -43,6 +43,7 @@ class MarkupTranslator:
         self._html_to_markdown_converter = ExtendedHTMLToMarkdownConverter(
             heading_style=ATX,
             convert_as_inline=True,
+            escape_misc=False,
         )
         fenced_code = FencedCodeExtension()
         wikilinks = WikiLinkExtension()

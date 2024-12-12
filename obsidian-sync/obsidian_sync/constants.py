@@ -51,7 +51,11 @@ AUDIO_FILE_SUFFIXES = [  # https://help.obsidian.md/Files+and+folders/Accepted+f
 VIDEO_FILE_SUFFIXES = [  # https://help.obsidian.md/Files+and+folders/Accepted+file+formats
     ".mkv", ".mov", ".mp4", ".ogv", ".webm"
 ]
-MEDIA_FILE_SUFFIXES = IMAGE_FILE_SUFFIXES + AUDIO_FILE_SUFFIXES + VIDEO_FILE_SUFFIXES
+MEDIA_FILE_SUFFIXES = (
+    IMAGE_FILE_SUFFIXES + [s.upper() for s in IMAGE_FILE_SUFFIXES]
+    + AUDIO_FILE_SUFFIXES + [s.upper() for s in AUDIO_FILE_SUFFIXES]
+    + VIDEO_FILE_SUFFIXES + [s.upper() for s in VIDEO_FILE_SUFFIXES]
+)
 
 ADD_ON_DIR = Path(__file__).parent.parent
 USER_FILES_PATH = ADD_ON_DIR / "user_files"  # persists across add-on updates

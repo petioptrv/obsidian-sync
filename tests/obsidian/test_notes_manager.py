@@ -25,7 +25,7 @@ def test_get_note_changes_method_finds_new_note(
     )
 
     with addon_metadata:
-        notes = obsidian_notes_manager.get_all_obsidian_notes()
+        notes = obsidian_notes_manager.get_all_notes_categorized()
 
     assert len(notes.new_notes) == 1
     assert len(notes.updated_notes) == 0
@@ -53,7 +53,7 @@ def test_get_note_changes_method_finds_updated_note(
 
     with addon_metadata:
         addon_metadata._last_sync_timestamp = int(time.time()) - 1
-        notes = obsidian_notes_manager.get_all_obsidian_notes()
+        notes = obsidian_notes_manager.get_all_notes_categorized()
 
     assert len(notes.new_notes) == 0
     assert len(notes.updated_notes) == 1
@@ -81,7 +81,7 @@ def test_get_note_changes_method_ignores_unchanged_note(
 
     with addon_metadata:
         addon_metadata._last_sync_timestamp = int(time.time()) + 1
-        notes = obsidian_notes_manager.get_all_obsidian_notes()
+        notes = obsidian_notes_manager.get_all_notes_categorized()
 
     assert len(notes.new_notes) == 0
     assert len(notes.updated_notes) == 0
@@ -110,7 +110,7 @@ def test_get_note_changes_method_finds_moved_note_identified_as_existing(
     obsidian_note_path.rename(updated_note_path)
 
     with addon_metadata:
-        notes = obsidian_notes_manager.get_all_obsidian_notes()
+        notes = obsidian_notes_manager.get_all_notes_categorized()
 
     assert len(notes.new_notes) == 0
     assert len(notes.updated_notes) == 1

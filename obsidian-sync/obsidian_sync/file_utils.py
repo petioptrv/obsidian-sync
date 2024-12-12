@@ -53,11 +53,11 @@ def check_is_srs_note_and_get_id(path: Path, text: Optional[str] = None) -> int:
 
 
 def check_is_srs_file(path: Path, text: Optional[str] = None) -> bool:
-    text = text or path.read_text(encoding="utf-8")
-    return (
-        check_is_markdown_file(path=path)
-        and SRS_NOTE_IDENTIFIER_COMMENT in text
-    )
+    is_srs_file = False
+    if check_is_markdown_file(path=path):
+        text = text or path.read_text(encoding="utf-8")
+        is_srs_file = SRS_NOTE_IDENTIFIER_COMMENT in text
+    return is_srs_file
 
 
 def check_is_media_file(path: Path) -> bool:

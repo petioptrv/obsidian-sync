@@ -72,7 +72,7 @@ class NotesSynchronizer:
     def synchronize_notes(self):
         self._metadata.start_sync()
         try:
-            obsidian_notes = self._obsidian_notes_manager.get_all_obsidian_notes()
+            obsidian_notes = self._obsidian_notes_manager.get_all_notes_categorized()
             anki_notes = self._anki_app.get_all_notes_categorized()
 
             unchanged_obsidian_note_ids = set(obsidian_notes.unchanged_notes.keys())
@@ -112,7 +112,7 @@ class NotesSynchronizer:
                 reference_note=anki_note
             )
             if self._addon_config.add_obsidian_url_in_anki:
-                self._update_anki_note_with_obsidian_notes(obsidian_note=obsidian_note)
+                self._update_anki_note_with_obsidian_notes(obsidian_note=obsidian_note, sanitize=False)
 
     def _add_new_obsidian_notes(self, obsidian_notes: ObsidianNotesResult):
         for obsidian_note in obsidian_notes.new_notes:
@@ -177,8 +177,9 @@ class NotesSynchronizer:
         else:
             self._anki_app.update_anki_note_with_note(reference_note=obsidian_note)
 
-    def _update_anki_note_with_obsidian_notes(self, obsidian_note: ObsidianNote):
-        obsidian_note = self._sanitize_obsidian_note(obsidian_note=obsidian_note)
+    def _update_anki_note_with_obsidian_notes(self, obsidian_note: ObsidianNote, sanitize: bool = True):
+        if sanitize:
+            obsidian_note = self._sanitize_obsidian_note(obsidian_note=obsidian_note)
         if obsidian_note is not None:
             anki_note = self._anki_app.update_anki_note_with_note(reference_note=obsidian_note)
             self._obsidian_notes_manager.update_obsidian_note_with_note(  # update timestamps
@@ -234,7 +235,7 @@ class NotesSynchronizer:
             if not has_obsidian_uri:
                 obsidian_note = (
                     obsidian_notes.unchanged_notes.get(note_id, None)
-                    or obsidian_notes.unchanged_notes[note_id]
+                    or obsidian_notes.updated_notes[note_id]
                 )
                 if obsidian_note.is_corrupt():
                     obsidian_note = self._fix_corrupted_obsidian_note(obsidian_note=obsidian_note, anki_note=anki_note)

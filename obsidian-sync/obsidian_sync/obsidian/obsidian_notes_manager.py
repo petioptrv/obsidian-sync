@@ -84,7 +84,7 @@ class ObsidianNotesManager:
         )
         return obsidian_note
 
-    def get_all_obsidian_notes(self) -> ObsidianNotesResult:
+    def get_all_notes_categorized(self) -> ObsidianNotesResult:
         all_note_ids: Set[int] = set()
         new_notes: List[ObsidianNote] = []
         updated_notes: Dict[int, ObsidianNote] = {}
