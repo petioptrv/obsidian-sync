@@ -83,7 +83,7 @@ class NotesSynchronizer:
             notes_deleted_in_anki = unchanged_obsidian_note_ids - non_new_anki_note_ids  # we don't delete a note that has been deleted in one system but changed the another
             notes_deleted_in_obsidian = unchanged_anki_note_ids - non_new_obsidian_note_ids  # we don't delete a note that has been deleted in one system but changed the another
 
-            self._add_new_anki_notes(anki_notes=anki_notes)
+            self._add_new_anki_notes(anki_notes=anki_notes, obsidian_notes=obsidian_notes)
             self._add_new_obsidian_notes(obsidian_notes=obsidian_notes)
             self._remove_deleted_notes(
                 obsidian_notes=obsidian_notes, notes_deleted_in_anki=notes_deleted_in_anki, notes_deleted_in_obsidian=notes_deleted_in_obsidian
@@ -105,8 +105,14 @@ class NotesSynchronizer:
 
         self._metadata.commit_sync()
 
-    def _add_new_anki_notes(self, anki_notes: AnkiNotesResult):
+    def _add_new_anki_notes(self, anki_notes: AnkiNotesResult, obsidian_notes: ObsidianNotesResult):
         for anki_note in anki_notes.new_notes:
+            obsidian_note = (
+                obsidian_notes.unchanged_notes.pop(anki_note.id, None)
+                or obsidian_notes.updated_notes.pop(anki_note.id, None)
+            )
+            if obsidian_note is not None:  # This can happen after a backup recovery in Anki, so we replace the existing note in Obsidian from previous syncs with the newly recovered version.
+                self._obsidian_notes_manager.delete_note(note=obsidian_note)
             anki_note = self._sanitize_anki_note(anki_note=anki_note)
             obsidian_note = self._obsidian_notes_manager.create_new_obsidian_note_from_note(
                 reference_note=anki_note

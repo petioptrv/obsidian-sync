@@ -72,11 +72,15 @@ class AnkiAddon:
         self._anki_app.add_menu_item(title="Obsidian Sync", key_sequence="Ctrl+Y", callback=self._sync_with_obsidian)
 
     def _add_hooks(self):
-        self._anki_app.add_sync_hook(self._sync_with_obsidian_on_anki_web_sync)
+        self._anki_app.add_sync_hook(hook=self._sync_with_obsidian_on_anki_web_sync)
+        self._anki_app.add_profile_opened_hook(hook=self._on_profile_open)
 
     def _sync_with_obsidian_on_anki_web_sync(self):
         if self._addon_config.sync_with_obsidian_on_anki_web_sync:
             self._sync_with_obsidian()
+
+    def _on_profile_open(self):
+        self._metadata.anki_user = self._anki_app.anki_user
 
     def _sync_with_obsidian(self):
         if self._check_can_sync():

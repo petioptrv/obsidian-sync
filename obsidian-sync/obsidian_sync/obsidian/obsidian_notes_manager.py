@@ -168,15 +168,8 @@ class ObsidianNotesManager:
             )
             note_path = self._addon_config.srs_folder / note_file_name
 
-        if new_note and note_path.exists():
-            random_name = uuid.uuid4().hex
-            note_file_name = self._build_obsidian_note_file_name_from_note_front_field(
-                note=note, name_suffix=random_name
-            )
-            note_path = self._addon_config.srs_folder / note_file_name
-
-        if new_note and note_path.exists():
-            raise NotImplementedError
+        if new_note and note_path.exists():  # this situation should not occur as notes have unique IDs
+            raise RuntimeError(f"Attempting to duplicate note with ID {note.content.properties.note_id}")
 
         return note_path
 

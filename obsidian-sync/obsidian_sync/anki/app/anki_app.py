@@ -29,12 +29,11 @@
 # Any modifications to this file must keep this entire header intact.
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Tuple, Callable, Optional
+from typing import Dict, List, Tuple, Callable
 
 from PyQt6.QtGui import QAction, QKeySequence
 from PyQt6.QtWidgets import QFileDialog, QApplication
 import aqt
-from anki.consts import QUEUE_TYPE_SUSPENDED
 from anki.notes import Note as AnkiSystemNote
 
 from obsidian_sync.addon_metadata import AddonMetadata
@@ -66,11 +65,12 @@ class AnkiApp:
         return self._media_manager
 
     @property
+    def anki_user(self) -> str:
+        return aqt.mw.pm.name
+
+    @property
     def addon_config_editor_will_update_json(self) -> List:
         return aqt.gui_hooks.addon_config_editor_will_update_json
-
-    def set_metadata(self, metadata: AddonMetadata):
-        self._metadata = metadata
 
     def get_all_anki_templates(self) -> Dict[int, AnkiTemplate]:
         templates = {}
@@ -320,6 +320,10 @@ class AnkiApp:
     @staticmethod
     def add_sync_hook(hook: Callable):
         aqt.gui_hooks.sync_will_start.append(hook)
+
+    @staticmethod
+    def add_profile_opened_hook(hook: Callable):
+        aqt.gui_hooks.profile_did_open.append(hook)
 
     def get_open_editing_anki_windows(self):
         open_editing_windows = []

@@ -30,7 +30,6 @@
 import json
 import time
 from pathlib import Path
-from typing import Set, Dict, Optional
 
 from obsidian_sync.constants import ADD_ON_METADATA_PATH
 
@@ -42,7 +41,7 @@ class AddonMetadata:
     use Obsidian and Anki data as much as possible, and only resort to persisting
     metadata where no other option exists.
 
-    For example, it"s tempting to use persisted metadata to know which note was last
+    For example, it's tempting to use persisted metadata to know which note was last
     synced and which was most recently updated, but this information can be persisted
     inside the note itself, and combined with information from the file system.
 
@@ -53,6 +52,7 @@ class AddonMetadata:
     def __init__(self):
         self._last_sync_timestamp: int = 0
         self._sync_started = False
+        self._anki_user = "default"
 
     def __enter__(self) -> "AddonMetadata":
         self.start_sync()
@@ -60,6 +60,14 @@ class AddonMetadata:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.commit_sync()
+
+    @property
+    def anki_user(self) -> str:
+        return self._anki_user
+
+    @anki_user.setter
+    def anki_user(self, value: str) -> None:
+        self._anki_user = value
 
     @property
     def last_sync_timestamp(self) -> int:
@@ -81,13 +89,15 @@ class AddonMetadata:
         if file_path.exists():
             string = file_path.read_text()
             metadata_json = json.loads(s=string)
-            self._last_sync_timestamp = int(metadata_json.get("last_sync_timestamp", 0))
+            self._last_sync_timestamp = int(
+                metadata_json.get(self._get_last_sync_timestamp_key(), 0)
+            )
 
     def _save(self):
         file_path = self._get_file_path()
         with open(file_path, "w") as f:
             dict_ = {
-                "last_sync_timestamp": self._last_sync_timestamp,
+                self._get_last_sync_timestamp_key(): self._last_sync_timestamp,
             }
             json.dump(obj=dict_, fp=f)
 
@@ -95,3 +105,6 @@ class AddonMetadata:
     def _get_file_path() -> Path:
         ADD_ON_METADATA_PATH.parent.mkdir(parents=True, exist_ok=True)
         return ADD_ON_METADATA_PATH
+
+    def _get_last_sync_timestamp_key(self) -> str:
+        return f"last_sync_timestamp_{self.anki_user}"
