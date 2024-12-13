@@ -13,11 +13,31 @@ def test_convert_html_with_latex_in_line_math_statement_to_markdown():
     assert markdown_text == expected_markdown_text
 
 
+def test_convert_html_with_in_line_anki_mathjax_to_markdown():
+    markup_translator = MarkupTranslator()
+
+    html_text = "<p>Some in-line math <anki-mathjax>x = 1</anki-mathjax></p>"
+    expected_markdown_text = "\nSome in-line math $x = 1$\n"
+    markdown_text = markup_translator.translate_html_to_markdown(html=html_text)
+
+    assert markdown_text == expected_markdown_text
+
+
 def test_convert_html_with_latex_block_math_statement_to_markdown():
     markup_translator = MarkupTranslator()
 
     html_text = "<p>Some math block \\[x = 1\\]</p>"
     expected_markdown_text = "\nSome math block $$x = 1$$\n"
+    markdown_text = markup_translator.translate_html_to_markdown(html=html_text)
+
+    assert markdown_text == expected_markdown_text
+
+
+def test_convert_html_with_block_anki_mathjax_to_markdown():
+    markup_translator = MarkupTranslator()
+
+    html_text = "<p>Some in-line math <anki-mathjax block=true>x = 1</anki-mathjax></p>"
+    expected_markdown_text = "\nSome in-line math $$x = 1$$\n"
     markdown_text = markup_translator.translate_html_to_markdown(html=html_text)
 
     assert markdown_text == expected_markdown_text
@@ -135,3 +155,4 @@ def test_convert_wikilinks_reference_to_html():
     assert html == expected_html
 
     raise NotImplementedError
+

@@ -31,6 +31,8 @@
 import re
 from textwrap import fill
 
+from bs4 import Tag
+
 from markdown_extensions.fenced_code import FencedCodeExtension
 from markdown_extensions.wikilinks import WikiLinkExtension
 from markdownify import ATX, MarkdownConverter as HTMLToMarkdownConverter
@@ -90,6 +92,10 @@ class MarkupTranslator:
 
 
 class ExtendedHTMLToMarkdownConverter(HTMLToMarkdownConverter):
+    def __getattr__(self, item):
+        item = item.replace("-", "_")
+        return self.__getattribute__(item)
+
     def convert_p(self, el, text, convert_as_inline):
         if convert_as_inline:
             return text
@@ -110,6 +116,12 @@ class ExtendedHTMLToMarkdownConverter(HTMLToMarkdownConverter):
             code_language = self.options["code_language_callback"](el) or code_language
 
         return "\n```%s\n%s\n```\n" % (code_language, text)
+
+    def convert_anki_mathjax(self, el: Tag, text: str, convert_as_inline: bool) -> str:
+        text = self.unescape(text=text)
+        block = el.attrs.get("block", "false")
+        punctuation = "$$" if block == "true" else "$"
+        return f"{punctuation}{text}{punctuation}"
 
     def process_text(self, el):
         text = super().process_text(el=el)
