@@ -9,7 +9,7 @@ from tests.anki_test_app import AnkiTestApp
 from tests.utils import build_basic_obsidian_note
 
 
-@pytest.mark.skip
+@pytest.mark.skip(reason="for experimentation")
 def test_first_approach_to_file_parsing(
     anki_setup_and_teardown,
     obsidian_setup_and_teardown,
@@ -40,7 +40,7 @@ def test_first_approach_to_file_parsing(
     print(f"took {t1 - t0} seconds")
 
 
-@pytest.mark.skip
+@pytest.mark.skip(reason="for experimentation")
 def test_second_approach_to_file_parsing(
     anki_setup_and_teardown,
     obsidian_setup_and_teardown,
@@ -84,7 +84,7 @@ def test_second_approach_to_file_parsing(
     print(f"took {t1 - t0} seconds")
 
 
-@pytest.mark.skip
+@pytest.mark.skip(reason="for experimentation")
 def test_third_approach_to_file_parsing(
     anki_setup_and_teardown,
     obsidian_setup_and_teardown,

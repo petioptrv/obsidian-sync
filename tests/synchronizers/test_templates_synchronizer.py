@@ -8,7 +8,8 @@ from obsidian_sync.constants import MARKDOWN_FILE_SUFFIX, \
     MODEL_NAME_PROPERTY_NAME, NOTE_ID_PROPERTY_NAME, TAGS_PROPERTY_NAME, \
     SRS_NOTE_IDENTIFIER_COMMENT, SRS_NOTE_FIELD_IDENTIFIER_COMMENT, SRS_HEADER_TITLE_LEVEL, \
     CONF_ADD_OBSIDIAN_URL_IN_ANKI, OBSIDIAN_LINK_URL_FIELD_NAME, DEFAULT_NOTE_ID_FOR_NEW_NOTES, \
-    MODEL_ID_PROPERTY_NAME, DATE_MODIFIED_PROPERTY_NAME
+    MODEL_ID_PROPERTY_NAME, DATE_MODIFIED_PROPERTY_NAME, OBSIDIAN_SETTINGS_FOLDER, OBSIDIAN_APP_SETTINGS_FILE, \
+    OBSIDIAN_TEMPLATES_OPTION_KEY
 from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
 from obsidian_sync.obsidian.obsidian_templates_manager import ObsidianTemplatesManager
 from obsidian_sync.synchronizers.templates_synchronizer import TemplatesSynchronizer
@@ -77,28 +78,31 @@ def test_create_new_anki_template_in_obsidian(
     assert template_file.read_text() == expected_text
 
 
-@pytest.mark.skip
-def test_dont_sync_anki_templates_to_obsidian_if_the_obsidian_template_extension_is_not_enabled(
-    anki_setup_and_teardown,
-    obsidian_setup_and_teardown,
-    anki_test_app: AnkiTestApp,
-    obsidian_templates_manager: ObsidianTemplatesManager,
-    obsidian_templates_folder: Path,
-    templates_synchronizer: TemplatesSynchronizer,
-):
-    raise NotImplementedError
-
-
-@pytest.mark.skip
 def test_create_a_new_anki_template_in_obsidian_after_resolving_a_template_name_collision_with_an_existing_user_template(
     anki_setup_and_teardown,
     obsidian_setup_and_teardown,
+    obsidian_config: ObsidianConfig,
     anki_test_app: AnkiTestApp,
     obsidian_templates_manager: ObsidianTemplatesManager,
     obsidian_templates_folder: Path,
     templates_synchronizer: TemplatesSynchronizer,
 ):
-    raise NotImplementedError
+    anki_test_app.remove_all_note_models()  # the default Basic model is always kept by Anki
+    already_existing_basic_template = obsidian_templates_folder / "Basic.md"
+    obsidian_templates_folder.mkdir(parents=True, exist_ok=True)
+    already_existing_basic_template.touch()
+
+    templates_synchronizer.synchronize_templates()
+
+    obsidian_templates = obsidian_templates_manager.get_all_obsidian_templates()
+
+    assert len(obsidian_templates) == 1
+
+    basic_template = list(obsidian_templates.values())[0]
+
+    assert basic_template.file.path == (
+        obsidian_templates_folder / f"Basic-{basic_template.content.properties.model_id}.md"
+    )
 
 
 def test_add_obsidian_url_field_to_anki_templates_on_sync(

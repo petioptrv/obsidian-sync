@@ -55,7 +55,7 @@ class ObsidianNote(Note):
 
     @property
     def content(self) -> Optional[ObsidianNoteContent]:
-        content = self._file.content if self._file is not None else None  # todo: check that this is not unnecessarily in practice
+        content = self._file.content if self._file is not None else None
         return content
 
     @property

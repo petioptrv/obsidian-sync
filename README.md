@@ -13,8 +13,9 @@ information ported from Anki to Obsidian as that is a card concept and a given n
 cards may reside in different decks.
 
 The app syncs Anki note models to Obsidian's templates folder, allowing the user to
-create new notes in Obsidian using the [templates core plugin](https://help.obsidian.md/Plugins/Templates). See the
-[limitations section](#note-models-and-templates) for further details.
+create new notes in Obsidian using the [templates core plugin](https://help.obsidian.md/Plugins/Templates). If the core plugin
+is disabled, the Anki models will not be synced. See the [limitations section](#note-models-and-templates) for
+further details.
 
 If a given note has been modified in both apps, the most recent version is kept.
 
@@ -64,7 +65,7 @@ SRS note template, then the add-on will not try to sync it to Anki.
 
 This add-on will likely re-format your Anki and/or Obsidian notes in order to ensure that a given note can be
 converted to HTML or Markdown and back to the original text in the original format. The content of the notes
-will not be changed by this process. However, be sure to [backup your Anki files](https://docs.ankiweb.net/backups.html#backups)
+will not be changed by this process. However, be sure to [back up your Anki files](https://docs.ankiweb.net/backups.html#backups)
 and your [Obsidian vault](https://help.obsidian.md/Getting+started/Back+up+your+Obsidian+files) before use.
 
 #### Media
@@ -82,7 +83,7 @@ models must happen in Anki and then be synced to the Obsidian templates.
 
 The addon will convert markdown links of the form `[alt text](path/to/obsidian note.md)` to HTML links with
 [Obsidian URIs](https://help.obsidian.md/Extending+Obsidian/Obsidian+URI). However, [WikiLinks](https://help.obsidian.md/Linking+notes+and+files/Internal+links)
-are not currently supported. The add-on will simply ignore them and sync them as-is.
+are not currently supported. The add-on will treat them as regular text.
 
 #### Obsidian URIs on Windows
 

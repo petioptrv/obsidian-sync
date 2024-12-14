@@ -40,8 +40,6 @@ from obsidian_sync.utils import format_add_on_message
 class AnkiAddon:
     """Anki add-on composition root.
 
-    todo: ensure sync timestamp is on a per-user basis
-
     todo: explore using wikilinks (the markdown converters have support for it—test case already written)
     todo: remove sleeping in tests by mocking time.time()
     todo: add initialization walkthrough for first-time users to setup the configs interactively
@@ -84,7 +82,8 @@ class AnkiAddon:
 
     def _sync_with_obsidian(self):
         if self._check_can_sync():
-            self._templates_synchronizer.synchronize_templates()
+            if self._obsidian_config.templates_enabled:
+                self._templates_synchronizer.synchronize_templates()
             self._notes_synchronizer.synchronize_notes()
 
     def _check_can_sync(self) -> bool:
@@ -103,16 +102,6 @@ class AnkiAddon:
             self._anki_app.show_critical(
                 text=format_add_on_message(message=message),
                 title=ADD_ON_NAME,
-            )
-            can_sync = False
-        if not self._obsidian_config.templates_enabled:
-            message = (
-                "Obsidian templates must be enabled:"
-                "\n\nOptions -> Core plugins -> check the \"Templates\" option."
-            )
-            self._anki_app.show_critical(
-                text=format_add_on_message(message=message),
-                title=ADD_ON_NAME
             )
             can_sync = False
 

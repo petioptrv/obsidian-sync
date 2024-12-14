@@ -73,15 +73,12 @@ class ObsidianTemplatesManager:
     ) -> ObsidianTemplate:
         file = obsidian_template.file
 
-        if (
-            file is None
-            or f"{reference_template.content.properties.model_name}{MARKDOWN_FILE_SUFFIX}" != file.name
-            or file.is_corrupt()
-        ):
+        if file is None or file.is_corrupt():
             if file is not None:
                 self._obsidian_vault.delete_file(file=file)
             file = self._build_template_file_for_model(
-                model_name=reference_template.content.properties.model_name
+                model_name=reference_template.content.properties.model_name,
+                model_id=reference_template.content.properties.model_id,
             )
             if file.exists:
                 self._obsidian_vault.delete_file(file=file)
@@ -133,10 +130,14 @@ class ObsidianTemplatesManager:
     def delete_template(self, template: ObsidianTemplate):
         self._obsidian_vault.delete_file(file=template.file)
 
-    def _build_template_file_for_model(self, model_name: str) -> ObsidianTemplateFile:
+    def _build_template_file_for_model(self, model_name: str, model_id: int) -> ObsidianTemplateFile:
         template_path = (
             self._obsidian_config.templates_folder / f"{model_name}{MARKDOWN_FILE_SUFFIX}"
         )
+        if template_path.exists():
+            template_path = (
+                self._obsidian_config.templates_folder / f"{model_name}-{model_id}{MARKDOWN_FILE_SUFFIX}"
+            )
         file = ObsidianTemplateFile(
             path=template_path,
             addon_config=self._addon_config,

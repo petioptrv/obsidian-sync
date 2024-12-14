@@ -266,19 +266,3 @@ class NotesSynchronizer:
             reference_note=anki_note,
         )
         return obsidian_note
-
-    def _check_obsidian_urls_are_synced_to_anki(self) -> bool:  # todo: fix
-        urls_are_synced = False
-        notes_checked = 0
-
-        while not urls_are_synced and len(synced_notes) > 0 and notes_checked != 10:
-            note_id = synced_notes.pop()
-            anki_note = self._anki_app.get_note_by_id(note_id=note_id)
-            obsidian_uri_field = next(
-                field
-                for field in anki_note.content.fields
-                if field.name == OBSIDIAN_LINK_URL_FIELD_NAME
-            )
-            urls_are_synced = len(obsidian_uri_field.references[0].to_field_text()) != 0
-
-        return urls_are_synced
