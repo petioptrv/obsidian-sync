@@ -34,7 +34,7 @@ from typing import Optional, Dict
 from obsidian_sync.constants import OBSIDIAN_SETTINGS_FOLDER, OBSIDIAN_TEMPLATES_SETTINGS_FILE, \
     TEMPLATES_FOLDER_JSON_FIELD_NAME, OBSIDIAN_LOCAL_TRASH_OPTION_VALUE, OBSIDIAN_APP_SETTINGS_FILE, \
     OBSIDIAN_TRASH_OPTION_KEY, OBSIDIAN_LOCAL_TRASH_FOLDER, OBSIDIAN_USE_MARKDOWN_LINKS_OPTION_KEY, \
-    OBSIDIAN_TEMPLATES_OPTION_KEY, SRS_ATTACHMENTS_FOLDER
+    OBSIDIAN_TEMPLATES_OPTION_KEY, SRS_ATTACHMENTS_FOLDER, OBSIDIAN_CORE_PLUGINS_FILE
 from obsidian_sync.addon_config import AddonConfig
 
 
@@ -48,7 +48,7 @@ class ObsidianConfig:
 
     @property
     def templates_enabled(self) -> bool:
-        templates = self._settings.get(OBSIDIAN_TEMPLATES_OPTION_KEY)
+        templates = self._core_plugins.get(OBSIDIAN_TEMPLATES_OPTION_KEY, False)
         return templates is not None and templates
 
     @property
@@ -106,3 +106,12 @@ class ObsidianConfig:
             settings = json.load(f)
 
         return settings
+
+    @property
+    def _core_plugins(self) -> Dict[str, str]:
+        with open(
+            self._addon_config.obsidian_vault_path / OBSIDIAN_SETTINGS_FOLDER / OBSIDIAN_CORE_PLUGINS_FILE, "r"
+        ) as f:
+            plugins = json.load(f)
+
+        return plugins
