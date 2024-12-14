@@ -32,12 +32,15 @@ import re
 from textwrap import fill
 
 from bs4 import Tag
+from markdown.inlinepatterns import InlineProcessor
 
 from markdown_extensions.fenced_code import FencedCodeExtension
 from markdown_extensions.wikilinks import WikiLinkExtension
 from markdownify import ATX, MarkdownConverter as HTMLToMarkdownConverter
-from markdown import Markdown as MarkdownToHTMLConverter
-from markdown.postprocessors import Postprocessor as MarkdownToHTMLPostprocessor
+from markdown import Markdown as MarkdownToHTMLConverter, Extension
+
+from obsidian_sync.constants import MATH_BLOCK_MARKDOWN_MATCHING_PATTERN, \
+    IN_LINE_MATCH_MARKDOWN_MATCHING_PATTERN
 
 
 class MarkupTranslator:
@@ -47,15 +50,11 @@ class MarkupTranslator:
             convert_as_inline=True,
             escape_misc=False,
         )
+        math = MarkdownToHTMLMathExtension()
         fenced_code = FencedCodeExtension()
         wikilinks = WikiLinkExtension()
         self._markdown_to_html_converter = MarkdownToHTMLConverter(
-            extensions=[fenced_code, wikilinks], output_format="html"
-        )
-        self._markdown_to_html_converter.postprocessors.register(
-            item=ExtendedMarkdownToHTMLMathPostprocessor(md=self._markdown_to_html_converter),
-            name="extended_markdown_to_html",
-            priority=10,
+            extensions=[math, fenced_code, wikilinks], output_format="html"
         )
 
     def sanitize_markdown(self, markdown: str) -> str:
@@ -172,23 +171,38 @@ class ExtendedHTMLToMarkdownConverter(HTMLToMarkdownConverter):
         return text
 
 
-class ExtendedMarkdownToHTMLMathPostprocessor(MarkdownToHTMLPostprocessor):
-    def run(self, text):
-        block_equation_pattern = r"\$\$(.+?)\$\$"
-        block_equation_repl = r'\[\1\]'
-        in_line_equation_pattern = r"\$(.+?)\$"
-        in_line_equation_repl = r"\(\1\)"
+class MarkdownToHTMLMathExtension(Extension):
+    def extendMarkdown(self, md):
+        md.inlinePatterns.register(
+            item=MarkdownToHTMLMathBlockProcessor(
+                pattern=MATH_BLOCK_MARKDOWN_MATCHING_PATTERN,
+                md=md,
+            ),
+            name="math-block",
+            priority=186,  # higher priority than "escape" which is 180 and higher than in-line
+        )
+        md.inlinePatterns.register(
+            item=MarkdownToHTMLInLineMathProcessor(
+                pattern=IN_LINE_MATCH_MARKDOWN_MATCHING_PATTERN,
+                md=md,
+            ),
+            name="math-inline",
+            priority=185,  # higher priority than "escape" which is 180
+        )
 
-        text = re.sub(  # should be matched first
-            pattern=block_equation_pattern,
-            repl=block_equation_repl,
-            string=text,
-            flags=re.DOTALL,  # allows spanning multiple lines
-        )
-        text = re.sub(
-            pattern=in_line_equation_pattern,
-            repl=in_line_equation_repl,
-            string=text,
-        )
-        return text
+
+class MarkdownToHTMLInLineMathProcessor(InlineProcessor):
+    def handleMatch(self, m: re.Match[str], data: str) -> tuple[str, int, int]:
+        """ Store the text of `group(1)` of a pattern and return a placeholder string. """
+        match_group = m.group(1)
+        place_holder = self.md.htmlStash.store(f"\\({match_group}\\)")
+        return place_holder, m.start(0), m.end(0)
+
+
+class MarkdownToHTMLMathBlockProcessor(InlineProcessor):
+    def handleMatch(self, m: re.Match[str], data: str) -> tuple[str, int, int]:
+        """ Store the text of `group(1)` of a pattern and return a placeholder string. """
+        match_group = m.group(1)
+        place_holder = self.md.htmlStash.store(f"\\[{match_group}\\]")
+        return place_holder, m.start(0), m.end(0)
 

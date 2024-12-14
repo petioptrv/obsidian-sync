@@ -108,3 +108,8 @@ MODEL_NAME_PROPERTY_NAME = "model name"
 NOTE_ID_PROPERTY_NAME = "note ID"
 TAGS_PROPERTY_NAME = "tags"
 DATE_MODIFIED_PROPERTY_NAME = "date modified in Anki"
+
+# regex patterns
+
+IN_LINE_MATCH_MARKDOWN_MATCHING_PATTERN = r"\$(.+?)\$"
+MATH_BLOCK_MARKDOWN_MATCHING_PATTERN = r"\$\$(.+?)\$\$"

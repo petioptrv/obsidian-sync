@@ -102,8 +102,8 @@ class NotesSynchronizer:
                 text=format_add_on_message(f"Obsidian sync error: {str(e)}"),
                 title=ADD_ON_NAME,
             )
-
-        self._metadata.commit_sync()
+        else:
+            self._metadata.commit_sync()
 
     def _add_new_anki_notes(self, anki_notes: AnkiNotesResult, obsidian_notes: ObsidianNotesResult):
         for anki_note in anki_notes.new_notes:
@@ -166,11 +166,24 @@ class NotesSynchronizer:
 
         changes_in_obsidian_only = changes_in_obsidian - changes_in_both_systems
         for note_id in changes_in_obsidian_only:
-            anki_note = anki_notes.unchanged_notes[note_id]
+            anki_note = anki_notes.unchanged_notes.get(note_id, None)
             obsidian_note = obsidian_notes.updated_notes[note_id]
-            if obsidian_note.is_corrupt():
-                obsidian_note = self._fix_corrupted_obsidian_note(obsidian_note=obsidian_note, anki_note=anki_note)
-            self._update_anki_note_with_obsidian_notes(obsidian_note=obsidian_note)
+            if anki_note is None:
+                relative_obsidian_note_path = self._obsidian_notes_manager.get_relative_note_path(
+                    note=obsidian_note
+                )
+                self._anki_app.show_critical(
+                    text=(
+                        f"The Obsidian note {relative_obsidian_note_path} is no longer found in Anki but"
+                        f" has been updated in Obsidian since the last sync. Once the sync is over, review the note and"
+                        f" manually resolve the discrepancy."
+                    ),
+                    title=ADD_ON_NAME,
+                )
+            else:
+                if obsidian_note.is_corrupt():
+                    obsidian_note = self._fix_corrupted_obsidian_note(obsidian_note=obsidian_note, anki_note=anki_note)
+                self._update_anki_note_with_obsidian_notes(obsidian_note=obsidian_note)
 
     def _synchronize_note_pair(self, anki_note: AnkiNote, obsidian_note: ObsidianNote):
         anki_note_modified_timestamp = anki_note.content.properties.date_modified_in_anki.timestamp()

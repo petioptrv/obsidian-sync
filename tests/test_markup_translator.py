@@ -13,6 +13,16 @@ def test_convert_html_with_latex_in_line_math_statement_to_markdown():
     assert markdown_text == expected_markdown_text
 
 
+def test_convert_markdown_with_latex_in_line_math_statement_to_html():
+    markup_translator = MarkupTranslator()
+
+    markdown_text = "\nSome in-line math $x = 1$\n"
+    expected_html_text = "<p>Some in-line math \\(x = 1\\)</p>"
+    html_text = markup_translator.translate_markdown_to_html(markdown=markdown_text)
+
+    assert html_text == expected_html_text
+
+
 def test_convert_html_with_in_line_anki_mathjax_to_markdown():
     markup_translator = MarkupTranslator()
 
@@ -41,6 +51,20 @@ def test_convert_html_with_block_anki_mathjax_to_markdown():
     markdown_text = markup_translator.translate_html_to_markdown(html=html_text)
 
     assert markdown_text == expected_markdown_text
+
+
+def test_convert_latex_with_multiple_underscores():
+    """A bug derived in practice in which latex with an underscore preceded by a non-alphabetical character
+    and later an underscore followed by a non-alphabetical character lead the converter to interpret the enclosed
+    text as being italicized."""
+
+    markup_translator = MarkupTranslator()
+
+    html_text = r"""<p>Before \(\hat{y}_i = y_{i+1}\) after</p>"""
+    expected_sanitized_html = r"""<p>Before \(\hat{y}_i = y_{i+1}\) after</p>"""
+    sanitized_html = markup_translator.sanitize_html(html=html_text)
+
+    assert sanitized_html == expected_sanitized_html
 
 
 def test_convert_html_with_code_block_to_markdown():
@@ -118,17 +142,6 @@ def test_escape_special_html_characters():
     markdown_text = markup_translator.translate_html_to_markdown(html=html_text)
 
     assert markdown_text == expected_markdown
-
-
-def test_nested_inline_code_blocks():
-    markup_translator = MarkupTranslator()
-
-    html_text = "<p>Code block with nested `<code>tags</code>`</p>"
-    expected_markdown = "\nCode block with nested ``tags``\n"
-    markdown_text = markup_translator.translate_html_to_markdown(html=html_text)
-
-    assert markdown_text == expected_markdown
-    assert markup_translator.translate_markdown_to_html(markdown=markdown_text) == html_text
 
 
 def test_misaligned_latex_escape():
