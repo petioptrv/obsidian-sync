@@ -93,8 +93,12 @@ class NotesSynchronizer:
             unchanged_anki_note_ids = set(anki_notes.unchanged_notes.keys())
             non_new_anki_note_ids = unchanged_anki_note_ids.union(anki_notes.updated_notes.keys())
             
-            notes_deleted_in_anki = unchanged_obsidian_note_ids - non_new_anki_note_ids  # we don't delete a note that has been deleted in one system but changed the another
-            notes_deleted_in_obsidian = unchanged_anki_note_ids - non_new_obsidian_note_ids  # we don't delete a note that has been deleted in one system but changed the another
+            notes_deleted_in_anki = (  # keep notes that have been deleted in one system but updated in the another
+                unchanged_obsidian_note_ids - non_new_anki_note_ids
+            )
+            notes_deleted_in_obsidian = (  # keep notes that have been deleted in one system but changed in the another
+                unchanged_anki_note_ids - non_new_obsidian_note_ids
+            )
 
             self._add_new_anki_notes(anki_notes=anki_notes, obsidian_notes=obsidian_notes, sync_count=sync_count)
             self._add_new_obsidian_notes(obsidian_notes=obsidian_notes, sync_count=sync_count)
