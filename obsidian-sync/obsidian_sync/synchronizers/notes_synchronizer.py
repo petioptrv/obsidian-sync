@@ -29,6 +29,8 @@
 # Any modifications to this file must keep this entire header intact.
 
 import logging
+import time
+from dataclasses import dataclass
 from itertools import chain
 from typing import Set, Optional
 
@@ -45,6 +47,14 @@ from obsidian_sync.obsidian.obsidian_notes_manager import ObsidianNotesManager
 from obsidian_sync.obsidian.obsidian_notes_result import ObsidianNotesResult
 from obsidian_sync.obsidian.obsidian_vault import ObsidianVault
 from obsidian_sync.utils import format_add_on_message
+
+
+@dataclass
+class SyncCount:
+    new: int = 0
+    updated: int = 0
+    deleted: int = 0
+    unchanged: int = 0
 
 
 class NotesSynchronizer:
@@ -70,8 +80,11 @@ class NotesSynchronizer:
         self._markup_translator = MarkupTranslator()
 
     def synchronize_notes(self):
-        self._metadata.start_sync()
         try:
+            self._metadata.start_sync()
+            if time.time() < self._metadata.last_sync_timestamp:
+                time.sleep(1)
+            sync_count = SyncCount()
             obsidian_notes = self._obsidian_notes_manager.get_all_notes_categorized()
             anki_notes = self._anki_app.get_all_notes_categorized()
 
@@ -83,29 +96,40 @@ class NotesSynchronizer:
             notes_deleted_in_anki = unchanged_obsidian_note_ids - non_new_anki_note_ids  # we don't delete a note that has been deleted in one system but changed the another
             notes_deleted_in_obsidian = unchanged_anki_note_ids - non_new_obsidian_note_ids  # we don't delete a note that has been deleted in one system but changed the another
 
-            self._add_new_anki_notes(anki_notes=anki_notes, obsidian_notes=obsidian_notes)
-            self._add_new_obsidian_notes(obsidian_notes=obsidian_notes)
+            self._add_new_anki_notes(anki_notes=anki_notes, obsidian_notes=obsidian_notes, sync_count=sync_count)
+            self._add_new_obsidian_notes(obsidian_notes=obsidian_notes, sync_count=sync_count)
             self._remove_deleted_notes(
-                obsidian_notes=obsidian_notes, notes_deleted_in_anki=notes_deleted_in_anki, notes_deleted_in_obsidian=notes_deleted_in_obsidian
+                obsidian_notes=obsidian_notes,
+                notes_deleted_in_anki=notes_deleted_in_anki,
+                notes_deleted_in_obsidian=notes_deleted_in_obsidian,
+                sync_count=sync_count,
             )
             self._synchronize_changed_notes(
-                anki_notes=anki_notes, obsidian_notes=obsidian_notes
+                anki_notes=anki_notes, obsidian_notes=obsidian_notes, sync_count=sync_count
             )
 
             if self._addon_config.add_obsidian_url_in_anki:
                 self._ensure_anki_notes_have_obsidian_uri(obsidian_notes=obsidian_notes, anki_notes=anki_notes)
 
-            self._anki_app.show_tooltip(tip=format_add_on_message("Notes synced successfully."))
+            self._anki_app.show_tooltip(
+                tip=format_add_on_message(
+                    f"Synced {sync_count.new} new,"
+                    f" {sync_count.updated} updated,"
+                    f" {sync_count.deleted} deleted,"
+                    f" and {sync_count.unchanged} unchanged notes successfully."
+                )
+            )
+            self._metadata.commit_sync()
         except Exception as e:
             logging.exception("Failed to sync notes.")
             self._anki_app.show_critical(
                 text=format_add_on_message(f"Obsidian sync error: {str(e)}"),
                 title=ADD_ON_NAME,
             )
-        else:
-            self._metadata.commit_sync()
 
-    def _add_new_anki_notes(self, anki_notes: AnkiNotesResult, obsidian_notes: ObsidianNotesResult):
+    def _add_new_anki_notes(
+        self, anki_notes: AnkiNotesResult, obsidian_notes: ObsidianNotesResult, sync_count: SyncCount
+    ):
         for anki_note in anki_notes.new_notes:
             obsidian_note = (
                 obsidian_notes.unchanged_notes.pop(anki_note.id, None)
@@ -119,8 +143,9 @@ class NotesSynchronizer:
             )
             if self._addon_config.add_obsidian_url_in_anki:
                 self._update_anki_note_with_obsidian_notes(obsidian_note=obsidian_note, sanitize=False)
+            sync_count.new += 1
 
-    def _add_new_obsidian_notes(self, obsidian_notes: ObsidianNotesResult):
+    def _add_new_obsidian_notes(self, obsidian_notes: ObsidianNotesResult, sync_count: SyncCount):
         for obsidian_note in obsidian_notes.new_notes:
             obsidian_note = self._sanitize_obsidian_note(obsidian_note=obsidian_note)
             if obsidian_note is not None:
@@ -130,18 +155,29 @@ class NotesSynchronizer:
                 self._obsidian_notes_manager.update_obsidian_note_with_note(  # update note ID and timestamps
                     obsidian_note=obsidian_note, reference_note=anki_note
                 )
+                sync_count.new += 1
 
-    def _remove_deleted_notes(self, obsidian_notes: ObsidianNotesResult, notes_deleted_in_anki: Set[int], notes_deleted_in_obsidian: Set[int]):
+    def _remove_deleted_notes(
+        self,
+        obsidian_notes: ObsidianNotesResult,
+        notes_deleted_in_anki: Set[int],
+        notes_deleted_in_obsidian: Set[int],
+        sync_count: SyncCount,
+    ):
         for note_id in notes_deleted_in_anki:
             obsidian_note = (
                 obsidian_notes.unchanged_notes.pop(note_id, None)
                 or obsidian_notes.updated_notes.pop(note_id)
             )
             self._obsidian_notes_manager.delete_note(note=obsidian_note)
+            sync_count.deleted += 1
         for note_id in notes_deleted_in_obsidian:
             self._anki_app.delete_note_by_id(note_id=note_id)
+            sync_count.deleted += 1
 
-    def _synchronize_changed_notes(self, anki_notes: AnkiNotesResult, obsidian_notes: ObsidianNotesResult):
+    def _synchronize_changed_notes(
+        self, anki_notes: AnkiNotesResult, obsidian_notes: ObsidianNotesResult, sync_count: SyncCount
+    ):
         changes_in_anki = set(anki_notes.updated_notes.keys())
         changes_in_obsidian = set(obsidian_notes.updated_notes.keys())
         changes_in_both_systems = changes_in_anki.intersection(changes_in_obsidian)
@@ -152,6 +188,7 @@ class NotesSynchronizer:
             if obsidian_note.is_corrupt():
                 obsidian_note = self._fix_corrupted_obsidian_note(obsidian_note=obsidian_note, anki_note=anki_note)
             self._synchronize_note_pair(obsidian_note=obsidian_note, anki_note=anki_note)
+            sync_count.updated += 1
 
         changes_in_anki_only = changes_in_anki - changes_in_both_systems
         for note_id in changes_in_anki_only:
@@ -163,6 +200,7 @@ class NotesSynchronizer:
                 obsidian_note=obsidian_note,
                 reference_note=anki_notes.updated_notes[note_id],
             )
+            sync_count.updated += 1
 
         changes_in_obsidian_only = changes_in_obsidian - changes_in_both_systems
         for note_id in changes_in_obsidian_only:
@@ -184,6 +222,7 @@ class NotesSynchronizer:
                 if obsidian_note.is_corrupt():
                     obsidian_note = self._fix_corrupted_obsidian_note(obsidian_note=obsidian_note, anki_note=anki_note)
                 self._update_anki_note_with_obsidian_notes(obsidian_note=obsidian_note)
+                sync_count.updated += 1
 
     def _synchronize_note_pair(self, anki_note: AnkiNote, obsidian_note: ObsidianNote):
         anki_note_modified_timestamp = anki_note.content.properties.date_modified_in_anki.timestamp()
