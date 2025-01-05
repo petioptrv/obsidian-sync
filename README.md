@@ -17,13 +17,17 @@ create new notes in Obsidian using the [templates core plugin](https://help.obsi
 is disabled, the Anki models will not be synced. See the [limitations section](#note-models-and-templates) for
 further details.
 
-If a given note has been modified in both apps, the most recent version is kept.
+If a given note has been modified in both apps, Anki takes precedence. This is because
+the add-on uses last-modified timestamp for Obsidian files to determine if a note has
+been recently modified. If iCloud is used to sync Obsidian files, then off-loading and
+re-downloading iCloud files updates their last-modified timestamps. This makes them
+appear to be recently modified even if that's not the case.
 
 The add-on treats spaced repetition system (SRS) notes (i.e. Anki notes) as first-class
 citizens and creates one Obsidian note per SRS note in Anki. That said SRS notes can
 coexist with regular notes in Obsidian, so it's possible to have one regular Obsidian
-note on a given topic, populated with sections from SRS notes that contain parts of the
-theory relating to the concept. As long as the regular note is note created from an
+note on a given topic, populated with links to SRS note sections that contain parts of the
+theory relating to the concept. As long as the regular note is not created from an
 SRS note template, then the add-on will not try to sync it to Anki.
 
 ### Supported Features

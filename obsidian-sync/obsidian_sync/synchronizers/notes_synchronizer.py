@@ -229,15 +229,9 @@ class NotesSynchronizer:
                 sync_count.updated += 1
 
     def _synchronize_note_pair(self, anki_note: AnkiNote, obsidian_note: ObsidianNote):
-        anki_note_modified_timestamp = anki_note.content.properties.date_modified_in_anki.timestamp()
-        obsidian_modified_timestamp = obsidian_note.file.path.stat().st_mtime  # todo: fix violation of law of Demeter
-
-        if anki_note_modified_timestamp > obsidian_modified_timestamp:
-            self._obsidian_notes_manager.update_obsidian_note_with_note(
-                obsidian_note=obsidian_note, reference_note=anki_note,
-            )
-        else:
-            self._anki_app.update_anki_note_with_note(reference_note=obsidian_note)
+        self._obsidian_notes_manager.update_obsidian_note_with_note(  # Anki takes precedence because off-loading and re-downloading Obsidian files synced with iCloud updates their last-modified timestamp
+            obsidian_note=obsidian_note, reference_note=anki_note,
+        )
 
     def _update_anki_note_with_obsidian_notes(self, obsidian_note: ObsidianNote, sanitize: bool = True):
         if sanitize:
