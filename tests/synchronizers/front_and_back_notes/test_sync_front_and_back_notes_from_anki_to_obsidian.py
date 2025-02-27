@@ -520,19 +520,19 @@ and a block equation:&nbsp;\[{block_equation}\]"""
     assert f"$${block_equation}$$" in first_field.to_markdown()
 
 
-def test_sync_new_anki_note_with_math_equations_in_cloze_to_obsidian(
+def test_sync_new_anki_note_with_math_equation_underscores_to_obsidian_without_treating_underscores_as_italics(
     anki_setup_and_teardown,
     obsidian_setup_and_teardown,
     anki_test_app: AnkiTestApp,
-    markup_translator: MarkupTranslator,
     addon_config: AddonConfig,
     notes_synchronizer: NotesSynchronizer,
     obsidian_notes_manager: ObsidianNotesManager,
 ):
-    in_line_equation = "A^*"
-    block_equation = "B^*"
-    front_field_html = f"""Some front with an in-line math {{{{c1::equation \({in_line_equation}\)}}}}
-and a {{{{c2::block equation:&nbsp;\[{block_equation}\]}}}}"""
+    """The translator treated underscores as italicization even if it's in an equation."""
+    equation = "\sum_{i \in C^+j}y_i + \sum{i \in C^-_j}(1 - y_i)"
+    front_field_html = f"""
+Some front with an in-line math equation \({equation}\) and a block equation:&nbsp;\[{equation}\]
+"""
     back_field_html = "Some back"
     note = build_basic_anki_note(
         anki_test_app=anki_test_app,
@@ -549,8 +549,45 @@ and a {{{{c2::block equation:&nbsp;\[{block_equation}\]}}}}"""
     obsidian_note = obsidian_notes_result.unchanged_notes[anki_note.id]
     first_field = obsidian_note.content.fields[0]
 
-    assert f"${in_line_equation}$" in first_field.to_markdown()
-    assert f"$${block_equation}$$" in first_field.to_markdown()
+    assert f"${equation}$" in first_field.to_markdown()
+    assert f"$${equation}$$" in first_field.to_markdown()
+
+    anki_note = anki_test_app.get_note_by_id(note_id=anki_note.id)
+
+    assert f"\({equation}\)" in anki_note.content.fields[0].text
+    assert f"\[{equation}\]" in anki_note.content.fields[0].text
+
+
+def test_sync_new_anki_note_with_plain_text_equal_sign_to_obsidian(
+    anki_setup_and_teardown,
+    obsidian_setup_and_teardown,
+    anki_test_app: AnkiTestApp,
+    addon_config: AddonConfig,
+    notes_synchronizer: NotesSynchronizer,
+    obsidian_notes_manager: ObsidianNotesManager,
+):
+    front_field = "Some front with plain-text equation x = 2 and one more x=2"
+    back_field = "Some back"
+    note = build_basic_anki_note(
+        anki_test_app=anki_test_app,
+        front_text=front_field,
+        back_text=back_field,
+    )
+    anki_note = anki_test_app.add_note(
+        note=note, deck_name=addon_config.anki_deck_name_for_obsidian_imports
+    )
+
+    notes_synchronizer.synchronize_notes()
+
+    obsidian_notes_result = obsidian_notes_manager.get_all_notes_categorized()
+    obsidian_note = obsidian_notes_result.unchanged_notes[anki_note.id]
+    first_field = obsidian_note.content.fields[0]
+
+    assert front_field in first_field.to_markdown()
+
+    anki_note = anki_test_app.get_note_by_id(note_id=anki_note.id)
+
+    assert front_field in anki_note.content.fields[0].text
 
 
 def test_sync_new_anki_note_with_code_to_obsidian(
@@ -600,7 +637,6 @@ def test_sync_new_anki_note_with_list_to_obsidian(
     anki_setup_and_teardown,
     obsidian_setup_and_teardown,
     anki_test_app: AnkiTestApp,
-    markup_translator: MarkupTranslator,
     addon_config: AddonConfig,
     notes_synchronizer: NotesSynchronizer,
     obsidian_notes_manager: ObsidianNotesManager,

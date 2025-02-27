@@ -1,15 +1,12 @@
 import json
 from pathlib import Path
 
-import pytest
-
 from obsidian_sync.addon_config import AddonConfig
 from obsidian_sync.constants import MARKDOWN_FILE_SUFFIX, \
     MODEL_NAME_PROPERTY_NAME, NOTE_ID_PROPERTY_NAME, TAGS_PROPERTY_NAME, \
     SRS_NOTE_IDENTIFIER_COMMENT, SRS_NOTE_FIELD_IDENTIFIER_COMMENT, SRS_HEADER_TITLE_LEVEL, \
     CONF_ADD_OBSIDIAN_URL_IN_ANKI, OBSIDIAN_LINK_URL_FIELD_NAME, DEFAULT_NOTE_ID_FOR_NEW_NOTES, \
-    MODEL_ID_PROPERTY_NAME, DATE_MODIFIED_PROPERTY_NAME, OBSIDIAN_SETTINGS_FOLDER, OBSIDIAN_APP_SETTINGS_FILE, \
-    OBSIDIAN_TEMPLATES_OPTION_KEY
+    MODEL_ID_PROPERTY_NAME, DATE_MODIFIED_PROPERTY_NAME
 from obsidian_sync.obsidian.obsidian_config import ObsidianConfig
 from obsidian_sync.obsidian.obsidian_templates_manager import ObsidianTemplatesManager
 from obsidian_sync.synchronizers.templates_synchronizer import TemplatesSynchronizer
