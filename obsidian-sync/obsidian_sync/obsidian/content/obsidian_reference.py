@@ -27,7 +27,6 @@
 # listed here: <mailto:petioptrv@icloud.com>.
 #
 # Any modifications to this file must keep this entire header intact.
-
 import urllib.parse
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -50,11 +49,11 @@ class ObsidianReferenceFactory:
         )
         references: List["ObsidianReference"] = [
             ObsidianMediaReference(
-                path=path,
-                _obsidian_file_text_path=obsidian_file_text_path,
+                path=referenced_vault_file.path,
+                _obsidian_file_text_path=referenced_vault_file.string_in_text,
                 _obsidian_references_manager=self._obsidian_attachments_manager,
             )
-            for obsidian_file_text_path, path in attachment_paths.items()
+            for referenced_vault_file in attachment_paths
         ]
         obsidian_urls = self._obsidian_attachments_manager.obsidian_urls_from_file_text(
             file_text=field_text, note_path=note_path
@@ -113,7 +112,9 @@ class ObsidianMediaReference(ObsidianReference, MediaReference):
         obsidian_media_path = obsidian_references_manager.ensure_media_is_in_obsidian(
             reference=reference, note_path=note_path
         )
-        obsidian_file_text_path = str(obsidian_media_path.relative_to(obsidian_references_manager.vault_path))
+        obsidian_file_text_path = urllib.parse.quote(
+            str(obsidian_media_path.relative_to(obsidian_references_manager.vault_path))
+        )
         return cls(
             path=obsidian_media_path,
             _obsidian_file_text_path=obsidian_file_text_path,
@@ -121,8 +122,7 @@ class ObsidianMediaReference(ObsidianReference, MediaReference):
         )
 
     def to_obsidian_file_text(self) -> str:
-        path_quote = urllib.parse.quote(string=self._obsidian_file_text_path)
-        return path_quote
+        return self._obsidian_file_text_path
 
 
 @dataclass
@@ -140,16 +140,14 @@ class ObsidianURLReferenceInObsidian(ObsidianReference, ObsidianURLReference):
         obsidian_references_manager: ObsidianReferencesManager,
         note_path: Path,
     ) -> "ObsidianURLReferenceInObsidian":
-        path_to_referenced_file = obsidian_references_manager.resolve_obsidian_url(
+        referenced_vault_file = obsidian_references_manager.resolve_obsidian_url(
             reference=reference, note_path=note_path
         )
-        obsidian_file_text_path = str(path_to_referenced_file.relative_to(obsidian_references_manager.vault_path))
         return cls(
             url=reference.url,
-            _obsidian_file_text_path=obsidian_file_text_path,
+            _obsidian_file_text_path=referenced_vault_file.string_in_text,
             _obsidian_references_manager=obsidian_references_manager,
         )
 
     def to_obsidian_file_text(self) -> str:
-        path_quote = urllib.parse.quote(string=self._obsidian_file_text_path)
-        return path_quote
+        return self._obsidian_file_text_path

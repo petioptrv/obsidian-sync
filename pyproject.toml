@@ -7,13 +7,15 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-anki = "^24.6.3"
+anki = "^24.11"
 pytest = "^8.3.3"
 pyqt6 = "6.6.1"
 pyqt6-qt6 = "6.6.2"
 pyqt6-webengine = "6.6.0"
 pyqt6-webengine-qt6 = "6.6.2"
 pyqt6-sip = "13.6.0"
+setuptools = "^75.6.0"
+aqt = "^24.11"
 
 
 [tool.poetry.group.dev.dependencies]

@@ -694,7 +694,6 @@ def test_sync_new_obsidian_note_with_links_to_other_notes_to_anki_substituting_w
     )
 
 
-@pytest.mark.skip
 def test_sync_new_obsidian_note_with_link_to_heading_in_same_note_to_anki_substituting_with_obsidian_url(
     anki_setup_and_teardown,
     obsidian_setup_and_teardown,
@@ -704,10 +703,143 @@ def test_sync_new_obsidian_note_with_link_to_heading_in_same_note_to_anki_substi
     obsidian_notes_manager: ObsidianNotesManager,
     notes_synchronizer: NotesSynchronizer,
 ):
-    raise NotImplementedError
+    main_note_path = srs_folder_in_obsidian / "note.md"
+    heading = "some-heading"
+    obsidian_front_text = f"Some [linked heading](#{heading}) here"
+    build_basic_obsidian_note(
+        anki_test_app=anki_test_app,
+        front_text=obsidian_front_text,
+        back_text="Another back",
+        file_path=main_note_path,
+    )
+
+    notes_synchronizer.synchronize_notes()
+
+    vault_url_string = urllib.parse.quote(string=obsidian_vault_folder.name)
+    main_note_path_relative_to_vault = urllib.parse.quote(
+        string=str(main_note_path.relative_to(obsidian_vault_folder))
+    )
+    expected_url_html = f"obsidian://open?vault={vault_url_string}&amp;file={main_note_path_relative_to_vault}#{heading}"
+    expected_front_field_html = f"<p>Some <a href=\"{expected_url_html}\">linked heading</a> here</p>"
+    anki_notes = list(anki_test_app.get_all_notes().values())
+
+    assert len(anki_notes) == 1
+    assert anki_notes[0].content.fields[0].text == expected_front_field_html
+
+    obsidian_notes = obsidian_notes_manager.get_all_notes_categorized()
+    obsidian_note = obsidian_notes.unchanged_notes[anki_notes[0].id]
+
+    assert obsidian_note.content.fields[0].to_obsidian_file_text().endswith(f"{obsidian_front_text}\n\n")
 
 
-@pytest.mark.skip
+def test_sync_new_obsidian_note_with_link_to_heading_in_different_note_to_anki_substituting_with_obsidian_url(
+    anki_setup_and_teardown,
+    obsidian_setup_and_teardown,
+    anki_test_app: AnkiTestApp,
+    srs_folder_in_obsidian: Path,
+    obsidian_vault_folder: Path,
+    obsidian_notes_manager: ObsidianNotesManager,
+    notes_synchronizer: NotesSynchronizer,
+):
+    linked_note_path = srs_folder_in_obsidian / "linked note.md"
+    main_note_path = srs_folder_in_obsidian / "main note.md"
+    build_basic_obsidian_note(
+        anki_test_app=anki_test_app,
+        front_text="Some front",
+        back_text="Some back",
+        file_path=linked_note_path,
+    )
+    linked_note_path_relative_to_vault = urllib.parse.quote(
+        string=str(linked_note_path.relative_to(obsidian_vault_folder))
+    )
+    heading = "some-heading"
+    obsidian_front_text = f"Some [linked note's heading]({linked_note_path_relative_to_vault}#{heading}) here"
+    build_basic_obsidian_note(
+        anki_test_app=anki_test_app,
+        front_text=obsidian_front_text,
+        back_text="Another back",
+        file_path=main_note_path,
+    )
+
+    notes_synchronizer.synchronize_notes()
+
+    vault_url_string = urllib.parse.quote(string=obsidian_vault_folder.name)
+    expected_url_html = f"obsidian://open?vault={vault_url_string}&amp;file={linked_note_path_relative_to_vault}"
+    expected_front_field_html = f"<p>Some <a href=\"{expected_url_html}#{heading}\">linked note's heading</a> here</p>"
+    anki_notes = list(anki_test_app.get_all_notes().values())
+
+    assert len(anki_notes) == 2
+    assert (
+        (
+            anki_notes[0].content.fields[0].text == expected_front_field_html
+            and anki_notes[1].content.fields[0].text != expected_front_field_html
+        ) or (
+            anki_notes[0].content.fields[0].text != expected_front_field_html
+            and anki_notes[1].content.fields[0].text == expected_front_field_html
+        )
+    )
+
+    anki_note_with_link = (
+        anki_notes[0]
+        if anki_notes[0].content.fields[0].text == expected_front_field_html
+        else anki_notes[1]
+    )
+    obsidian_notes = obsidian_notes_manager.get_all_notes_categorized()
+    obsidian_note = obsidian_notes.unchanged_notes[anki_note_with_link.id]
+
+    assert obsidian_note.content.fields[0].to_obsidian_file_text().endswith(f"{obsidian_front_text}\n\n")
+
+
+def test_sync_new_obsidian_note_with_link_to_subheading_in_different_note_to_anki_substituting_with_obsidian_url(
+    anki_setup_and_teardown,
+    obsidian_setup_and_teardown,
+    anki_test_app: AnkiTestApp,
+    srs_folder_in_obsidian: Path,
+    obsidian_vault_folder: Path,
+    obsidian_notes_manager: ObsidianNotesManager,
+    notes_synchronizer: NotesSynchronizer,
+):
+    linked_note_path = srs_folder_in_obsidian / "linked note.md"
+    main_note_path = srs_folder_in_obsidian / "main note.md"
+    build_basic_obsidian_note(
+        anki_test_app=anki_test_app,
+        front_text="Some front",
+        back_text="Some back",
+        file_path=linked_note_path,
+    )
+    linked_note_path_relative_to_vault = urllib.parse.quote(
+        string=str(linked_note_path.relative_to(obsidian_vault_folder))
+    )
+    heading = "some-heading"
+    subheading = "some-subheading"
+    build_basic_obsidian_note(
+        anki_test_app=anki_test_app,
+        front_text=f"Some [linked note's heading]({linked_note_path_relative_to_vault}#{heading}#{subheading}) here",
+        back_text="Another back",
+        file_path=main_note_path,
+    )
+
+    notes_synchronizer.synchronize_notes()
+
+    vault_url_string = urllib.parse.quote(string=obsidian_vault_folder.name)
+    expected_url_html = f"obsidian://open?vault={vault_url_string}&amp;file={linked_note_path_relative_to_vault}"
+    expected_front_field_html = (
+        f"<p>Some <a href=\"{expected_url_html}#{heading}#{subheading}\">linked note's heading</a> here</p>"
+    )
+    anki_notes = list(anki_test_app.get_all_notes().values())
+
+    assert len(anki_notes) == 2
+    assert (
+        (
+            anki_notes[0].content.fields[0].text == expected_front_field_html
+            and anki_notes[1].content.fields[0].text != expected_front_field_html
+        ) or (
+            anki_notes[0].content.fields[0].text != expected_front_field_html
+            and anki_notes[1].content.fields[0].text == expected_front_field_html
+        )
+    )
+
+
 def test_sync_new_obsidian_note_with_link_to_block_in_same_note_to_anki_substituting_with_obsidian_url(
     anki_setup_and_teardown,
     obsidian_setup_and_teardown,
@@ -717,7 +849,78 @@ def test_sync_new_obsidian_note_with_link_to_block_in_same_note_to_anki_substitu
     obsidian_notes_manager: ObsidianNotesManager,
     notes_synchronizer: NotesSynchronizer,
 ):
-    raise NotImplementedError
+    main_note_path = srs_folder_in_obsidian / "note.md"
+    block_identifier = "dac47a"
+    build_basic_obsidian_note(
+        anki_test_app=anki_test_app,
+        front_text=f"Some [linked block](#^{block_identifier}) here",
+        back_text="Some back",
+        file_path=main_note_path,
+    )
+
+    notes_synchronizer.synchronize_notes()
+
+    vault_url_string = urllib.parse.quote(string=obsidian_vault_folder.name)
+    main_note_path_relative_to_vault = urllib.parse.quote(
+        string=str(main_note_path.relative_to(obsidian_vault_folder))
+    )
+    expected_url_html = (
+        f"obsidian://open?vault={vault_url_string}&amp;file={main_note_path_relative_to_vault}#^{block_identifier}"
+    )
+    expected_front_field_html = f"<p>Some <a href=\"{expected_url_html}\">linked block</a> here</p>"
+    anki_notes = list(anki_test_app.get_all_notes().values())
+
+    assert len(anki_notes) == 1
+    assert anki_notes[0].content.fields[0].text == expected_front_field_html
+
+
+def test_sync_new_obsidian_note_with_link_to_block_in_different_note_to_anki_substituting_with_obsidian_url(
+    anki_setup_and_teardown,
+    obsidian_setup_and_teardown,
+    anki_test_app: AnkiTestApp,
+    srs_folder_in_obsidian: Path,
+    obsidian_vault_folder: Path,
+    obsidian_notes_manager: ObsidianNotesManager,
+    notes_synchronizer: NotesSynchronizer,
+):
+    linked_note_path = srs_folder_in_obsidian / "linked note.md"
+    main_note_path = srs_folder_in_obsidian / "main note.md"
+    build_basic_obsidian_note(
+        anki_test_app=anki_test_app,
+        front_text="Some front",
+        back_text="Some back",
+        file_path=linked_note_path,
+    )
+    linked_note_path_relative_to_vault = urllib.parse.quote(
+        string=str(linked_note_path.relative_to(obsidian_vault_folder))
+    )
+    block_identifier = "dac47a"
+    build_basic_obsidian_note(
+        anki_test_app=anki_test_app,
+        front_text=f"Some [linked note's block]({linked_note_path_relative_to_vault}#^{block_identifier}) here",
+        back_text="Another back",
+        file_path=main_note_path,
+    )
+
+    notes_synchronizer.synchronize_notes()
+
+    vault_url_string = urllib.parse.quote(string=obsidian_vault_folder.name)
+    expected_url_html = f"obsidian://open?vault={vault_url_string}&amp;file={linked_note_path_relative_to_vault}"
+    expected_front_field_html = (
+        f"<p>Some <a href=\"{expected_url_html}#^{block_identifier}\">linked note's block</a> here</p>"
+    )
+    anki_notes = list(anki_test_app.get_all_notes().values())
+
+    assert len(anki_notes) == 2
+    assert (
+        (
+            anki_notes[0].content.fields[0].text == expected_front_field_html
+            and anki_notes[1].content.fields[0].text != expected_front_field_html
+        ) or (
+            anki_notes[0].content.fields[0].text != expected_front_field_html
+            and anki_notes[1].content.fields[0].text == expected_front_field_html
+        )
+    )
 
 
 def test_obsidian_note_in_anki_remains_the_same_on_subsequent_sync(

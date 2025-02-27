@@ -45,7 +45,7 @@ from obsidian_sync.anki.anki_notes_result import AnkiNotesResult
 from obsidian_sync.anki.anki_template import AnkiTemplate
 from obsidian_sync.anki.app.anki_media_manager import AnkiReferencesManager
 from obsidian_sync.base_types.note import Note
-from obsidian_sync.constants import ADD_ON_NAME, DEFAULT_NOTE_ID_FOR_NEW_NOTES
+from obsidian_sync.constants import ADD_ON_NAME, DEFAULT_NOTE_ID_FOR_NEW_NOTES, ADD_ON_ID
 
 
 class AnkiApp:
@@ -58,7 +58,11 @@ class AnkiApp:
 
     @property
     def config(self):
-        return aqt.mw.addonManager.getConfig(module=ADD_ON_NAME)
+        return (
+            aqt.mw.addonManager.getConfig(module=ADD_ON_NAME.lower())
+            or aqt.mw.addonManager.getConfig(module=__name__)
+            or aqt.mw.addonManager.getConfig(module=ADD_ON_ID)
+        )
 
     @property
     def media_manager(self):

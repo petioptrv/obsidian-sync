@@ -32,6 +32,7 @@ import re
 import shutil
 import unicodedata
 import urllib.parse
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List
 
@@ -54,9 +55,12 @@ class ObsidianReferencesManager:
     def vault_path(self) -> Path:
         return self._addon_config.obsidian_vault_path
 
-    def media_paths_from_file_text(self, file_text: str, note_path: Path) -> Dict[str, Path]:
+    def media_paths_from_file_text(self, file_text: str, note_path: Path) -> List["ReferencedVaultFile"]:
         media_paths = self._referenced_vault_files_from_file_text(
-            file_text=file_text, note_path=note_path, file_suffixes=MEDIA_FILE_SUFFIXES
+            file_text=file_text,
+            note_path=note_path,
+            file_suffixes=MEDIA_FILE_SUFFIXES,
+            allow_location_identifiers=False,
         )
         return media_paths
 
@@ -76,41 +80,65 @@ class ObsidianReferencesManager:
 
     def obsidian_urls_from_file_text(self, file_text: str, note_path: Path) -> Dict[str, str]:
         markdown_file_paths = self._referenced_vault_files_from_file_text(
-            file_text=file_text, note_path=note_path, file_suffixes=[MARKDOWN_FILE_SUFFIX]
+            file_text=file_text,
+            note_path=note_path,
+            file_suffixes=[MARKDOWN_FILE_SUFFIX],
+            allow_location_identifiers=True,
+            allow_location_identifiers_only=True,
         )
-        obsidian_urls = {
-            path_string: obsidian_url_for_note_path(
-                vault_path=self._addon_config.obsidian_vault_path, note_path=file_path
+        obsidian_urls = {}
+        for referenced_vault_file in markdown_file_paths:
+            url = obsidian_url_for_note_path(
+                vault_path=self._addon_config.obsidian_vault_path,
+                note_path=referenced_vault_file.path,
+                location_identifier=referenced_vault_file.location_identifier,
             )
-            for path_string, file_path in markdown_file_paths.items()
-        }
+            obsidian_urls[referenced_vault_file.string_in_text] = url
         return obsidian_urls
 
-    def resolve_obsidian_url(self, reference: ObsidianURLReference, note_path: Path) -> Path:
-        obsidian_markdown_url_pattern = r"obsidian:\/\/open\?vault=([^&]+)&file=([^&]+)"
+    def resolve_obsidian_url(self, reference: ObsidianURLReference, note_path: Path) -> "ReferencedVaultFile":
+        obsidian_url_pattern = r"obsidian:\/\/open\?vault=([^&]+)&file=([^&#]+)(#.+)?"
         unquoted_url = urllib.parse.unquote(reference.url)
-        match = re.match(pattern=obsidian_markdown_url_pattern, string=unquoted_url)
+        match = re.match(pattern=obsidian_url_pattern, string=unquoted_url)
         base_path = Path(match.group(2))
         vault_file_path = self._resolve_vault_file_reference_path(
             base_path=base_path, note_path=note_path
         )
-        return vault_file_path
+        location_identifier = match.group(3) or ""
+        string_in_text = f"{urllib.parse.quote(str(base_path)) if vault_file_path != note_path else ''}{location_identifier}"
+        return ReferencedVaultFile(
+            path=vault_file_path, location_identifier=location_identifier, string_in_text=string_in_text
+        )
 
     def _referenced_vault_files_from_file_text(
-        self, file_text: str, note_path: Path, file_suffixes: List[str]
-    ) -> Dict[str, Path]:
+        self,
+        file_text: str,
+        note_path: Path,
+        file_suffixes: List[str],
+        allow_location_identifiers: bool,
+        allow_location_identifiers_only: bool = False,
+    ) -> List["ReferencedVaultFile"]:
         file_reference_pattern = self._build_reference_file_type_matcher(
-            file_suffixes=file_suffixes
+            file_suffixes=file_suffixes,
+            allow_location_identifiers=allow_location_identifiers,
+            allow_location_identifiers_only=allow_location_identifiers_only,
         )
-        vault_file_paths = dict()
+        vault_file_paths = []
 
-        for quoted_path_string, optional_part in re.findall(file_reference_pattern, file_text, re.DOTALL):
-            path_string = urllib.parse.unquote(string=quoted_path_string)
+        for quoted_path_string, location_identifier, _ in re.findall(file_reference_pattern, file_text, re.DOTALL):
+            path_string = urllib.parse.unquote(string=quoted_path_string) if quoted_path_string else str(note_path)
             file_path = self._resolve_vault_file_reference_path(
                 base_path=Path(path_string), note_path=note_path
             )
             if file_path.exists():
-                vault_file_paths[path_string] = file_path
+                associated_string_in_text = f"{quoted_path_string}{location_identifier}"
+                vault_file_paths.append(
+                    ReferencedVaultFile(
+                        path=file_path,
+                        location_identifier=location_identifier,
+                        string_in_text=associated_string_in_text,
+                    )
+                )
 
         return vault_file_paths
 
@@ -151,8 +179,30 @@ class ObsidianReferencesManager:
         return self._obsidian_config.srs_attachments_folder
 
     @staticmethod
-    def _build_reference_file_type_matcher(file_suffixes: List[str]) -> str:
-        file_reference_matcher = "|\\".join(file_suffixes)
-        return (  # source: https://stackoverflow.com/a/44227600/6793798
-            rf"""!?\[[^\]]*\]\((.*?(?:{file_reference_matcher}))\s*("(?:.*[^"])")?\s*\)"""
+    def _build_reference_file_type_matcher(
+        file_suffixes: List[str],
+        allow_location_identifiers: bool,
+        allow_location_identifiers_only: bool = False,  # for referencing a section or block in the current file
+    ) -> str:
+        assert not allow_location_identifiers_only or allow_location_identifiers
+
+        square_brackets_piece = r"!?\[[^\]]*\]"
+
+        file_reference_matcher = "\\" + "|\\".join(file_suffixes)
+        file_matcher = f"(.*?(?:{file_reference_matcher})){'?' if allow_location_identifiers_only else ''}"
+        location_matcher = """(#[^)"]+)?""" if allow_location_identifiers else "()?"
+
+        comment_piece_matcher = """("(?:.*[^"])")?"""
+
+        matcher = (  # source: https://stackoverflow.com/a/44227600/6793798
+            rf"""{square_brackets_piece}\({file_matcher}{location_matcher}\s*{comment_piece_matcher}\s*\)"""
         )
+
+        return matcher
+
+
+@dataclass
+class ReferencedVaultFile:
+    path: Path
+    location_identifier: str
+    string_in_text: str

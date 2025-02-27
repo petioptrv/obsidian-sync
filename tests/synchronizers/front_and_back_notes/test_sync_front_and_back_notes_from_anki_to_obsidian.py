@@ -376,7 +376,7 @@ def test_syncing_references_with_unicode_whitespace_from_anki_to_obsidian(
     obsidian_notes_manager: ObsidianNotesManager,
     srs_folder_in_obsidian: Path,
 ):
-    """Obsidian cannot handle file names with unicode whitespace."""
+    """Obsidian cannot handle file names with Unicode whitespace."""
 
     image_file_name = "Screenshot 2024-11-26 at 11.54.26 AM.png"
     expected_image_file_name_in_obsidian = "Screenshot 2024-11-26 at 11.54.26 AM.png"

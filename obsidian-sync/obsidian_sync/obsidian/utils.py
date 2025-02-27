@@ -31,15 +31,12 @@ import urllib.parse
 from pathlib import Path
 
 
-def obsidian_url_for_note_path(vault_path: Path, note_path: Path) -> str:
+def obsidian_url_for_note_path(vault_path: Path, note_path: Path, location_identifier: str = "") -> str:
     vault_name = urllib.parse.quote(string=vault_path.name)
     note_path_string_relative_to_vault = urllib.parse.quote(
         string=str(note_path.relative_to(vault_path))
     )
-    # obsidian_url = (
-    #     f"obsidian://open?vault={vault_name}&amp;file={note_path_string_relative_to_vault}"
-    # )
     obsidian_url = (
-        f"obsidian://open?vault={vault_name}&file={note_path_string_relative_to_vault}"
+        f"obsidian://open?vault={vault_name}&file={note_path_string_relative_to_vault}{location_identifier}"
     )
     return obsidian_url

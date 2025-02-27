@@ -111,6 +111,8 @@ class Field(ABC):
             isinstance(other, Field)
             and self.name == other.name
             and self.text == other.text
+            and self.to_markdown() == other.to_markdown()
+            and self.to_html() == other.to_html()
         )
 
     @abstractmethod

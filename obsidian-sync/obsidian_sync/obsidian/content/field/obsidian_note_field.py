@@ -150,9 +150,7 @@ class ObsidianNoteField(ObsidianNoteFieldBase):
         obsidian_reference_factory: ObsidianReferenceFactory,
     ) -> "ObsidianNoteField":
         text = paragraph.strip()
-        references = obsidian_reference_factory.from_obsidian_field_text(
-            field_text=text, note_path=note_path
-        )
+        references = obsidian_reference_factory.from_obsidian_field_text(field_text=text, note_path=note_path)
 
         for attachment in references:
             text = text.replace(
