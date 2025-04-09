@@ -38,3 +38,7 @@ class AnkiNotesResult:
     new_notes: List[AnkiNote]
     updated_notes: Dict[int, AnkiNote]
     unchanged_notes: Dict[int, AnkiNote]
+
+    @property
+    def all_notes_count(self) -> int:
+        return len(self.new_notes) + len(self.updated_notes) + len(self.unchanged_notes)

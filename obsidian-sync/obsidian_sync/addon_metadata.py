@@ -54,13 +54,6 @@ class AddonMetadata:
         self._sync_started = False
         self._anki_user = "default"
 
-    def __enter__(self) -> "AddonMetadata":
-        self.start_sync()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.commit_sync()
-
     @property
     def anki_user(self) -> str:
         return self._anki_user

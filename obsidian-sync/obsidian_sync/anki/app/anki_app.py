@@ -232,7 +232,7 @@ class AnkiApp:
         col = aqt.mw.col
         anki_system_note = col.get_note(note_id)
 
-        properties = AnkiNoteProperties(
+        properties = AnkiNoteProperties(  # todo: refactor so that the `AnkiNoteProperties` class knows how to instantiate itself from an Anki system note to make it easier to extend the class
             model_id=anki_system_note.mid,
             model_name=anki_system_note.note_type()["name"],
             note_id=anki_system_note.id,
@@ -312,6 +312,10 @@ class AnkiApp:
             canceled = True
 
         return selected_path, canceled
+
+    @staticmethod
+    def prompt_for_confirmation(prompt: str) -> bool:
+        return aqt.utils.askUser(text=prompt)
 
     @staticmethod
     def add_menu_item(title: str, key_sequence: str, callback: Callable):

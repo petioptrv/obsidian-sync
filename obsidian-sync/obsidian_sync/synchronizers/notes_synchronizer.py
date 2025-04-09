@@ -52,7 +52,8 @@ from obsidian_sync.utils import format_add_on_message
 @dataclass
 class SyncCount:
     new: int = 0
-    updated: int = 0
+    updated_in_anki: int = 0
+    updated_in_obsidian: int = 0
     deleted: int = 0
     unchanged: int = 0
 
@@ -96,34 +97,58 @@ class NotesSynchronizer:
             notes_deleted_in_anki = (  # keep notes that have been deleted in one system but updated in the another
                 unchanged_obsidian_note_ids - non_new_anki_note_ids
             )
+
+            abort_sync = False
+            if len(notes_deleted_in_anki) > obsidian_notes.all_notes_count * 0.2:
+                if not self._anki_app.prompt_for_confirmation(
+                    prompt=(
+                        f"{len(notes_deleted_in_anki)} of the {obsidian_notes.all_notes_count} notes in Obsidian"
+                        f" are detected as deleted in Anki and will be deleted in Obsidian."
+                        f" Proceed with the sync?"
+                    )
+                ):
+                    abort_sync = True
+
             notes_deleted_in_obsidian = (  # keep notes that have been deleted in one system but changed in the another
                 unchanged_anki_note_ids - non_new_obsidian_note_ids
             )
 
-            self._add_new_anki_notes(anki_notes=anki_notes, obsidian_notes=obsidian_notes, sync_count=sync_count)
-            self._add_new_obsidian_notes(obsidian_notes=obsidian_notes, sync_count=sync_count)
-            self._remove_deleted_notes(
-                obsidian_notes=obsidian_notes,
-                notes_deleted_in_anki=notes_deleted_in_anki,
-                notes_deleted_in_obsidian=notes_deleted_in_obsidian,
-                sync_count=sync_count,
-            )
-            self._synchronize_changed_notes(
-                anki_notes=anki_notes, obsidian_notes=obsidian_notes, sync_count=sync_count
-            )
+            if len(notes_deleted_in_obsidian) > anki_notes.all_notes_count * 0.2:
+                if not self._anki_app.prompt_for_confirmation(
+                    prompt=(
+                        f"{len(notes_deleted_in_obsidian)} of the {anki_notes.all_notes_count} notes in Anki"
+                        f" are detected as deleted in Obsidian and will be deleted in Anki."
+                        f" Proceed with the sync?"
+                    )
+                ):
+                    abort_sync = True
 
-            if self._addon_config.add_obsidian_url_in_anki:
-                self._ensure_anki_notes_have_obsidian_uri(obsidian_notes=obsidian_notes, anki_notes=anki_notes)
-
-            self._anki_app.show_tooltip(
-                tip=format_add_on_message(
-                    f"Synced {sync_count.new} new,"
-                    f" {sync_count.updated} updated,"
-                    f" {sync_count.deleted} deleted,"
-                    f" and {sync_count.unchanged} unchanged notes successfully."
+            if not abort_sync:
+                self._add_new_anki_notes(anki_notes=anki_notes, obsidian_notes=obsidian_notes, sync_count=sync_count)
+                self._add_new_obsidian_notes(obsidian_notes=obsidian_notes, sync_count=sync_count)
+                self._remove_deleted_notes(
+                    obsidian_notes=obsidian_notes,
+                    notes_deleted_in_anki=notes_deleted_in_anki,
+                    notes_deleted_in_obsidian=notes_deleted_in_obsidian,
+                    sync_count=sync_count,
                 )
-            )
-            self._metadata.commit_sync()
+                self._synchronize_changed_notes(
+                    anki_notes=anki_notes, obsidian_notes=obsidian_notes, sync_count=sync_count
+                )
+
+                if self._addon_config.add_obsidian_url_in_anki:
+                    self._ensure_anki_notes_have_obsidian_uri(obsidian_notes=obsidian_notes, anki_notes=anki_notes)
+
+                self._anki_app.show_tooltip(
+                    tip=format_add_on_message(
+                        f"Synced {sync_count.new} new,"
+                        f" {sync_count.updated_in_anki} updated in Anki,"
+                        f" {sync_count.updated_in_obsidian} updated in Obsidian,"
+                        f" {sync_count.deleted} deleted,"
+                        f" and {sync_count.unchanged} unchanged notes successfully."
+                    )
+                )
+                self._metadata.commit_sync()
         except Exception as e:
             logging.exception("Failed to sync notes.")
             self._anki_app.show_critical(
@@ -192,7 +217,8 @@ class NotesSynchronizer:
             if obsidian_note.is_corrupt():
                 obsidian_note = self._fix_corrupted_obsidian_note(obsidian_note=obsidian_note, anki_note=anki_note)
             self._synchronize_note_pair(obsidian_note=obsidian_note, anki_note=anki_note)
-            sync_count.updated += 1
+            sync_count.updated_in_anki += 1
+            sync_count.updated_in_obsidian += 1
 
         changes_in_anki_only = changes_in_anki - changes_in_both_systems
         for note_id in changes_in_anki_only:
@@ -204,7 +230,7 @@ class NotesSynchronizer:
                 obsidian_note=obsidian_note,
                 reference_note=anki_notes.updated_notes[note_id],
             )
-            sync_count.updated += 1
+            sync_count.updated_in_obsidian += 1
 
         changes_in_obsidian_only = changes_in_obsidian - changes_in_both_systems
         for note_id in changes_in_obsidian_only:
@@ -226,7 +252,7 @@ class NotesSynchronizer:
                 if obsidian_note.is_corrupt():
                     obsidian_note = self._fix_corrupted_obsidian_note(obsidian_note=obsidian_note, anki_note=anki_note)
                 self._update_anki_note_with_obsidian_notes(obsidian_note=obsidian_note)
-                sync_count.updated += 1
+                sync_count.updated_in_anki += 1
 
     def _synchronize_note_pair(self, anki_note: AnkiNote, obsidian_note: ObsidianNote):
         self._obsidian_notes_manager.update_obsidian_note_with_note(  # Anki takes precedence because off-loading and re-downloading Obsidian files synced with iCloud updates their last-modified timestamp
