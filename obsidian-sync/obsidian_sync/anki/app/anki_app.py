@@ -59,9 +59,9 @@ class AnkiApp:
     @property
     def config(self):
         return (
-            aqt.mw.addonManager.getConfig(module=ADD_ON_NAME.lower())
+            aqt.mw.addonManager.getConfig(module=ADD_ON_ID)
+            or aqt.mw.addonManager.getConfig(module=ADD_ON_NAME.lower())
             or aqt.mw.addonManager.getConfig(module=__name__)
-            or aqt.mw.addonManager.getConfig(module=ADD_ON_ID)
         )
 
     @property
@@ -292,7 +292,13 @@ class AnkiApp:
 
     @staticmethod
     def write_config(config: Dict):
-        aqt.mw.addonManager.writeConfig(ADD_ON_NAME, config)
+        try:
+            aqt.mw.addonManager.writeConfig(ADD_ON_ID, config)
+        except FileNotFoundError:
+            try:
+                aqt.mw.addonManager.writeConfig(ADD_ON_NAME, config)
+            except FileNotFoundError:
+                aqt.mw.addonManager.writeConfig(__name__, config)
 
     @staticmethod
     def prompt_for_path(starting_path: Path) -> Tuple[Path, bool]:
