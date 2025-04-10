@@ -292,7 +292,7 @@ class AnkiApp:
 
     @staticmethod
     def write_config(config: Dict):
-        aqt.mw.addonManager.writeConfig(__name__, config)
+        aqt.mw.addonManager.writeConfig(ADD_ON_NAME, config)
 
     @staticmethod
     def prompt_for_path(starting_path: Path) -> Tuple[Path, bool]:
