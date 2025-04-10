@@ -6,10 +6,10 @@ before use.
 ## Functionality
 
 The goal of this add-on is to provide an integration between Anki and Obsidian, with
-the main feature being bidirectional note syncing between the two apps.
+the main distinguishing feature being bidirectional note syncing between the two apps.
 
 The add-on focuses on notes rather than cards. This means that there is no deck
-information ported from Anki to Obsidian as that is a card concept and a given note's
+information ported from Anki to Obsidian as that is a card concept—for instance, a given note's
 cards may reside in different decks.
 
 The app syncs Anki note models to Obsidian's templates folder, allowing the user to
@@ -19,9 +19,8 @@ further details.
 
 If a given note has been modified in both apps, Anki takes precedence. This is because
 the add-on uses last-modified timestamp for Obsidian files to determine if a note has
-been recently modified. If iCloud is used to sync Obsidian files, then off-loading and
-re-downloading iCloud files updates their last-modified timestamps. This makes them
-appear to be recently modified even if that's not the case.
+been recently modified and this has unintended effects when using iCloud sync (see the
+[iCloud section](#icloud-sync) of the limitations for more details).
 
 The add-on treats spaced repetition system (SRS) notes (i.e. Anki notes) as first-class
 citizens and creates one Obsidian note per SRS note in Anki. That said SRS notes can
@@ -41,21 +40,19 @@ SRS note template, then the add-on will not try to sync it to Anki.
   - The files are duplicated on both platforms so that they are accessible on mobile as well.
 - LaTex, both in-line and blocks.
 - Code, both in-line and blocks.
-- Syncing Anki "suspended" status on a per-note basis.
-  - If all cards associated with the note are suspended in Anki, this property will be checked in Obsidian, otherwise it will be unchecked.
-  - If a note is "suspended" (i.e. all its cards are suspended in Anki) and the property is unchecked in Obsidian, this will cause all associated Anki cards to be unsuspended.
-  - If a note is not "suspended" (i.e. at least one of its cards is not suspended in Anki) and the property is checked in Obsidian, this will cause the associated Anki cards to be suspended.
+- Lists, including indented lists.
+- Special characters.
 - SRS notes can coexist with regular Obsidian notes in the Obsidian vault.
 
 ## Config
 
 | Config                                | Description                                                                                                                                                                                                                     |
 |---------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `vault-path`                          | Path to Obsidian vault.                                                                                                                                                                                                         |
+| `add-obsidian-url-in-anki`            | Adds an extra field to all note models in Anki that will contain the [Obsidian URI](https://help.obsidian.md/Extending+Obsidian/Obsidian+URI) associate with the note to allow quickly jumping to the note in the Obsidian app. |
+| `anki-deck-name-for-obsidian-imports` | The name of the Anki deck in which the cards of notes imported from Obsidian will default to.                                                                                                                                   |
 | `srs-folder-in-obsidian`              | Set a specific folder path relative to the Obsidian vault to use for SRS notes.                                                                                                                                                 |
 | `sync-with-obsidian-on-anki-web-sync` | If enabled, Anki will sync with Obsidian before every sync with Anki web.                                                                                                                                                       |
-| `anki-deck-name-for-obsidian-imports` | The name of the Anki deck in which the cards of notes imported from Obsidian will default to.                                                                                                                                   |
-| `add-obsidian-url-in-anki`            | Adds an extra field to all note models in Anki that will contain the [Obsidian URI](https://help.obsidian.md/Extending+Obsidian/Obsidian+URI) associate with the note to allow quickly jumping to the note in the Obsidian app. |
+| `vault-path`                          | Path to Obsidian vault.                                                                                                                                                                                                         |
 
 ## Shortcuts
 
@@ -91,7 +88,20 @@ are not currently supported. The add-on will treat them as regular text.
 
 #### Obsidian URIs on Windows
 
-Moving or renaming a note in Obsidian on Windows without changing its content won't update the note's URI in Anki. 
+Moving or renaming a note in Obsidian on Windows without changing its content won't update the note's URI in Anki.
+
+#### iCloud Sync
+
+If iCloud is used to sync Obsidian files, then off-loading and
+re-downloading iCloud files updates their last-modified timestamps. This makes them
+appear to be recently modified even if that's not the case. For that reason, if both an Anki not and an Obsidian note
+are identified as modified, Anki modifications take precedence.
+
+Tests using iCloud Sync result in many more notes being detected as updated in Obsidian even if they have not been.
+This is due to iCloud updating the metadata of the file which the add-on relies on to make change-detection more
+efficient. Unfortunately, this means that many more notes will be synced needlessly if iCloud Sync is used.
+
+Obsidian Sync seems to work better, and I have not tested other sync methods.
 
 ## To-Do
 
