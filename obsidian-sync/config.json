@@ -1,7 +1,7 @@
 {
   "vault-path": "",
   "srs-folder-in-obsidian": "",
-  "sync-with-obsidian-on-anki-web-sync": true,
+  "sync-with-obsidian-on-anki-web-sync": false,
   "anki-deck-name-for-obsidian-imports":  "Default",
   "add-obsidian-url-in-anki": true
 }

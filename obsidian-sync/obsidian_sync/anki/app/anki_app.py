@@ -296,7 +296,7 @@ class AnkiApp:
             aqt.mw.addonManager.writeConfig(ADD_ON_ID, config)
         except FileNotFoundError:
             try:
-                aqt.mw.addonManager.writeConfig(ADD_ON_NAME, config)
+                aqt.mw.addonManager.writeConfig(ADD_ON_NAME.lower(), config)
             except FileNotFoundError:
                 aqt.mw.addonManager.writeConfig(__name__, config)
 
