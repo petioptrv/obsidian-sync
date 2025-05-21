@@ -1,5 +1,3 @@
-import pytest
-
 from obsidian_sync.markup_translator import MarkupTranslator
 
 
@@ -158,7 +156,7 @@ def test_sanitize_special_characters():
     markup_translator = MarkupTranslator()
 
     original_html_text = """<p>Some special characters: &nbsp;</p>"""
-    expected_html_text = "<p>Some special characters: \xa0</p>"
+    expected_html_text = "<p>Some special characters: &nbsp;</p>"
     sanitized_html_text = markup_translator.sanitize_html(html=original_html_text)
 
     assert sanitized_html_text == expected_html_text
@@ -168,3 +166,129 @@ def test_sanitize_special_characters():
 
     assert markdown_text == expected_markdown
 
+
+def test_sanitize_multi_line_latex_block_with_underscores():
+    markup_translator = MarkupTranslator()
+
+    original_html_text = r"""<p>\[
+\text{Maximize } \quad x_1 + 6x_2 + 10x_3
+\]</p>"""
+    expected_html_text = r"""<p>\[
+\text{Maximize } \quad x_1 + 6x_2 + 10x_3
+\]</p>"""
+    sanitized_html_text = markup_translator.sanitize_html(html=original_html_text)
+
+    assert sanitized_html_text == expected_html_text
+
+
+def test_sanitize_multi_line_latex_html():
+    markup_translator = MarkupTranslator()
+
+    original_html_text = r"""<p>In algorithm design, derive the Dual LP for the following Primal LP: </p>
+<p>\[\text{Maximize } \quad x_1 + 6x_2 + 10x_3\]</p>
+<p>\[\text{Subject to:}\]
+\[\begin{aligned}
+ x_1 & \leq 300 \\
+ x_2 & \leq 200 \\
+ x_1 + 3x_2 + 2x_3 & \leq 1000 \\
+ x_2 + 3x_3 & \leq 500 \\
+ x_1, x_2, x_3 & \geq 0
+\end{aligned}\]</p>
+<p>\[\text{General Formulation:}\]</p>
+<p>\[\text{Maximize } \quad C^T X\]</p>
+<p>\[\text{Subject to: } \quad A X \leq b, \quad X \geq 0\]</p>
+<p>\[\text{where } n \text{ variables, } m \text{ constraints.}\]</p>"""
+
+    offender = r"""<p>In algorithm design, derive the Dual LP for the following Primal LP:</p>
+<p>\[\text{Maximize } \quad x_1 + 6x_2 + 10x_3\]</p>
+<p>\[\text{Subject to:}\]
+\[\begin{aligned}
+ x_1 &amp; \leq 300 \\
+ x_2 &amp; \leq 200 \\
+ x_1 + 3x_2 + 2x_3 &amp; \leq 1000 \\
+ x_2 + 3x_3 &amp; \leq 500 \\
+ x_1, x_2, x_3 &amp; \geq 0
+\end{aligned}\]</p>
+<p>\[\text{General Formulation:}\]</p>
+<p>\[\text{Maximize } \quad C^T X\]</p>
+<p>\[\text{Subject to: } \quad A X \leq b, \quad X \geq 0\]</p>
+<p>\[\text{where } n \text{ variables, } m \text{ constraints.}\]</p>"""
+    expected_html_text = original_html_text
+    expected_markdown_text = r"""
+In algorithm design, derive the Dual LP for the following Primal LP: 
+
+
+$$\text{Maximize } \quad x_1 + 6x_2 + 10x_3$$
+
+
+$$\text{Subject to:}$$
+$$\begin{aligned}
+ x_1 & \leq 300 \\
+ x_2 & \leq 200 \\
+ x_1 + 3x_2 + 2x_3 & \leq 1000 \\
+ x_2 + 3x_3 & \leq 500 \\
+ x_1, x_2, x_3 & \geq 0
+\end{aligned}$$
+
+
+$$\text{General Formulation:}$$
+
+
+$$\text{Maximize } \quad C^T X$$
+
+
+$$\text{Subject to: } \quad A X \leq b, \quad X \geq 0$$
+
+
+$$\text{where } n \text{ variables, } m \text{ constraints.}$$
+"""
+    sanitized_html_text = markup_translator.sanitize_html(html=original_html_text)
+
+    assert sanitized_html_text == expected_html_text
+    assert markup_translator.translate_html_to_markdown(html=sanitized_html_text) == expected_markdown_text
+
+
+def test_translate_html_multi_line_latex_block_with_underscores_to_markdown():
+    markup_translator = MarkupTranslator()
+
+    expected_markdown_text = r"""
+$$
+\text{Maximize } \quad x_1 + 6x_2 + 10x_3
+$$
+"""
+
+    latex_block_html_text = r"""<p>\[
+\text{Maximize } \quad x_1 + 6x_2 + 10x_3
+\]</p>"""
+    anki_mathjax_block_html_text = r"""<p><anki-mathjax block="true">
+\text{Maximize } \quad x_1 + 6x_2 + 10x_3
+</anki-mathjax></p>"""
+
+    latex_markdown_translation = markup_translator.translate_html_to_markdown(html=latex_block_html_text)
+
+    assert latex_markdown_translation == expected_markdown_text
+
+    anki_mathjax_block_markdown_translation = markup_translator.translate_html_to_markdown(
+        html=anki_mathjax_block_html_text
+    )
+
+    assert anki_mathjax_block_markdown_translation == expected_markdown_text
+
+
+def test_sync_previously_failed_frobenius_note():
+    markup_translator = MarkupTranslator()
+
+    original_html = (
+"""<p>The&nbsp;{{c1::Frobenius}} Norm (for matrices) ({{c1::\(\|\|A\|\|_{F}\) }})
+&nbsp;is defined as&nbsp;{{c2::\(\sqrt{\sum_{i=1}^{m} \sum_{j=1}^{n}\|A_{i,j}\|^2}\)}}.</p>"""
+    )
+
+    expected_markdown = """
+The\xa0{{c1::Frobenius}} Norm (for matrices) ({{c1::$\|\|A\|\|_{F}$\u200a}})
+\xa0is defined as\xa0{{c2::$\sqrt{\sum_{i=1}^{m} \sum_{j=1}^{n}\|A_{i,j}\|^2}$}}.
+"""
+
+    sanitized_html = markup_translator.sanitize_html(html=original_html)
+
+    assert sanitized_html == original_html
+    assert markup_translator.translate_html_to_markdown(html=original_html) == expected_markdown

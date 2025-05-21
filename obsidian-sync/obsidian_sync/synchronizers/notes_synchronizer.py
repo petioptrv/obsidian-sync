@@ -99,7 +99,7 @@ class NotesSynchronizer:
             )
 
             abort_sync = False
-            if len(notes_deleted_in_anki) > obsidian_notes.all_notes_count * 0.2:
+            if len(notes_deleted_in_anki) > 50 and len(notes_deleted_in_anki) > obsidian_notes.all_notes_count * 0.2:
                 if not self._anki_app.prompt_for_confirmation(
                     prompt=(
                         f"{len(notes_deleted_in_anki)} of the {obsidian_notes.all_notes_count} notes in Obsidian"
@@ -113,7 +113,7 @@ class NotesSynchronizer:
                 unchanged_anki_note_ids - non_new_obsidian_note_ids
             )
 
-            if len(notes_deleted_in_obsidian) > anki_notes.all_notes_count * 0.2:
+            if len(notes_deleted_in_obsidian) > 50 and len(notes_deleted_in_obsidian) > anki_notes.all_notes_count * 0.2:
                 if not self._anki_app.prompt_for_confirmation(
                     prompt=(
                         f"{len(notes_deleted_in_obsidian)} of the {anki_notes.all_notes_count} notes in Anki"

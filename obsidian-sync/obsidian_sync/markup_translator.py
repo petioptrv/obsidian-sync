@@ -53,8 +53,9 @@ class MarkupTranslator:
         math = MarkdownToHTMLMathExtension()
         fenced_code = FencedCodeExtension()
         wikilinks = WikiLinkExtension()
+        additional_characters = MarkdownToHTMLAdditionalCharactersExtension()
         self._markdown_to_html_converter = MarkdownToHTMLConverter(
-            extensions=[math, fenced_code, wikilinks], output_format="html"
+            extensions=[math, fenced_code, wikilinks, additional_characters], output_format="html"
         )
 
     def sanitize_markdown(self, markdown: str) -> str:
@@ -147,11 +148,11 @@ class ExtendedHTMLToMarkdownConverter(HTMLToMarkdownConverter):
             return part
 
         latex_pattern = r"(\$.*?\$|\$\$.*?\$\$|\\\(.*?\\\)|\\\[.*?\\\])"
-        parts = re.split(latex_pattern, text)
+        parts = re.split(latex_pattern, text, flags=re.DOTALL)
 
         escaped = "".join(
             part
-            if re.match(latex_pattern, part)
+            if re.match(latex_pattern, part, flags=re.DOTALL)
             else escape_non_latex(part)
             for part in parts
         )
@@ -206,3 +207,25 @@ class MarkdownToHTMLMathBlockProcessor(InlineProcessor):
         place_holder = self.md.htmlStash.store(f"\\[{match_group}\\]")
         return place_holder, m.start(0), m.end(0)
 
+
+class MarkdownToHTMLAdditionalCharactersExtension(Extension):
+    def extendMarkdown(self, md):
+        md.inlinePatterns.register(
+            item=MarkdownToHTMLAdditionalCharacterProcessor(
+                pattern=r"\xa0",
+                replacement_character=r"&nbsp;",
+                md=md,
+            ),
+            name="non-breaking-space",
+            priority=184,
+        )
+
+
+class MarkdownToHTMLAdditionalCharacterProcessor(InlineProcessor):
+    def __init__(self, * args, replacement_character: str, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.replacement_character = replacement_character
+
+    def handleMatch(self, m: re.Match[str], data: str) -> tuple[str, int, int]:
+        place_holder = self.md.htmlStash.store(self.replacement_character)
+        return place_holder, m.start(0), m.end(0)
